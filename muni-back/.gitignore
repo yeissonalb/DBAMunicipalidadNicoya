@@ -1,0 +1,7 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+MunicipalidadAPI/wwwroot/uploads/tramites/*
+!MunicipalidadAPI/wwwroot/uploads/tramites/.gitkeep
