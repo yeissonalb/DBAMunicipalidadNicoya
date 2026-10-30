@@ -159,11 +159,11 @@ export function DbaPoliticasPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col" style={{ gap: '2rem' }}>
       <PageHeader
-        title="Consola Técnica DBA — Políticas de Respaldo"
-        subtitle="Gobernanza de políticas Respaldos_Config, retención, cifrado y verificación DBCC CHECKDB (Wireframe #3, p. 114)"
-        badge="CU-DBA-01 a CU-DBA-04"
+        title="Políticas de respaldo"
+        subtitle="Configure la programación, retención, cifrado y destino de los respaldos institucionales."
+        badge={`${configuracionesQuery.data?.filter((c) => c.activo).length ?? 0} políticas activas`}
         icon={<Database className="h-6 w-6" />}
         actions={
           <>
@@ -182,41 +182,40 @@ export function DbaPoliticasPage() {
                 setOpenBackupModal(true);
               }}
             >
-              <Play className="h-4 w-4" /> Ejecutar Respaldo Inmediato
+              <Play className="h-4 w-4" /> Ejecutar respaldo
             </Button>
             <Button size="sm" onClick={() => setOpenCreateModal(true)}>
-              <Plus className="h-4 w-4" /> + Nueva Política
+              <Plus className="h-4 w-4" /> Nueva política
             </Button>
           </>
         }
       />
 
       {/* Subnavegación Consola DBA (Wireframes 3, 4 y 5) */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-[#DCE3DE] pb-3">
-        <Button variant="default" size="sm" asChild>
+      <nav className="grid gap-3 rounded-2xl border border-[#DCE3DE] bg-white p-3 shadow-card sm:grid-cols-3" aria-label="Consola DBA">
+        <Button variant="default" className="h-auto justify-start px-4 py-3" asChild>
           <Link to="/dba/politicas">
-            <Database className="h-4 w-4" /> Políticas de Respaldo
+            <Database className="h-4 w-4" /> Políticas de respaldo
           </Link>
         </Button>
-        <Button variant="outline" size="sm" asChild>
+        <Button variant="outline" className="h-auto justify-start px-4 py-3" asChild>
           <Link to="/dba/respaldos">
-            <Landmark className="h-4 w-4" /> Respaldos y Recuperación
+            <Landmark className="h-4 w-4" /> Respaldos y recuperación
           </Link>
         </Button>
-        <Button variant="outline" size="sm" asChild>
+        <Button variant="outline" className="h-auto justify-start px-4 py-3" asChild>
           <Link to="/auditoria">
-            <ShieldCheck className="h-4 w-4" /> Historial y Auditoría Técnica
+            <ShieldCheck className="h-4 w-4" /> Auditoría técnica
           </Link>
         </Button>
-      </div>
+      </nav>
 
       {/* Tarjetas Superiores del Wireframe 3 (p. 114) */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card className="border-l-4 border-l-[#164B35]">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+        <Card className="h-full border-l-4 border-l-[#164B35]">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-1.5">
-              <HardDrive className="h-4 w-4 text-[#164B35]" /> Volumen de Últimos Respaldos (
-              <code>vw_estado_respaldos</code>)
+              <HardDrive className="h-4 w-4 text-[#164B35]" /> Volumen del último ciclo
             </CardDescription>
             <CardTitle className="text-2xl font-extrabold text-[#164B35]">
               {formatNumber(totalTamanoMb, 2)} MB
@@ -234,11 +233,10 @@ export function DbaPoliticasPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-[#B6944A]">
+        <Card className="h-full border-l-4 border-l-[#B6944A]">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4 text-[#967736]" /> Integridad Física y Lógica (
-              <code>DBCC CHECKDB</code>)
+              <ShieldCheck className="h-4 w-4 text-[#967736]" /> Integridad de la base de datos
             </CardDescription>
             <CardTitle className="text-base font-bold text-[#26352D]">
               {lastDbccStatus || 'Listo para verificación en demanda'}
@@ -253,28 +251,27 @@ export function DbaPoliticasPage() {
             >
               {dbccMut.isPending ? (
                 <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Ejecutando DBCC CHECKDB...
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Verificando integridad...
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Ejecutar sp_dba_verificar_integridad_dbcc
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Verificar integridad
                 </>
               )}
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-600">
+        <Card className="h-full border-l-4 border-l-emerald-600">
           <CardHeader className="pb-2">
-            <CardDescription>Motor de Base de Datos Conectado</CardDescription>
+            <CardDescription>Servicio de base de datos</CardDescription>
             <CardTitle className="text-lg font-extrabold text-emerald-900">
-              SQL Server · DB_Municipalidad_Nicoya
+              SQL Server conectado
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-[#5A6B61]">
-              Cifrado y verificación SHA-256 registrados en{' '}
-              <code className="font-mono">dbo.Respaldo_Historial</code>.
+              El historial conserva la verificación de integridad de cada respaldo.
             </p>
           </CardContent>
         </Card>
@@ -289,21 +286,16 @@ export function DbaPoliticasPage() {
           onRetry={() => configuracionesQuery.refetch()}
         />
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Tabla de Políticas de Respaldo (<code className="font-mono">dbo.Respaldos_Config</code>)
-            </CardTitle>
-            <CardDescription>
-              Fuente: <code className="font-mono">GET /api/respaldosdba/configuraciones</code>{' '}
-              cruzado con <code className="font-mono">GET /api/respaldosdba/estado</code>.
-            </CardDescription>
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+            <CardTitle>Políticas configuradas</CardTitle>
+            <CardDescription>Programación, retención, destino y estado de las políticas de respaldo.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+          <CardContent className="p-0 sm:p-0">
+            <div className="overflow-x-auto" role="region" aria-label="Políticas de respaldo" tabIndex={0}>
+              <table className="w-full min-w-[1200px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
+                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
                     <th className="px-3.5 py-3">ID</th>
                     <th className="px-3.5 py-3">Nombre de Política</th>
                     <th className="px-3.5 py-3">Tipo / Frecuencia</th>
@@ -321,7 +313,7 @@ export function DbaPoliticasPage() {
                       (m) => m.idRespaldosConfig === cfg.idRespaldosConfig
                     );
                     return (
-                      <tr key={cfg.idRespaldosConfig} className="hover:bg-[#E8F0EC]/40">
+                      <tr key={cfg.idRespaldosConfig} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
                         <td className="px-3.5 py-3 font-mono font-bold text-[#164B35]">
                           #{cfg.idRespaldosConfig}
                         </td>
@@ -393,8 +385,8 @@ export function DbaPoliticasPage() {
       <Modal
         open={openCreateModal}
         onClose={() => setOpenCreateModal(false)}
-        title="Registrar Nueva Política de Respaldo (CU-DBA-01)"
-        description="Ejecuta POST /api/respaldosdba/configuracion (dbo.sp_registrar_configuracion_respaldo)"
+        title="Registrar nueva política de respaldo"
+        description="Defina la frecuencia, retención y ubicación segura de los archivos."
         maxWidth="max-w-xl"
       >
         <form
@@ -494,7 +486,7 @@ export function DbaPoliticasPage() {
       <Modal
         open={Boolean(editingPolicy)}
         onClose={() => setEditingPolicy(null)}
-        title={`Editar Política #${editingPolicy?.idRespaldosConfig ?? ''}`}
+        title={`Editar política #${editingPolicy?.idRespaldosConfig ?? ''}`}
       >
         {editingPolicy && (
           <form
@@ -561,8 +553,8 @@ export function DbaPoliticasPage() {
       <Modal
         open={openBackupModal}
         onClose={() => setOpenBackupModal(false)}
-        title="Ejecutar Respaldo Inmediato en SQL Server (CU-DBA-02)"
-        description="Esta operación ejecuta BACKUP DATABASE en la instancia de SQL Server y registra el hash en Respaldo_Historial."
+        title="Ejecutar respaldo inmediato"
+        description="Esta operación generará un respaldo y registrará su resultado en el historial técnico."
       >
         <div className="space-y-4">
           <FormField label="Tipo de Respaldo a Ejecutar" required>
@@ -570,9 +562,9 @@ export function DbaPoliticasPage() {
               value={backupTipo}
               onChange={(e) => setBackupTipo(e.target.value as 'FULL' | 'DIFF')}
             >
-              <option value="FULL">FULL — Respaldo Completo (sp_dba_ejecutar_backup_full)</option>
+              <option value="FULL">FULL — Respaldo completo</option>
               <option value="DIFF">
-                DIFERENCIAL — Respaldo Diferencial (sp_dba_ejecutar_backup_diferencial)
+                DIFERENCIAL — Respaldo diferencial
               </option>
             </Select>
           </FormField>

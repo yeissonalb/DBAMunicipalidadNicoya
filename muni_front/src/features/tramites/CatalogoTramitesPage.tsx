@@ -117,11 +117,11 @@ export function CatalogoTramitesPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col" style={{ gap: '2rem' }}>
       <PageHeader
-        title="Catálogo de Tipos de Trámite y Requisitos"
-        subtitle="Configuración de trámites municipales, plazos SLA y requisitos documentales (CU-TR-01 y CU-TR-02)"
-        badge="TipoTramiteController"
+        title="Catálogo de trámites y requisitos"
+        subtitle="Configure los servicios municipales, sus plazos de atención y la documentación necesaria."
+        badge={`${tiposQuery.data?.length ?? 0} tipos de trámite`}
         icon={<FileCheck2 className="h-6 w-6" />}
         actions={
           <>
@@ -166,18 +166,18 @@ export function CatalogoTramitesPage() {
       ) : tiposQuery.isError ? (
         <ErrorState error={tiposQuery.error} onRetry={() => tiposQuery.refetch()} />
       ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: '2rem' }}>
           {/* Lista de Tipos de Trámite */}
-          <div className="space-y-4 lg:col-span-7">
-            <Card>
-              <CardHeader>
-                <CardTitle>Tipos de Trámite Registrados ({tiposQuery.data?.length ?? 0})</CardTitle>
+          <div>
+            <Card className="h-full overflow-hidden">
+              <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+                <CardTitle>Tipos de trámite</CardTitle>
                 <CardDescription>
-                  Haga clic en un trámite para inspeccionar o configurar sus requisitos asociados.
+                  Seleccione un trámite para consultar y configurar sus requisitos.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2.5">
+              <CardContent className="pt-6 sm:pt-6">
+                <div className="space-y-3">
                   {(tiposQuery.data ?? []).map((t) => {
                     const isSelected = t.idTipoTramite === selectedTipoId;
                     return (
@@ -186,8 +186,8 @@ export function CatalogoTramitesPage() {
                         onClick={() => setSelectedTipoId(t.idTipoTramite)}
                         className={`cursor-pointer rounded-xl border p-4 transition-all ${
                           isSelected
-                            ? 'border-[#164B35] bg-[#E8F0EC]/60 shadow-xs'
-                            : 'border-[#DCE3DE] bg-white hover:bg-[#F5F7F4]'
+                            ? 'border-[#164B35] bg-[#E8F0EC]/60 shadow-sm ring-1 ring-[#164B35]/10'
+                            : 'border-[#DCE3DE] bg-white hover:border-[#AFC2B8] hover:bg-[#FAFCFB]'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -202,8 +202,8 @@ export function CatalogoTramitesPage() {
                               <Badge variant="gold">SLA: {t.diasResolucionMax} días</Badge>
                             </div>
                             <p className="mt-1 text-xs text-[#5A6B61]">{t.descripcionTipo}</p>
-                            <p className="mt-1 text-[11px] font-medium text-[#164B35]">
-                              Departamento: {t.nombreDepartamento} (#{t.idDepartamento})
+                            <p className="mt-2 text-xs font-medium text-[#164B35]">
+                              Departamento responsable: {t.nombreDepartamento}
                             </p>
                           </div>
                           <Button
@@ -233,21 +233,14 @@ export function CatalogoTramitesPage() {
           </div>
 
           {/* Configuración de Requisitos por Tipo */}
-          <div className="space-y-4 lg:col-span-5">
-            <Card className="border-t-4 border-t-[#B6944A]">
-              <CardHeader>
-                <CardTitle>
-                  Requisitos del Trámite #{selectedTipoId}
-                </CardTitle>
-                <CardDescription>
-                  Asociación mediante{' '}
-                  <code className="font-mono">
-                    POST /api/tipotramite/{selectedTipoId}/requisitos/&#123;idReq&#125;
-                  </code>
-                </CardDescription>
+          <div>
+            <Card className="h-full overflow-hidden border-[#D7C28E]">
+              <CardHeader className="border-b border-[#E9DFC4] bg-[#FBF7EE]">
+                <CardTitle>Requisitos del trámite seleccionado</CardTitle>
+                <CardDescription>Asocie documentos del catálogo al servicio municipal activo.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-2">
+              <CardContent className="space-y-5 pt-6 sm:pt-6">
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
                   <Select
                     value={selectedRequisitoToLink}
                     onChange={(e) => setSelectedRequisitoToLink(Number(e.target.value))}
@@ -270,7 +263,7 @@ export function CatalogoTramitesPage() {
                       })
                     }
                   >
-                    <Link2 className="h-4 w-4" /> Asociar
+                    <Link2 className="h-4 w-4" /> Asociar requisito
                   </Button>
                 </div>
 
@@ -283,7 +276,7 @@ export function CatalogoTramitesPage() {
                     (requisitosPorTipoQuery.data ?? []).map((r) => (
                       <div
                         key={r.idRequisito}
-                        className="rounded-lg border border-[#DCE3DE] bg-[#F5F7F4] p-3 text-xs"
+                        className="rounded-xl border border-[#DCE3DE] bg-[#FAFCFB] p-4 text-sm transition-colors hover:border-[#C6D4CC]"
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-[#26352D]">
@@ -293,7 +286,7 @@ export function CatalogoTramitesPage() {
                             {r.esObligatorio ? 'Obligatorio' : 'Opcional'}
                           </Badge>
                         </div>
-                        <p className="mt-1 text-[#5A6B61]">{r.descripcion}</p>
+                        <p className="mt-2 text-xs leading-relaxed text-[#5A6B61]">{r.descripcion}</p>
                       </div>
                     ))
                   )}
@@ -308,7 +301,7 @@ export function CatalogoTramitesPage() {
       <Modal
         open={openTipoModal}
         onClose={() => setOpenTipoModal(false)}
-        title={editingTipo ? `Editar Tipo de Trámite #${editingTipo.idTipoTramite}` : 'Nuevo Tipo de Trámite'}
+        title={editingTipo ? `Editar tipo de trámite #${editingTipo.idTipoTramite}` : 'Nuevo tipo de trámite'}
       >
         <form
           onSubmit={tipoForm.handleSubmit((dto) => guardarTipoMut.mutate(dto))}
@@ -367,7 +360,7 @@ export function CatalogoTramitesPage() {
       <Modal
         open={openRequisitoModal}
         onClose={() => setOpenRequisitoModal(false)}
-        title="Registrar Nuevo Requisito Documental"
+        title="Registrar nuevo requisito documental"
       >
         <form
           onSubmit={reqForm.handleSubmit((dto) => crearReqMut.mutate(dto))}

@@ -20,7 +20,7 @@ import { catalogosGeneralesApi, rolPermisoApi, usuarioApi } from '@/services/api
 import type { SpConsultarUsuarioResultDto } from '@/types/api';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/common/StateFeedback';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Select } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -164,17 +164,17 @@ export function UsuariosRolesPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col" style={{ gap: '2rem' }}>
       <PageHeader
-        title="Administración de Usuarios y Roles (RBAC Security Panel)"
-        subtitle="Gestión de funcionarios municipales, departamentos, estado de cuenta y asignación de roles (Wireframe #6, p. 116)"
-        badge="CU-AS-01 a CU-AS-05"
+        title="Administración de usuarios"
+        subtitle="Gestione las cuentas del personal municipal, sus departamentos, estados y roles asignados."
+        badge={`${usuariosQuery.data?.length ?? 0} usuarios`}
         icon={<UserCheck className="h-6 w-6" />}
         actions={
           <>
             <Button asChild variant="outline" size="sm">
               <Link to="/seguridad/matriz">
-                <Sliders className="h-4 w-4" /> Ir a Matriz de Permisos
+                <Sliders className="h-4 w-4" /> Matriz de permisos
               </Link>
             </Button>
             <Button
@@ -202,36 +202,42 @@ export function UsuariosRolesPage() {
                 setOpenCreateModal(true);
               }}
             >
-              <UserPlus className="h-4 w-4" /> Crear Nuevo Usuario
+              <UserPlus className="h-4 w-4" /> Crear usuario
             </Button>
           </>
         }
       />
 
       {/* Subnavegación superior del Wireframe 6 */}
-      <div className="flex items-center gap-2 border-b border-[#DCE3DE] pb-3">
-        <Button variant="default" size="sm" asChild>
+      <nav className="grid gap-3 rounded-2xl border border-[#DCE3DE] bg-white p-3 shadow-card sm:grid-cols-2" aria-label="Administración de seguridad">
+        <Button variant="default" className="h-auto justify-start px-4 py-3" asChild>
           <Link to="/seguridad/usuarios">
-            <UserCheck className="h-4 w-4" /> Usuarios y Roles
+            <UserCheck className="h-4 w-4" /> Usuarios y roles
           </Link>
         </Button>
-        <Button variant="outline" size="sm" asChild>
+        <Button variant="outline" className="h-auto justify-start px-4 py-3" asChild>
           <Link to="/seguridad/matriz">
-            <Sliders className="h-4 w-4" /> Matriz de Permisos (RBAC)
+            <Sliders className="h-4 w-4" /> Matriz de permisos
           </Link>
         </Button>
-      </div>
+      </nav>
 
       {/* Filtro de búsqueda por username (sp_consultar_usuario) */}
-      <Card>
-        <CardContent className="pt-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Search className="h-4 w-4 text-[#164B35]" /> Buscar usuarios
+          </CardTitle>
+          <CardDescription>Consulte una cuenta por su nombre de usuario institucional.</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-6 sm:pt-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-semibold text-[#26352D]">
-                Filtrar por Nombre de Usuario (<code className="font-mono">GET /api/usuario?userName=...</code>)
+              <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                Nombre de usuario
               </label>
               <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#5A6B61]" />
+                <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-[#607168]" />
                 <Input
                   placeholder="Ej. admin_nicoya, analista_curb, cajero_caja1..."
                   value={userNameFilter}
@@ -271,10 +277,10 @@ export function UsuariosRolesPage() {
       ) : !usuariosQuery.data || usuariosQuery.data.length === 0 ? (
         <EmptyState title="No se encontraron usuarios" />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-[#DCE3DE] bg-white shadow-card">
-          <table className="w-full border-collapse text-left text-xs sm:text-sm">
+        <div className="overflow-x-auto rounded-2xl border border-[#DCE3DE] bg-white shadow-card" role="region" aria-label="Usuarios municipales" tabIndex={0}>
+          <table className="w-full min-w-[1250px] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] text-[11px] font-bold uppercase tracking-wider text-[#5A6B61]">
+              <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
                 <th className="px-4 py-3">ID</th>
                 <th className="px-4 py-3">Usuario</th>
                 <th className="px-4 py-3">Nombre y Apellidos</th>
@@ -290,7 +296,7 @@ export function UsuariosRolesPage() {
                 const rolesSet = rolesPorUsuarioMap.get(u.idUsuario);
                 const rolesList = rolesSet ? Array.from(rolesSet) : [];
                 return (
-                  <tr key={u.idUsuario} className="hover:bg-[#E8F0EC]/40">
+                  <tr key={u.idUsuario} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
                     <td className="px-4 py-3 font-mono font-bold text-[#164B35]">
                       #{u.idUsuario}
                     </td>
@@ -330,7 +336,7 @@ export function UsuariosRolesPage() {
                         }
                         disabled={cambiarEstadoMut.isPending}
                         className="inline-flex items-center gap-2"
-                        title="Haga clic para activar/desactivar usuario (PATCH /estado)"
+                        title="Activar o desactivar usuario"
                       >
                         <span
                           className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
@@ -380,7 +386,7 @@ export function UsuariosRolesPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setInspectUserTarget(u)}
-                          title="Consultar roles y permisos efectivos (GET /api/rolpermiso/usuario/{id})"
+                          title="Consultar roles y permisos efectivos"
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
@@ -398,8 +404,8 @@ export function UsuariosRolesPage() {
       <Modal
         open={openCreateModal}
         onClose={() => setOpenCreateModal(false)}
-        title="Crear Nuevo Usuario Municipal (CU-AS-01)"
-        description="La contraseña se envía por HTTPS/HTTP y el backend la convierte a SHA-256 antes de ejecutar sp_registrar_usuario."
+        title="Crear nuevo usuario municipal"
+        description="Registre la cuenta institucional y asigne sus datos básicos de acceso."
         maxWidth="max-w-xl"
       >
         <form
@@ -488,7 +494,7 @@ export function UsuariosRolesPage() {
       <Modal
         open={Boolean(editingUser)}
         onClose={() => setEditingUser(null)}
-        title={`Editar Usuario #${editingUser?.idUsuario ?? ''} (${editingUser?.userName ?? ''})`}
+        title={`Editar usuario #${editingUser?.idUsuario ?? ''} (${editingUser?.userName ?? ''})`}
       >
         {editingUser && (
           <form
@@ -603,7 +609,7 @@ export function UsuariosRolesPage() {
         open={Boolean(inspectUserTarget)}
         onClose={() => setInspectUserTarget(null)}
         title={`Permisos Efectivos — ${inspectUserTarget?.userName ?? ''}`}
-        description={`Fuente: GET /api/rolpermiso/usuario/${inspectUserTarget?.idUsuario ?? ''}`}
+        description="Roles y permisos asignados actualmente a esta cuenta."
       >
         <div className="space-y-3 text-xs">
           {permisosUsuarioQuery.isLoading ? (

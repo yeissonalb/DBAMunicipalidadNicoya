@@ -138,11 +138,11 @@ export function PagosMunicipalesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col" style={{ gap: '2rem' }}>
       <PageHeader
-        title="Pagos Municipales y Facturación Electrónica"
-        subtitle="Cobro de facturas pendientes, medios de pago autorizados e imputación automática de saldos (Wireframe #12, p. 119)"
-        badge="CU-PC-06 a CU-PC-08"
+        title="Caja y pagos municipales"
+        subtitle="Consulte facturas pendientes, registre el medio de pago y aplique el cobro al saldo correspondiente."
+        badge={`${facturasFiltradas.length} facturas pendientes`}
         icon={<Receipt className="h-6 w-6" />}
         actions={
           <Button
@@ -150,7 +150,7 @@ export function PagosMunicipalesPage() {
             size="sm"
             onClick={() => queryClient.invalidateQueries({ queryKey: ['facturacion'] })}
           >
-            <RefreshCw className="h-4 w-4" /> Actualizar Caja
+            <RefreshCw className="h-4 w-4" /> Actualizar caja
           </Button>
         }
       />
@@ -163,22 +163,19 @@ export function PagosMunicipalesPage() {
           onRetry={() => facturasPendientesQuery.refetch()}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: '2rem' }}>
           {/* Panel Izquierdo (7 cols): Saldos pendientes por facturar / Facturas Pendientes (Wireframe 12) */}
-          <div className="space-y-4 xl:col-span-7">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle>
-                  Facturas con Saldo Pendiente (<code className="font-mono">vw_facturas_pendientes</code>)
-                </CardTitle>
+          <div className="contents">
+            <Card className="overflow-hidden lg:col-span-2">
+              <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+                <CardTitle>Facturas pendientes de cobro</CardTitle>
                 <CardDescription>
-                  Seleccione una factura de la tabla para cargar sus importes oficiales de base de
-                  datos en el panel de caja.
+                  Seleccione una factura para consultar su saldo y preparar el registro del pago.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5 pt-6 sm:pt-6">
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#5A6B61]" />
+                  <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-[#607168]" />
                   <Input
                     placeholder="Buscar por contribuyente, finca, tributo, ID factura o clave Hacienda..."
                     value={busqueda}
@@ -193,10 +190,10 @@ export function PagosMunicipalesPage() {
                     description="Puede generar nuevas facturas desde el módulo de Tributos y Deudas."
                   />
                 ) : (
-                  <div className="overflow-x-auto rounded-lg border border-[#DCE3DE]">
-                    <table className="w-full text-left text-xs">
+                  <div className="overflow-x-auto rounded-xl border border-[#DCE3DE]" role="region" aria-label="Facturas pendientes" tabIndex={0}>
+                    <table className="w-full min-w-[1100px] text-left text-sm">
                       <thead>
-                        <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
+                        <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
                           <th className="px-3 py-2.5">Factura</th>
                           <th className="px-3 py-2.5">Contribuyente / Finca</th>
                           <th className="px-3 py-2.5">Tributo / Periodo</th>
@@ -214,7 +211,7 @@ export function PagosMunicipalesPage() {
                               key={f.idFactura}
                               onClick={() => selectFacturaAndPrefill(f)}
                               className={`cursor-pointer transition-colors ${
-                                isSelected ? 'bg-[#E8F0EC]' : 'hover:bg-[#F5F7F4]'
+                                isSelected ? 'bg-[#E8F0EC] shadow-[inset_4px_0_0_#164B35]' : 'even:bg-[#FAFCFB] hover:bg-[#F5F7F4]'
                               }`}
                             >
                               <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">
@@ -257,7 +254,7 @@ export function PagosMunicipalesPage() {
 
                 {/* Resumen de la Factura Seleccionada (Tal como en el Wireframe 12) */}
                 {selectedFactura && (
-                  <div className="rounded-xl border border-[#164B35]/30 bg-[#E8F0EC]/40 p-4 space-y-2 text-xs">
+                  <div className="space-y-3 rounded-xl border border-[#164B35]/30 bg-[#E8F0EC]/40 p-5 text-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#DCE3DE] pb-2">
                       <span className="font-bold text-[#164B35]">
                         Factura Seleccionada #{selectedFactura.idFactura} · Estado:{' '}
@@ -269,13 +266,13 @@ export function PagosMunicipalesPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 pt-1">
                       <div>
-                        <p className="text-[#5A6B61]">Subtotal (BD)</p>
+                        <p className="text-[#5A6B61]">Subtotal</p>
                         <p className="font-bold text-[#26352D]">
                           {formatCurrencyCRC(selectedFactura.subtotal)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[#5A6B61]">Descuentos (BD)</p>
+                        <p className="text-[#5A6B61]">Descuentos</p>
                         <p className="font-bold text-[#26352D]">
                           {formatCurrencyCRC(selectedFactura.descuentos)}
                         </p>
@@ -287,7 +284,7 @@ export function PagosMunicipalesPage() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-[#5A6B61]">Saldo por Pagar (BD)</p>
+                        <p className="text-[#5A6B61]">Saldo por pagar</p>
                         <p className="text-sm font-extrabold text-[#164B35]">
                           {formatCurrencyCRC(selectedFactura.saldoPendiente)}
                         </p>
@@ -299,14 +296,12 @@ export function PagosMunicipalesPage() {
             </Card>
 
             {/* Consulta de Factura por Clave Numérica Hacienda (sp_consultar_factura) */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">
-                  Verificador de Comprobante Electrónico Hacienda (
-                  <code className="font-mono">GET /api/facturacionpago/factura</code>)
-                </CardTitle>
+            <Card className="h-full overflow-hidden">
+              <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+                <CardTitle className="text-base">Verificar comprobante electrónico</CardTitle>
+                <CardDescription>Consulte una factura mediante su clave numérica de Hacienda.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 pt-6 sm:pt-6">
                 <Input
                   placeholder="Pegue aquí la Clave Numérica de Hacienda para consultar..."
                   value={consultaClaveHacienda}
@@ -333,22 +328,19 @@ export function PagosMunicipalesPage() {
           </div>
 
           {/* Panel Derecho (5 cols): Registro de Pago en Caja (Wireframe 12) */}
-          <div className="space-y-4 xl:col-span-5">
-            <Card className="border-t-4 border-t-[#164B35]">
-              <CardHeader>
+          <div className="contents">
+            <Card className="h-full overflow-hidden border-[#BBD3C6]">
+              <CardHeader className="border-b border-[#DCE3DE] bg-[#F2F7F4]">
                 <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-[#164B35]" /> Registro de Pago en Caja
+                  <CreditCard className="h-5 w-5 text-[#164B35]" /> Registrar pago en caja
                 </CardTitle>
-                <CardDescription>
-                  Ejecuta <code className="font-mono">POST /api/facturacionpago/pago</code> y{' '}
-                  <code className="font-mono">POST /api/facturacionpago/pago/&#123;id&#125;/aplicar</code>.
-                </CardDescription>
+                <CardDescription>Seleccione el medio de pago y distribuya el monto aplicado a la factura.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5 pt-6 sm:pt-6">
                 {/* Botones de Método de Pago como en el Wireframe 12 */}
                 <div>
                   <label className="mb-2 block text-xs font-semibold text-[#26352D]">
-                    Método de Pago Autorizado (<code className="font-mono">sp_consultar_medios_pago</code>)
+                    Método de pago autorizado
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     {(mediosPagoQuery.data ?? []).map((mp) => {
@@ -375,7 +367,7 @@ export function PagosMunicipalesPage() {
                 <FormField
                   label="Número de Comprobante Bancario / Recibo de Caja"
                   required
-                  hint="Requerido por dbo.sp_registrar_pago_municipal (máx. 50 caracteres)."
+                  hint="Ingrese el identificador del comprobante o recibo (máximo 50 caracteres)."
                 >
                   <Input
                     maxLength={50}
@@ -458,17 +450,15 @@ export function PagosMunicipalesPage() {
         open={openConfirmModal}
         onClose={() => setOpenConfirmModal(false)}
         title="Confirmar Registro y Aplicación de Pago Municipal"
-        description="Verifique los datos antes de impactar la contabilidad en SQL Server."
+        description="Verifique cuidadosamente los datos antes de registrar el cobro."
       >
         {selectedFactura && (
           <div className="space-y-4">
             <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
               <AlertTriangle className="h-4 w-4 shrink-0 text-amber-700 mt-0.5" />
               <span>
-                Esta operación ejecutará <code className="font-mono">sp_registrar_pago_municipal</code>{' '}
-                seguido de <code className="font-mono">sp_aplicar_pago_factura</code>. El trigger{' '}
-                <code className="font-mono">trg_actualizar_saldo_factura</code> recalculará el
-                saldo y estado de la factura.
+                Esta operación registrará el pago, lo aplicará a la factura seleccionada y
+                actualizará automáticamente su saldo pendiente.
               </span>
             </div>
 

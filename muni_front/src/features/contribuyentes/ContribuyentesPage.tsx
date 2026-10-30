@@ -225,11 +225,11 @@ export function ContribuyentesPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col" style={{ gap: '2rem' }}>
       <PageHeader
-        title="Padrón de Contribuyentes Municipales"
-        subtitle="Gestión de personas físicas, jurídicas y representantes legales (Wireframe #11, p. 119)"
-        badge="CU-01 a CU-05"
+        title="Padrón de contribuyentes"
+        subtitle="Administre personas físicas, organizaciones y representantes legales del cantón."
+        badge={`${padronQuery.data?.length ?? 0} registros`}
         icon={<Users className="h-6 w-6" />}
         actions={
           <>
@@ -254,43 +254,48 @@ export function ContribuyentesPage() {
         }
       />
 
-      {/* Tabs inspiradas en Wireframe 11 (Persona Física / Persona Jurídica / Padrón) */}
-      <div className="flex flex-wrap gap-2 border-b border-[#DCE3DE] pb-3">
+      <nav className="grid gap-3 rounded-2xl border border-[#DCE3DE] bg-white p-3 shadow-card sm:grid-cols-3" aria-label="Secciones del padrón">
         <Button
           variant={activeTab === 'padron' ? 'default' : 'outline'}
-          size="sm"
+          className="h-auto justify-start px-4 py-3"
           onClick={() => setActiveTab('padron')}
         >
-          <Users className="h-4 w-4" /> Padrón General ({padronQuery.data?.length ?? 0})
+          <Users className="h-4 w-4" /> Consultar padrón
         </Button>
         <Button
           variant={activeTab === 'fisico' ? 'default' : 'outline'}
-          size="sm"
+          className="h-auto justify-start px-4 py-3"
           onClick={() => setActiveTab('fisico')}
         >
-          <UserPlus className="h-4 w-4" /> + Registrar Persona Física
+          <UserPlus className="h-4 w-4" /> Registrar persona física
         </Button>
         <Button
           variant={activeTab === 'juridico' ? 'default' : 'outline'}
-          size="sm"
+          className="h-auto justify-start px-4 py-3"
           onClick={() => setActiveTab('juridico')}
         >
-          <Building className="h-4 w-4" /> + Registrar Persona Jurídica
+          <Building className="h-4 w-4" /> Registrar persona jurídica
         </Button>
-      </div>
+      </nav>
 
       {/* TAB 1: PADRÓN GENERAL Y BÚSQUEDA */}
       {activeTab === 'padron' && (
-        <div className="space-y-4">
-          <Card>
-            <CardContent className="pt-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex flex-col" style={{ gap: '1.5rem' }}>
+          <Card className="overflow-hidden">
+            <CardHeader className="border-b border-[#E5EBE7] bg-[#FAFCFB]">
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-4 w-4 text-[#164B35]" /> Buscar contribuyentes
+              </CardTitle>
+              <CardDescription>Consulte por identificación, nombre, razón social o correo electrónico.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 sm:pt-6">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px_auto] lg:items-end">
                 <div className="flex-1">
-                  <label className="mb-1 block text-xs font-semibold text-[#26352D]">
-                    Buscar en Padrón (<code className="font-mono">sp_consultar_contribuyente</code>)
+                  <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                    Criterio de búsqueda
                   </label>
                   <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#5A6B61]" />
+                    <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-[#607168]" />
                     <Input
                       placeholder="Cédula de identidad/jurídica, nombre, razón social o correo..."
                       value={criterioBusqueda}
@@ -302,9 +307,9 @@ export function ContribuyentesPage() {
                     />
                   </div>
                 </div>
-                <div className="w-full sm:w-48">
-                  <label className="mb-1 block text-xs font-semibold text-[#26352D]">
-                    Tipo de Persona
+                <div className="w-full">
+                  <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                    Tipo de persona
                   </label>
                   <Select
                     value={tipoFiltro}
@@ -348,27 +353,27 @@ export function ContribuyentesPage() {
               description="Intente con otro criterio de búsqueda o registre un nuevo contribuyente."
             />
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-[#DCE3DE] bg-white shadow-card">
-              <table className="w-full border-collapse text-left text-xs sm:text-sm">
+            <div className="overflow-x-auto rounded-2xl border border-[#DCE3DE] bg-white shadow-card" role="region" aria-label="Listado de contribuyentes" tabIndex={0}>
+              <table className="w-full min-w-[1180px] border-collapse text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] text-[11px] font-bold uppercase tracking-wider text-[#5A6B61]">
-                    <th className="px-4 py-3">ID</th>
-                    <th className="px-4 py-3">Tipo</th>
-                    <th className="px-4 py-3">Identificación</th>
-                    <th className="px-4 py-3">Nombre Completo / Razón Social</th>
-                    <th className="px-4 py-3">Contacto</th>
-                    <th className="px-4 py-3">Dirección Notificaciones</th>
-                    <th className="px-4 py-3">Registro</th>
-                    <th className="px-4 py-3">Estado</th>
-                    <th className="px-4 py-3 text-right">Acciones</th>
+                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                    <th scope="col" className="px-5 py-4">ID</th>
+                    <th scope="col" className="px-4 py-4">Tipo</th>
+                    <th scope="col" className="px-4 py-4">Identificación</th>
+                    <th scope="col" className="px-4 py-4">Nombre o razón social</th>
+                    <th scope="col" className="px-4 py-4">Contacto</th>
+                    <th scope="col" className="px-4 py-4">Dirección de notificaciones</th>
+                    <th scope="col" className="px-4 py-4">Registro</th>
+                    <th scope="col" className="px-4 py-4">Estado</th>
+                    <th scope="col" className="px-5 py-4 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#DCE3DE]">
                   {listaFiltrada.map((c) => {
                     const isJuridica = (c.tipoContribuyente || '').toUpperCase().includes('JUR');
                     return (
-                      <tr key={c.idContribuyente} className="hover:bg-[#E8F0EC]/40">
-                        <td className="px-4 py-3 font-mono font-bold text-[#164B35]">
+                      <tr key={c.idContribuyente} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
+                        <td className="px-5 py-4 font-mono font-bold text-[#164B35]">
                           #{c.idContribuyente}
                         </td>
                         <td className="px-4 py-3">

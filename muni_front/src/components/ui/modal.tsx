@@ -32,16 +32,19 @@ export function Modal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#071A12]/60 p-0 backdrop-blur-sm animate-in fade-in duration-150 sm:items-center sm:p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sigemun-modal-title"
         className={cn(
-          'relative w-full rounded-xl border border-[#DCE3DE] bg-white shadow-elevated max-h-[90vh] flex flex-col',
+          'relative flex max-h-[92vh] w-full flex-col rounded-t-2xl border border-[#DCE3DE] bg-white shadow-elevated sm:rounded-2xl',
           maxWidth
         )}
       >
         <div className="flex items-start justify-between border-b border-[#DCE3DE] px-6 py-4">
           <div>
-            <h2 className="text-lg font-bold text-[#164B35]">{title}</h2>
+            <h2 id="sigemun-modal-title" className="text-lg font-bold text-[#164B35]">{title}</h2>
             {description && <p className="mt-0.5 text-xs text-[#5A6B61]">{description}</p>}
           </div>
           <button
