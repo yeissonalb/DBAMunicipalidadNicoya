@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --sigemun-green: #164B35;
+    --sigemun-gold: #B6944A;
+    --sigemun-bg: #F5F7F4;
+    --sigemun-card: #FFFFFF;
+    --sigemun-text: #26352D;
+  }
+
+  body {
+    background-color: #F5F7F4;
+    color: #26352D;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Custom scrollbar institutional styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F5F7F4;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C4D0C9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #164B35;
+}
+
