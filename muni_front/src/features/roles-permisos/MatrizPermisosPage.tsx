@@ -138,11 +138,11 @@ export function MatrizPermisosPage() {
     rolesQuery.data?.find((r) => r.idRol === selectedRolId)?.nombreRol || `Rol #${selectedRolId}`;
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col" style={{ gap: '2rem' }}>
       <PageHeader
-        title="Centro de Seguridad y Matriz de Permisos (RBAC)"
-        subtitle="Configuración de autorizaciones por módulo y acción bajo el Principio de Mínimo Privilegio (Wireframe #7, p. 117)"
-        badge="CU-AS-03 a CU-AS-05"
+        title="Centro de seguridad y permisos"
+        subtitle="Configure las autorizaciones institucionales por rol, módulo y tipo de acción."
+        badge={`${rolesQuery.data?.length ?? 0} roles`}
         icon={<Sliders className="h-6 w-6" />}
         actions={
           <>
@@ -154,10 +154,10 @@ export function MatrizPermisosPage() {
               <RefreshCw className="h-4 w-4" /> Actualizar
             </Button>
             <Button variant="secondary" size="sm" onClick={() => setOpenPermisoModal(true)}>
-              <Plus className="h-4 w-4" /> Nuevo Permiso
+              <Plus className="h-4 w-4" /> Nuevo permiso
             </Button>
             <Button variant="outline" size="sm" onClick={() => setOpenRolModal(true)}>
-              <Plus className="h-4 w-4" /> Nuevo Rol
+              <Plus className="h-4 w-4" /> Nuevo rol
             </Button>
             <Button
               size="sm"
@@ -170,7 +170,7 @@ export function MatrizPermisosPage() {
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4" /> Guardar Cambios de Permisos (
+                  <Save className="h-4 w-4" /> Guardar cambios (
                   {pendingPermissionIds.length})
                 </>
               )}
@@ -180,26 +180,30 @@ export function MatrizPermisosPage() {
       />
 
       {/* Subnavegación superior (Wireframes 6 y 7) */}
-      <div className="flex items-center gap-2 border-b border-[#DCE3DE] pb-3">
-        <Button variant="outline" size="sm" asChild>
+      <nav className="grid gap-3 rounded-2xl border border-[#DCE3DE] bg-white p-3 shadow-card sm:grid-cols-2" aria-label="Administración de seguridad">
+        <Button variant="outline" className="h-auto justify-start px-4 py-3" asChild>
           <Link to="/seguridad/usuarios">
-            <UserCheck className="h-4 w-4" /> Usuarios y Roles
+            <UserCheck className="h-4 w-4" /> Usuarios y roles
           </Link>
         </Button>
-        <Button variant="default" size="sm" asChild>
+        <Button variant="default" className="h-auto justify-start px-4 py-3" asChild>
           <Link to="/seguridad/matriz">
-            <Sliders className="h-4 w-4" /> Matriz de Permisos (RBAC)
+            <Sliders className="h-4 w-4" /> Matriz de permisos
           </Link>
         </Button>
-      </div>
+      </nav>
 
       {/* Selector de Rol y Nota Técnica */}
-      <Card>
-        <CardContent className="pt-5">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="w-full sm:w-96">
-              <label className="mb-1 block text-xs font-bold text-[#164B35]">
-                Seleccionar Rol para Configurar Matriz (<code className="font-mono">sp_consultar_roles</code>)
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+          <CardTitle className="text-base">Rol en configuración</CardTitle>
+          <CardDescription>Seleccione el perfil institucional al que desea conceder permisos.</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-6 sm:pt-6">
+          <div className="grid gap-5 lg:grid-cols-[minmax(280px,420px)_minmax(0,1fr)] lg:items-center">
+            <div className="w-full">
+              <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                Rol institucional
               </label>
               <Select
                 value={selectedRolId}
@@ -216,12 +220,11 @@ export function MatrizPermisosPage() {
               </Select>
             </div>
 
-            <div className="flex items-start gap-2 rounded-lg border border-[#B6944A]/40 bg-[#FBF7EE] px-4 py-2.5 text-xs text-[#967736] max-w-xl">
-              <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 rounded-xl border border-[#B6944A]/40 bg-[#FBF7EE] p-4 text-sm text-[#735A26]">
+              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
               <span>
-                <strong>Principio de Mínimo Privilegio:</strong> Marque los permisos adicionales que
-                desea conceder a <strong>{activeRolName}</strong> y presione{' '}
-                <em>Guardar Cambios de Permisos</em> (<code className="font-mono">POST /api/rolpermiso/asignar-permiso</code>).
+                <strong>Principio de mínimo privilegio:</strong> conceda únicamente las acciones
+                necesarias para <strong>{activeRolName}</strong> y guarde los cambios pendientes.
               </span>
             </div>
           </div>
@@ -234,19 +237,16 @@ export function MatrizPermisosPage() {
       ) : permisosQuery.isError ? (
         <ErrorState error={permisosQuery.error} onRetry={() => permisosQuery.refetch()} />
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Matriz de Autorizaciones — {activeRolName}</CardTitle>
-            <CardDescription>
-              Catálogo oficial de permisos (<code className="font-mono">sp_consultar_permisos</code>)
-              cruzado con <code className="font-mono">vw_usuarios_roles_permisos</code>.
-            </CardDescription>
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+            <CardTitle>Matriz de autorizaciones · {activeRolName}</CardTitle>
+            <CardDescription>Permisos disponibles por módulo y acción institucional.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left text-xs sm:text-sm">
+          <CardContent className="p-0 sm:p-0">
+            <div className="overflow-x-auto" role="region" aria-label="Matriz de autorizaciones" tabIndex={0}>
+              <table className="w-full min-w-[960px] border-collapse text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] text-[11px] font-bold uppercase tracking-wider text-[#5A6B61]">
+                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
                     <th className="px-4 py-3">Módulo del Sistema</th>
                     {actionsList.map((act) => (
                       <th key={act} className="px-4 py-3 text-center">
@@ -257,7 +257,7 @@ export function MatrizPermisosPage() {
                 </thead>
                 <tbody className="divide-y divide-[#DCE3DE]">
                   {modulesList.map((mod) => (
-                    <tr key={mod} className="hover:bg-[#E8F0EC]/40">
+                    <tr key={mod} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
                       <td className="px-4 py-3 font-bold text-[#26352D]">{mod}</td>
                       {actionsList.map((act) => {
                         const permId = permLookup.get(`${mod}::${act}`);
@@ -276,7 +276,7 @@ export function MatrizPermisosPage() {
                             {alreadyGranted ? (
                               <span
                                 className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800"
-                                title={`Permiso #${permId} ya concedido en BD`}
+                                title="Permiso concedido"
                               >
                                 <CheckCircle2 className="h-3.5 w-3.5" /> Activo
                               </span>
@@ -305,10 +305,8 @@ export function MatrizPermisosPage() {
             <div className="mt-4 flex items-center gap-2 text-xs text-[#5A6B61]">
               <Info className="h-4 w-4 text-[#164B35]" />
               <span>
-                Nota: El backend expone <code className="font-mono">sp_asignar_permiso_rol</code>{' '}
-                para conceder permisos; no existe endpoint de revocación (<code className="font-mono">DELETE</code>)
-                en <code className="font-mono">RolPermisoController</code> (documentado en{' '}
-                <code className="font-mono">PENDIENTES_BACKEND.md</code>).
+                Actualmente esta pantalla permite conceder permisos adicionales. La revocación de
+                permisos aún no está disponible desde la aplicación.
               </span>
             </div>
           </CardContent>
@@ -316,17 +314,16 @@ export function MatrizPermisosPage() {
       )}
 
       {/* Vista Detallada de la Matriz Usuario-Rol-Permiso */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            Vista Consolidada de Accesos (<code className="font-mono">vw_usuarios_roles_permisos</code>)
-          </CardTitle>
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+          <CardTitle className="text-base">Accesos asignados</CardTitle>
+          <CardDescription>Vista consolidada de usuarios, roles y permisos efectivos.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="max-h-80 overflow-y-auto rounded-lg border border-[#DCE3DE]">
-            <table className="w-full text-left text-xs">
+        <CardContent className="p-0 sm:p-0">
+          <div className="max-h-96 overflow-auto" role="region" aria-label="Accesos asignados" tabIndex={0}>
+            <table className="w-full min-w-[900px] text-left text-sm">
               <thead>
-                <tr className="sticky top-0 bg-[#F5F7F4] border-b border-[#DCE3DE] font-bold uppercase text-[#5A6B61]">
+                <tr className="sticky top-0 border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
                   <th className="px-3 py-2">Usuario</th>
                   <th className="px-3 py-2">Funcionario</th>
                   <th className="px-3 py-2">Departamento</th>
@@ -337,7 +334,7 @@ export function MatrizPermisosPage() {
               </thead>
               <tbody className="divide-y divide-[#DCE3DE]">
                 {(matrizQuery.data ?? []).map((row, idx) => (
-                  <tr key={`${row.idUsuario}-${row.idRol}-${row.idPermiso}-${idx}`}>
+                  <tr key={`${row.idUsuario}-${row.idRol}-${row.idPermiso}-${idx}`} className="even:bg-[#FAFCFB] hover:bg-[#E8F0EC]/55">
                     <td className="px-3 py-2 font-mono font-semibold text-[#164B35]">
                       {row.userName}
                     </td>
@@ -362,8 +359,8 @@ export function MatrizPermisosPage() {
       <Modal
         open={openRolModal}
         onClose={() => setOpenRolModal(false)}
-        title="Registrar Nuevo Rol del Sistema"
-        description="Ejecuta POST /api/rolpermiso/rol (dbo.sp_registrar_rol)"
+        title="Registrar nuevo rol"
+        description="Cree un perfil institucional para agrupar permisos."
       >
         <div className="space-y-4">
           <FormField label="Nombre del Rol" required>
@@ -392,8 +389,8 @@ export function MatrizPermisosPage() {
       <Modal
         open={openPermisoModal}
         onClose={() => setOpenPermisoModal(false)}
-        title="Registrar Nuevo Permiso Modular"
-        description="Ejecuta POST /api/rolpermiso/permiso (dbo.sp_registrar_permiso)"
+        title="Registrar nuevo permiso"
+        description="Defina el módulo y la acción que podrá autorizarse a los roles."
       >
         <div className="space-y-4">
           <FormField label="Módulo del Sistema" required>

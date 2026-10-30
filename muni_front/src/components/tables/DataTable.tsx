@@ -24,12 +24,12 @@ export function DataTable<T>({
   onRowClick,
 }: DataTableProps<T>) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-[#DCE3DE] bg-white shadow-card">
+    <div className="overflow-x-auto rounded-2xl border border-[#DCE3DE] bg-white shadow-card" role="region" aria-label="Tabla de resultados" tabIndex={0}>
       <table className="w-full border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] text-[11px] font-bold uppercase tracking-wider text-[#5A6B61]">
             {columns.map((col) => (
-              <th key={col.key} className={cn('px-4 py-3', col.className)}>
+              <th key={col.key} scope="col" className={cn('whitespace-nowrap px-4 py-3.5', col.className)}>
                 {col.header}
               </th>
             ))}
@@ -51,7 +51,7 @@ export function DataTable<T>({
                 key={rowKey(row, idx)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 className={cn(
-                  'transition-colors hover:bg-[#E8F0EC]/40',
+                  'transition-colors even:bg-[#FAFCFB] hover:bg-[#E8F0EC]/55',
                   onRowClick && 'cursor-pointer'
                 )}
               >

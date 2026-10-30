@@ -113,11 +113,11 @@ export function SeguimientoExpedientePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col" style={{ gap: '2rem' }}>
       <PageHeader
-        title="Seguimiento y Trazabilidad de Expedientes"
-        subtitle="Monitoreo de etapas, línea de tiempo histórica, archivos adjuntos y actualización de estado (Wireframe #10, p. 118)"
-        badge="CU-TR-06 y CU-TR-08"
+        title="Seguimiento de expedientes"
+        subtitle="Consulte el avance, historial, documentos y estado actual de cada trámite municipal."
+        badge={`${listaFiltrada.length} expedientes`}
         icon={<FolderKanban className="h-6 w-6" />}
         actions={
           <>
@@ -141,15 +141,21 @@ export function SeguimientoExpedientePage() {
       />
 
       {/* Barra de Búsqueda */}
-      <Card>
-        <CardContent className="pt-5">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Search className="h-4 w-4 text-[#164B35]" /> Buscar expedientes
+          </CardTitle>
+          <CardDescription>Filtre la bandeja por expediente, tipo de trámite o contribuyente.</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-6 sm:pt-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold text-[#26352D]">
-                Buscar por Número de Expediente, Trámite o Contribuyente
+              <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                Expediente, trámite o contribuyente
               </label>
               <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#5A6B61]" />
+                <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-[#607168]" />
                 <Input
                   placeholder="Ej. EXP-NIC-2026-0001 o Visado..."
                   value={busquedaExpediente}
@@ -159,8 +165,8 @@ export function SeguimientoExpedientePage() {
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[#26352D]">
-                Filtrar por ID Contribuyente
+              <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                ID del contribuyente
               </label>
               <Input
                 type="number"
@@ -179,20 +185,16 @@ export function SeguimientoExpedientePage() {
       ) : seguimientoQuery.isError ? (
         <ErrorState error={seguimientoQuery.error} onRetry={() => seguimientoQuery.refetch()} />
       ) : showBitacoraGlobal ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Bitácora Global de Cambios de Estado (<code className="font-mono">vw_historial_tramites_detallado</code>)
-            </CardTitle>
-            <CardDescription>
-              Todos los movimientos de expedientes registrados por el trigger SQL.
-            </CardDescription>
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+            <CardTitle>Bitácora global de cambios</CardTitle>
+            <CardDescription>Movimientos y transiciones registrados para todos los expedientes.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+          <CardContent className="p-0 sm:p-0">
+            <div className="overflow-x-auto" role="region" aria-label="Bitácora global" tabIndex={0}>
+              <table className="w-full min-w-[980px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
+                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
                     <th className="px-3 py-2.5">Fecha Cambio</th>
                     <th className="px-3 py-2.5">Expediente</th>
                     <th className="px-3 py-2.5">Trámite</th>
@@ -203,7 +205,7 @@ export function SeguimientoExpedientePage() {
                 </thead>
                 <tbody className="divide-y divide-[#DCE3DE]">
                   {(bitacoraDetalladaQuery.data ?? []).map((row) => (
-                    <tr key={row.idHistorialTramite} className="hover:bg-[#E8F0EC]/40">
+                    <tr key={row.idHistorialTramite} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         {formatDateTime(row.fechaCambio)}
                       </td>
@@ -230,10 +232,10 @@ export function SeguimientoExpedientePage() {
       ) : (
         <>
           {/* Tabla de Expedientes para seleccionar */}
-          <div className="overflow-x-auto rounded-xl border border-[#DCE3DE] bg-white shadow-card">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto rounded-2xl border border-[#DCE3DE] bg-white shadow-card" role="region" aria-label="Bandeja de expedientes" tabIndex={0}>
+            <table className="w-full min-w-[1100px] text-left text-sm">
               <thead>
-                <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
+                <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
                   <th className="px-4 py-3">Expediente</th>
                   <th className="px-4 py-3">Tipo de Trámite</th>
                   <th className="px-4 py-3">Contribuyente</th>
@@ -251,7 +253,7 @@ export function SeguimientoExpedientePage() {
                       key={t.idTramite}
                       onClick={() => setSelectedIdTramite(t.idTramite)}
                       className={`cursor-pointer transition-colors ${
-                        isSelected ? 'bg-[#E8F0EC]' : 'hover:bg-[#F5F7F4]'
+                        isSelected ? 'bg-[#E8F0EC] shadow-[inset_4px_0_0_#164B35]' : 'even:bg-[#FAFCFB] hover:bg-[#F5F7F4]'
                       }`}
                     >
                       <td className="px-4 py-3 font-mono font-bold text-[#164B35]">
@@ -288,15 +290,15 @@ export function SeguimientoExpedientePage() {
 
           {/* Detalle del Expediente Seleccionado (Wireframe 10: Stepper + 3 Paneles Inferiores) */}
           {activeTramite && (
-            <div className="space-y-6">
+            <div className="flex flex-col" style={{ gap: '2rem' }}>
               {/* Stepper Horizontal del Wireframe 10 */}
-              <Card>
-                <CardHeader className="pb-3">
+              <Card className="overflow-hidden">
+                <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
                   <CardTitle className="text-base">
-                    Trazabilidad de Etapas — Expediente {activeTramite.numeroExpediente}
+                    Ruta del expediente · {activeTramite.numeroExpediente}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6 sm:pt-6">
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                     {STEPPER_STATES.map((step) => {
                       const currentCode = activeTramite.codigoEstado || 'REC';
@@ -326,16 +328,14 @@ export function SeguimientoExpedientePage() {
               </Card>
 
               {/* 3 Columnas Inferiores del Wireframe 10 */}
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+              <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: '2rem' }}>
                 {/* Columna 1 (5 cols): Historial de Cambio (Línea de Tiempo) */}
-                <Card className="lg:col-span-5">
-                  <CardHeader>
-                    <CardTitle className="text-base">Historial de Cambio</CardTitle>
-                    <CardDescription>
-                      Fuente: <code className="font-mono">GET /api/tramite/{activeTramite.idTramite}/historial</code>
-                    </CardDescription>
+                <Card className="h-full overflow-hidden">
+                  <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+                    <CardTitle className="text-base">Historial de cambios</CardTitle>
+                    <CardDescription>Movimientos registrados para este expediente.</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-6 sm:pt-6">
                     {!historialIndividualQuery.data ||
                     historialIndividualQuery.data.length === 0 ? (
                       <p className="text-xs text-[#5A6B61]">
@@ -363,12 +363,12 @@ export function SeguimientoExpedientePage() {
                 </Card>
 
                 {/* Columna 2 (3 cols): Archivos Adjuntos */}
-                <Card className="lg:col-span-3">
-                  <CardHeader>
-                    <CardTitle className="text-base">Archivos Adjuntos</CardTitle>
+                <Card className="h-full overflow-hidden">
+                  <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+                    <CardTitle className="text-base">Archivos adjuntos</CardTitle>
                     <CardDescription>Documentos del expediente</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-3 pt-6 sm:pt-6">
                     <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#DCE3DE] bg-[#F5F7F4] p-4 text-center hover:border-[#164B35]">
                       <Upload className="h-5 w-5 text-[#164B35]" />
                       <span className="mt-1.5 text-xs font-semibold text-[#164B35]">
@@ -411,22 +411,18 @@ export function SeguimientoExpedientePage() {
                       ))}
 
                     <p className="text-[11px] text-[#5A6B61]">
-                      <FileText className="mr-1 inline h-3 w-3" />
-                      Nota: El backend almacena archivos en{' '}
-                      <code className="font-mono">wwwroot/uploads/tramites/</code>.
+                      <FileText className="mr-1 inline h-3 w-3" /> Los documentos se vinculan de forma segura al expediente.
                     </p>
                   </CardContent>
                 </Card>
 
                 {/* Columna 3 (4 cols): Actualizar Estado del Trámite */}
-                <Card className="lg:col-span-4 border-t-4 border-t-[#B6944A]">
-                  <CardHeader>
-                    <CardTitle className="text-base">Actualizar Estado del Trámite</CardTitle>
-                    <CardDescription>
-                      Registra avance en <code className="font-mono">sp_cambiar_estado_tramite</code>
-                    </CardDescription>
+                <Card className="h-full overflow-hidden border-[#D7C28E]">
+                  <CardHeader className="border-b border-[#E9DFC4] bg-[#FBF7EE]">
+                    <CardTitle className="text-base">Actualizar estado</CardTitle>
+                    <CardDescription>Registre el avance y las observaciones de la gestión.</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-4 pt-6 sm:pt-6">
                     <FormField label="Nuevo Estado" required>
                       <Select
                         value={nuevoEstado}

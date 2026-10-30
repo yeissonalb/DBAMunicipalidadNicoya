@@ -142,13 +142,13 @@ export function RevisionExpedientePage() {
     : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col" style={{ gap: '2rem' }}>
       <PageHeader
-        title={`Revisión y Resolución de Expedientes — ${
-          activeTramite?.numeroExpediente ?? ''
-        } (${activeTramite?.nombreTramite ?? ''})`}
-        subtitle="Evaluación técnica de requisitos, transición de estado y resolución definitiva (Wireframe #9, p. 118)"
-        badge="CU-TR-06 y CU-TR-07"
+        title="Revisión y resolución de expedientes"
+        subtitle={activeTramite
+          ? `${activeTramite.numeroExpediente} · ${activeTramite.nombreTramite}`
+          : 'Seleccione un expediente para comenzar la revisión.'}
+        badge={activeTramite?.nombreEstado || 'En revisión'}
         icon={<ClipboardCheck className="h-6 w-6" />}
         actions={
           <Button
@@ -162,12 +162,16 @@ export function RevisionExpedientePage() {
       />
 
       {/* Selector de Expediente y Resumen Superior del Wireframe 9 */}
-      <Card className="border-l-4 border-l-[#164B35]">
-        <CardContent className="pt-5">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-center">
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+          <CardTitle className="text-base">Expediente en revisión</CardTitle>
+          <CardDescription>Seleccione un elemento de la bandeja para consultar su información y continuar la gestión.</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-6 sm:pt-6">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:items-end">
             <div className="lg:col-span-4">
-              <label className="mb-1 block text-xs font-bold text-[#164B35]">
-                Seleccionar Expediente en Bandeja
+              <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                Seleccionar expediente
               </label>
               <Select
                 value={activeTramite?.idTramite ?? ''}
@@ -183,21 +187,21 @@ export function RevisionExpedientePage() {
 
             {activeTramite && (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:col-span-8">
-                <div className="rounded-lg bg-[#F5F7F4] p-3">
-                  <p className="text-[11px] text-[#5A6B61]">Ciudadano / Contribuyente</p>
-                  <p className="mt-0.5 truncate text-xs font-bold text-[#26352D]">
+                <div className="rounded-xl border border-[#E1E8E4] bg-[#F7FAF8] p-4">
+                  <p className="section-label">Contribuyente</p>
+                  <p className="mt-1.5 truncate text-sm font-bold text-[#26352D]">
                     {activeTramite.contribuyente || `ID #${activeTramite.idContribuyente}`}
                   </p>
                 </div>
-                <div className="rounded-lg bg-[#F5F7F4] p-3">
-                  <p className="text-[11px] text-[#5A6B61]">Finca Asociada</p>
-                  <p className="mt-0.5 font-mono text-xs font-bold text-[#164B35]">
+                <div className="rounded-xl border border-[#E1E8E4] bg-[#F7FAF8] p-4">
+                  <p className="section-label">Finca asociada</p>
+                  <p className="mt-1.5 font-mono text-sm font-bold text-[#164B35]">
                     {activeTramite.numeroFinca || 'No aplica'}
                   </p>
                 </div>
-                <div className="rounded-lg bg-[#F5F7F4] p-3">
-                  <p className="text-[11px] text-[#5A6B61]">Estado Actual</p>
-                  <div className="mt-0.5 flex items-center gap-1.5">
+                <div className="rounded-xl border border-[#E1E8E4] bg-[#F7FAF8] p-4">
+                  <p className="section-label">Estado actual</p>
+                  <div className="mt-1.5 flex items-center gap-1.5">
                     <Badge
                       variant={
                         activeTramite.codigoEstado === 'APR'
@@ -211,8 +215,8 @@ export function RevisionExpedientePage() {
                     </Badge>
                   </div>
                 </div>
-                <div className="rounded-lg bg-[#F5F7F4] p-3">
-                  <p className="text-[11px] text-[#5A6B61]">Plazo SLA</p>
+                <div className="rounded-xl border border-[#E1E8E4] bg-[#F7FAF8] p-4">
+                  <p className="section-label">Plazo de atención</p>
                   <p
                     className={`mt-0.5 text-xs font-bold ${
                       slaRestante < 0 ? 'text-red-600' : 'text-[#164B35]'
@@ -232,11 +236,11 @@ export function RevisionExpedientePage() {
 
       {/*Dos Columnas del Wireframe 9: Izquierda Requisitos e Historial, Derecha Acción Operativa */}
       {activeTramite && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: '2rem' }}>
           {/* Izquierda (7 cols): Lista de Chequeo de Requisitos y Bitácora */}
-          <div className="space-y-6 lg:col-span-7">
-            <Card>
-              <CardHeader>
+          <div className="contents">
+            <Card className="order-1 h-full overflow-hidden lg:col-start-1 lg:row-start-1">
+              <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
                 <CardTitle className="flex items-center gap-2">
                   <FileCheck className="h-5 w-5 text-[#164B35]" /> Verificación de Requisitos del
                   Expediente
@@ -247,7 +251,7 @@ export function RevisionExpedientePage() {
                   {formatDate(activeTramite.fechaSolicitud)}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 pt-6 sm:pt-6">
                 {!requisitosQuery.data || requisitosQuery.data.length === 0 ? (
                   <p className="text-xs text-[#5A6B61]">
                     No hay requisitos parametrizados para este tipo de trámite.
@@ -290,13 +294,13 @@ export function RevisionExpedientePage() {
             </Card>
 
             {/* Bitácora resumida del expediente */}
-            <Card>
-              <CardHeader className="pb-2">
+            <Card className="order-3 h-full overflow-hidden lg:col-start-1 lg:row-start-2">
+              <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
                 <CardTitle className="text-base">
                   Historial de Movimientos del Expediente #{activeTramite.idTramite}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6 sm:pt-6">
                 {!historialQuery.data || historialQuery.data.length === 0 ? (
                   <p className="text-xs text-[#5A6B61]">Sin movimientos registrados.</p>
                 ) : (
@@ -324,16 +328,13 @@ export function RevisionExpedientePage() {
           </div>
 
           {/* Derecha (5 cols): Acción Operativa — Actualizar Estado y Resolución Final */}
-          <div className="space-y-6 lg:col-span-5">
-            <Card className="border-t-4 border-t-[#164B35]">
-              <CardHeader>
-                <CardTitle>Acción Operativa: Actualizar Estado del Trámite</CardTitle>
-                <CardDescription>
-                  Ejecuta <code className="font-mono">POST /api/tramite/{activeTramite.idTramite}/estado</code>{' '}
-                  y dispara <code className="font-mono">trg_historial_estado_tramite</code>.
-                </CardDescription>
+          <div className="contents">
+            <Card className="order-2 h-full overflow-hidden border-[#BBD3C6] lg:col-start-2 lg:row-start-1">
+              <CardHeader className="border-b border-[#DCE3DE] bg-[#F2F7F4]">
+                <CardTitle>Actualizar estado del trámite</CardTitle>
+                <CardDescription>Registre el resultado de la revisión y avance el expediente a su siguiente etapa.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5 pt-6 sm:pt-6">
                 <FormField label="Seleccionar Siguiente Estado" required>
                   <Select
                     value={codigoEstadoNuevo}
@@ -381,18 +382,14 @@ export function RevisionExpedientePage() {
             </Card>
 
             {/* Panel de Resolución Final y Cierre (CU-TR-07) */}
-            <Card className="border-t-4 border-t-[#B6944A]">
-              <CardHeader>
+            <Card className="order-4 flex h-full flex-col overflow-hidden border-[#D7C28E] lg:col-start-2 lg:row-start-2">
+              <CardHeader className="border-b border-[#E9DFC4] bg-[#FBF7EE]">
                 <CardTitle className="flex items-center gap-2">
-                  <Gavel className="h-5 w-5 text-[#967736]" /> Emitir Resolución Final y Cerrar
-                  Expediente
+                  <Gavel className="h-5 w-5 text-[#967736]" /> Resolución final
                 </CardTitle>
-                <CardDescription>
-                  Ejecuta <code className="font-mono">POST /api/tramite/{activeTramite.idTramite}/resolucion</code>{' '}
-                  (<code className="font-mono">sp_registrar_resolucion_tramite</code>).
-                </CardDescription>
+                <CardDescription>Apruebe o rechace la solicitud y cierre formalmente el expediente.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="flex flex-1 flex-col gap-5 pt-6 sm:pt-6">
                 {activeTramite.esEstadoFinal ? (
                   <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
                     Este expediente ya se encuentra cerrado con estado final{' '}
@@ -400,28 +397,54 @@ export function RevisionExpedientePage() {
                     {formatDate(activeTramite.fechaCierre)}).
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      type="button"
-                      variant="default"
-                      onClick={() => {
-                        setResolucionTipo('APR');
-                        setOpenResolucionModal(true);
-                      }}
-                    >
-                      <CheckCircle2 className="h-4 w-4" /> Aprobar (APR)
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={() => {
-                        setResolucionTipo('RECH');
-                        setOpenResolucionModal(true);
-                      }}
-                    >
-                      <XCircle className="h-4 w-4" /> Rechazar (RECH)
-                    </Button>
-                  </div>
+                  <>
+                    <div className="flex flex-1 items-center">
+                      <div className="w-full rounded-2xl border border-[#E9DFC4] bg-[#FFFCF5] p-5">
+                        <p className="text-sm font-bold text-[#26352D]">Antes de emitir la resolución</p>
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                          <div className="rounded-xl bg-white p-3 ring-1 ring-[#E9DFC4]">
+                            <p className="section-label">Estado actual</p>
+                            <p className="mt-1 text-sm font-semibold text-[#164B35]">
+                              {activeTramite.nombreEstado || 'En revisión'}
+                            </p>
+                          </div>
+                          <div className="rounded-xl bg-white p-3 ring-1 ring-[#E9DFC4]">
+                            <p className="section-label">Requisitos</p>
+                            <p className="mt-1 text-sm font-semibold text-[#164B35]">
+                              {requisitosQuery.data?.length ?? 0} configurados
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-[#735A26]">
+                          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                          <span>La decisión cerrará el expediente y quedará registrada en su historial.</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => {
+                          setResolucionTipo('APR');
+                          setOpenResolucionModal(true);
+                        }}
+                      >
+                        <CheckCircle2 className="h-4 w-4" /> Aprobar (APR)
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => {
+                          setResolucionTipo('RECH');
+                          setOpenResolucionModal(true);
+                        }}
+                      >
+                        <XCircle className="h-4 w-4" /> Rechazar (RECH)
+                      </Button>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -436,14 +459,13 @@ export function RevisionExpedientePage() {
         title={`Confirmar Resolución Final (${
           resolucionTipo === 'APR' ? 'APROBADO' : 'RECHAZADO'
         })`}
-        description={`Expediente ${activeTramite?.numeroExpediente ?? ''} — Esta operación cierra formalmente el trámite en la base de datos.`}
+        description={`Expediente ${activeTramite?.numeroExpediente ?? ''} — Esta acción cerrará formalmente el trámite.`}
       >
         <div className="space-y-4">
           <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-700 mt-0.5" />
             <span>
-              Al confirmar, <code className="font-mono">sp_registrar_resolucion_tramite</code>{' '}
-              establecerá la fecha de cierre definitiva del expediente.
+              Al confirmar, se registrará la resolución y la fecha de cierre definitiva del expediente.
             </span>
           </div>
 

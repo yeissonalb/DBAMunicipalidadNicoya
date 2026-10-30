@@ -197,48 +197,48 @@ export function RadicacionTramitePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col" style={{ gap: '2rem' }}>
       <PageHeader
-        title="Radicación de Trámites — Nueva Radicación de Expediente"
-        subtitle="Apertura de expediente municipal, verificación de requisitos y carga de documentación adjunta (Wireframe #8, p. 117)"
-        badge="CU-TR-03 a CU-TR-05"
+        title="Nueva radicación de trámite"
+        subtitle="Registre el expediente, seleccione al contribuyente y adjunte la documentación requerida."
+        badge={radicadoIdTramite ? `Expediente #${radicadoIdTramite}` : 'Nuevo expediente'}
         icon={<FilePlus2 className="h-6 w-6" />}
       />
 
       {!canReadPadron && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-sky-200 bg-sky-50 p-3.5 text-xs text-sky-900">
-          <Info className="h-4 w-4 shrink-0 text-sky-700 mt-0.5" />
+        <div className="flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-5 text-sm text-sky-900 shadow-card">
+          <Info className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" />
           <div>
-            <strong>Nota de permisos del rol Analista:</strong> En{' '}
-            <code className="font-mono">muni-back</code>, <code className="font-mono">ContribuyenteController</code>{' '}
-            está restringido a <code className="font-mono">Admin</code> y <code className="font-mono">Cajero</code>.
-            El selector de contribuyentes carga automáticamente los propietarios desde{' '}
-            <code className="font-mono">vw_inmuebles_propietarios</code> y permite indicar cualquier{' '}
-            <code className="font-mono">idContribuyente</code> directamente.
+            <p className="font-semibold">Selección de contribuyente según permisos</p>
+            <p className="mt-1 leading-relaxed text-sky-800">
+              Para este perfil, el selector utiliza los propietarios disponibles en el padrón de
+              inmuebles. También puede ingresar directamente el ID de un contribuyente autorizado.
+            </p>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: '2rem' }}>
         {/* Columna Izquierda (7 cols): Paso 1 - Datos del trámite y contribuyente */}
-        <div className="space-y-6 lg:col-span-7">
-          <Card>
-            <CardHeader className="border-b border-[#DCE3DE] bg-[#F5F7F4]/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Paso 1: Datos del Trámite y Contribuyente</CardTitle>
-                  <CardDescription>
-                    Ejecuta <code className="font-mono">POST /api/tramite</code> (
-                    <code className="font-mono">dbo.sp_registrar_tramite</code>). El funcionario se
-                    asigna automáticamente desde el JWT.
-                  </CardDescription>
+        <div className="contents">
+          <Card className="overflow-hidden lg:col-span-2">
+            <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E8F0EC] font-bold text-[#164B35]">1</div>
+                  <div>
+                    <CardTitle>Datos del trámite y del contribuyente</CardTitle>
+                    <CardDescription className="mt-1">
+                      Complete la información principal para crear el expediente municipal.
+                    </CardDescription>
+                  </div>
                 </div>
                 {radicadoIdTramite && (
                   <Badge variant="success">Radicado ID #{radicadoIdTramite}</Badge>
                 )}
               </div>
             </CardHeader>
-            <CardContent className="pt-5">
+            <CardContent className="pt-6 sm:pt-6">
               <form
                 onSubmit={form.handleSubmit((v) => radicarMut.mutate(v))}
                 className="space-y-4"
@@ -347,7 +347,7 @@ export function RadicacionTramitePage() {
                 {/* Finca Relacionada */}
                 <FormField
                   label="Finca / Bien Inmueble Relacionado (Opcional)"
-                  hint="Cargado automáticamente para el contribuyente seleccionado (sp_consultar_inmuebles_por_contribuyente)"
+                  hint="Se muestran los inmuebles asociados al contribuyente seleccionado."
                   error={form.formState.errors.idInmueble?.message}
                 >
                   <Select {...form.register('idInmueble')}>
@@ -382,7 +382,7 @@ export function RadicacionTramitePage() {
                   <Button type="submit" disabled={radicarMut.isPending}>
                     {radicarMut.isPending ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" /> Radicando en SQL Server...
+                        <Loader2 className="h-4 w-4 animate-spin" /> Radicando expediente...
                       </>
                     ) : (
                       <>
@@ -396,16 +396,12 @@ export function RadicacionTramitePage() {
           </Card>
 
           {/* Requisitos del Trámite Seleccionado */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">
-                Requisitos Configurados para el Tipo de Trámite
-              </CardTitle>
-              <CardDescription>
-                Fuente: <code className="font-mono">GET /api/tipotramite/{watchedTipoTramite}/requisitos</code>
-              </CardDescription>
+          <Card className="overflow-hidden">
+            <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+              <CardTitle className="text-base">Requisitos del trámite</CardTitle>
+              <CardDescription>Documentos configurados para el tipo de trámite seleccionado.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6 sm:pt-6">
               {requisitosPorTipoQuery.isLoading ? (
                 <p className="text-xs text-[#5A6B61]">Consultando requisitos...</p>
               ) : !requisitosPorTipoQuery.data || requisitosPorTipoQuery.data.length === 0 ? (
@@ -453,19 +449,22 @@ export function RadicacionTramitePage() {
         </div>
 
         {/* Columna Derecha (5 cols): Paso 2 - Documentación Adjunta y Requisitos Presentados */}
-        <div className="space-y-6 lg:col-span-5">
-          <Card className="border-t-4 border-t-[#164B35]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5 text-[#164B35]" /> Paso 2: Documentación Adjunta
-              </CardTitle>
-              <CardDescription>
-                Sube archivos reales en <code className="font-mono">multipart/form-data</code> a{' '}
-                <code className="font-mono">POST /api/tramite/requisito-presentado</code> o{' '}
-                <code className="font-mono">POST /api/tramite/adjuntar-archivo</code> (máx. 10 MB).
-              </CardDescription>
+        <div className="contents">
+          <Card className="overflow-hidden">
+            <CardHeader className="border-b border-[#DCE3DE] bg-[#F2F7F4]">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white font-bold text-[#164B35] shadow-sm">2</div>
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Upload className="h-5 w-5 text-[#164B35]" /> Documentación adjunta
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Acredite requisitos o agregue anexos al expediente. Tamaño máximo: 10 MB.
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5 pt-6 sm:pt-6">
               <FormField
                 label="ID Trámite Destino"
                 hint="Se completa automáticamente al radicar el expediente o puede ingresar un ID existente."
@@ -505,9 +504,7 @@ export function RadicacionTramitePage() {
                   <span className="mt-2 text-xs font-bold text-[#164B35]">
                     Acreditar Requisito
                   </span>
-                  <span className="mt-0.5 text-[10px] text-[#5A6B61]">
-                    POST /requisito-presentado
-                  </span>
+                  <span className="mt-0.5 text-[11px] text-[#5A6B61]">Documento de requisito</span>
                   <input
                     type="file"
                     className="hidden"
@@ -527,9 +524,7 @@ export function RadicacionTramitePage() {
                   <span className="mt-2 text-xs font-bold text-[#967736]">
                     Adjuntar Anexo General
                   </span>
-                  <span className="mt-0.5 text-[10px] text-[#5A6B61]">
-                    POST /adjuntar-archivo
-                  </span>
+                  <span className="mt-0.5 text-[11px] text-[#5A6B61]">Documento complementario</span>
                   <input
                     type="file"
                     className="hidden"

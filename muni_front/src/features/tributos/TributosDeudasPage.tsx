@@ -168,11 +168,11 @@ export function TributosDeudasPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col" style={{ gap: '2rem' }}>
       <PageHeader
-        title="Gestión de Tributos, Deudas y Estado de Cuenta"
-        subtitle="Catálogo de tributos, cargos municipales, recálculo de intereses en BD y emisión de facturas (CU-PC-01 a CU-PC-06)"
-        badge="TributoDeudaController"
+        title="Tributos, deudas y estado de cuenta"
+        subtitle="Administre cargos municipales, saldos pendientes, recargos y facturación de los contribuyentes."
+        badge={`${tiposTributoQuery.data?.length ?? 0} tributos activos`}
         icon={<Scale className="h-6 w-6" />}
         actions={
           <>
@@ -187,24 +187,29 @@ export function TributosDeudasPage() {
               <RefreshCw className="h-4 w-4" /> Actualizar
             </Button>
             <Button size="sm" onClick={() => setOpenDeudaModal(true)}>
-              <Plus className="h-4 w-4" /> Registrar Deuda Municipal
+              <Plus className="h-4 w-4" /> Registrar deuda
             </Button>
           </>
         }
       />
 
       {/* Catálogo de Tipos de Tributo (sp_consultar_tipos_tributo) */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section>
+        <div className="mb-4">
+          <p className="section-label">Catálogo tributario</p>
+          <h2 className="mt-1 text-lg font-bold text-[#26352D]">Tributos municipales</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {(tiposTributoQuery.data ?? []).map((t) => (
-          <Card key={t.idTipoTributo} className="border-t-4 border-t-[#164B35]">
+          <Card key={t.idTipoTributo} className="flex h-full flex-col overflow-hidden border-[#C9D9D0] hover:shadow-elevated">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <Badge variant="gold">{t.codigoTributo}</Badge>
                 <span className="text-[11px] font-semibold text-[#5A6B61]">{t.periodicidad}</span>
               </div>
-              <CardTitle className="mt-2 text-sm">{t.nombreTributo}</CardTitle>
+              <CardTitle className="mt-3 min-h-10 text-sm leading-snug">{t.nombreTributo}</CardTitle>
             </CardHeader>
-            <CardContent className="text-xs text-[#5A6B61] space-y-1">
+            <CardContent className="mt-auto space-y-1.5 text-xs text-[#5A6B61]">
               <p>
                 <strong>Fórmula:</strong> {t.formulaCalculo}
               </p>
@@ -215,20 +220,19 @@ export function TributosDeudasPage() {
             </CardContent>
           </Card>
         ))}
-      </div>
+        </div>
+      </section>
 
       {/* Estado de Cuenta Consolidado General (vw_estado_cuenta_contribuyente) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Estado de Cuenta Consolidado (<code className="font-mono">vw_estado_cuenta_contribuyente</code>)
-          </CardTitle>
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+          <CardTitle>Estado de cuenta consolidado</CardTitle>
           <CardDescription>
             Haga clic en un contribuyente para inspeccionar el desglose de sus deudas, intereses y
             facturas abajo.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-0">
           {estadoCuentaGeneralQuery.isLoading ? (
             <LoadingState message="Consultando estado de cuenta general..." />
           ) : estadoCuentaGeneralQuery.isError ? (
@@ -237,10 +241,10 @@ export function TributosDeudasPage() {
               onRetry={() => estadoCuentaGeneralQuery.refetch()}
             />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto" role="region" aria-label="Estado de cuenta consolidado" tabIndex={0}>
+              <table className="w-full min-w-[1100px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
+                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
                     <th className="px-3 py-2.5">ID</th>
                     <th className="px-3 py-2.5">Contribuyente</th>
                     <th className="px-3 py-2.5">Fincas</th>
@@ -259,7 +263,7 @@ export function TributosDeudasPage() {
                         key={c.idContribuyente}
                         onClick={() => setSelectedContribuyenteId(c.idContribuyente)}
                         className={`cursor-pointer transition-colors ${
-                          isSelected ? 'bg-[#E8F0EC]' : 'hover:bg-[#F5F7F4]'
+                          isSelected ? 'bg-[#E8F0EC] shadow-[inset_4px_0_0_#164B35]' : 'even:bg-[#FAFCFB] hover:bg-[#F5F7F4]'
                         }`}
                       >
                         <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">
@@ -302,16 +306,13 @@ export function TributosDeudasPage() {
       </Card>
 
       {/* Deudas del Contribuyente Seleccionado + Recálculo BD */}
-      <Card className="border-t-4 border-t-[#B6944A]">
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <Card className="overflow-hidden border-[#D7C28E]">
+        <CardHeader className="flex flex-col gap-4 border-b border-[#E9DFC4] bg-[#FBF7EE] sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle>
               Deudas Municipales del Contribuyente #{selectedContribuyenteId}
             </CardTitle>
-            <CardDescription>
-              Fuente: <code className="font-mono">GET /api/tributodeuda/contribuyente/{selectedContribuyenteId}/deudas</code>.
-              El recálculo de intereses lo ejecuta íntegramente SQL Server.
-            </CardDescription>
+            <CardDescription>Consulte cargos, recalcule recargos autorizados y genere facturas.</CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select
@@ -335,16 +336,16 @@ export function TributosDeudasPage() {
             />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6 sm:pt-6">
           {deudasContribuyenteQuery.isLoading ? (
             <LoadingState message="Consultando deudas del contribuyente..." />
           ) : !deudasContribuyenteQuery.data || deudasContribuyenteQuery.data.length === 0 ? (
             <EmptyState title="Este contribuyente no registra deudas municipales" />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto rounded-xl border border-[#DCE3DE]" role="region" aria-label="Deudas del contribuyente" tabIndex={0}>
+              <table className="w-full min-w-[1250px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
+                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
                     <th className="px-3 py-2.5">Deuda ID</th>
                     <th className="px-3 py-2.5">Tributo / Periodo</th>
                     <th className="px-3 py-2.5">Finca</th>
@@ -359,7 +360,7 @@ export function TributosDeudasPage() {
                 </thead>
                 <tbody className="divide-y divide-[#DCE3DE]">
                   {deudasContribuyenteQuery.data.map((d) => (
-                    <tr key={d.idDeudaMunicipal} className="hover:bg-[#E8F0EC]/40">
+                    <tr key={d.idDeudaMunicipal} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
                       <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">
                         #{d.idDeudaMunicipal}
                       </td>
@@ -408,9 +409,9 @@ export function TributosDeudasPage() {
                             size="sm"
                             onClick={() => recalcularMut.mutate(d.idDeudaMunicipal)}
                             disabled={recalcularMut.isPending}
-                            title="sp_calcular_recargos_intereses"
+                            title="Recalcular intereses y recargos"
                           >
-                            <Calculator className="h-3.5 w-3.5" /> Recalcular BD
+                            <Calculator className="h-3.5 w-3.5" /> Recalcular
                           </Button>
                           <Button
                             variant="gold"
@@ -420,7 +421,7 @@ export function TributosDeudasPage() {
                               setClaveHacienda(generarClaveHacienda50(d.idDeudaMunicipal));
                               setDescuentosFactura('0');
                             }}
-                            title="Emitir factura electrónica (sp_generar_factura)"
+                            title="Emitir factura electrónica"
                           >
                             <FilePlus className="h-3.5 w-3.5" /> Facturar
                           </Button>
@@ -437,9 +438,8 @@ export function TributosDeudasPage() {
           {estadoCuentaIndividualQuery.data && estadoCuentaIndividualQuery.data.length > 0 && (
             <div className="mt-4 rounded-lg border border-[#DCE3DE] bg-[#F5F7F4] p-3 text-xs text-[#5A6B61]">
               <Search className="mr-1.5 inline h-3.5 w-3.5 text-[#164B35]" />
-              <strong>sp_consultar_estado_cuenta:</strong>{' '}
-              {estadoCuentaIndividualQuery.data.length} registro(s) cruzados entre deudas y facturas
-              para este contribuyente.
+              {estadoCuentaIndividualQuery.data.length} registro(s) relacionados entre deudas y
+              facturas para este contribuyente.
             </div>
           )}
         </CardContent>
@@ -449,8 +449,8 @@ export function TributosDeudasPage() {
       <Modal
         open={openDeudaModal}
         onClose={() => setOpenDeudaModal(false)}
-        title="Registrar Nueva Deuda Municipal (CU-PC-02)"
-        description="Ejecuta POST /api/tributodeuda/deuda (dbo.sp_registrar_deuda_municipal)"
+        title="Registrar nueva deuda municipal"
+        description="Complete los datos del cargo y su periodo fiscal."
         maxWidth="max-w-xl"
       >
         <form
@@ -546,7 +546,7 @@ export function TributosDeudasPage() {
         open={Boolean(facturarDeudaTarget)}
         onClose={() => setFacturarDeudaTarget(null)}
         title={`Emitir Factura Electrónica — Deuda #${facturarDeudaTarget?.idDeudaMunicipal ?? ''}`}
-        description="El subtotal y el total los calcula automáticamente dbo.sp_generar_factura en SQL Server."
+        description="El subtotal y el total se calcularán automáticamente al emitir la factura."
       >
         {facturarDeudaTarget && (
           <div className="space-y-4">
@@ -559,7 +559,7 @@ export function TributosDeudasPage() {
                 <strong>Finca:</strong> {facturarDeudaTarget.numeroFinca}
               </p>
               <p>
-                <strong>Monto Total en BD:</strong>{' '}
+                <strong>Monto total:</strong>{' '}
                 <span className="font-bold text-[#164B35]">
                   {formatCurrencyCRC(facturarDeudaTarget.montoTotal)}
                 </span>
@@ -598,7 +598,7 @@ export function TributosDeudasPage() {
                     <Loader2 className="h-4 w-4 animate-spin" /> Generando Factura...
                   </>
                 ) : (
-                  'Emitir Factura en SQL Server'
+                  'Emitir factura'
                 )}
               </Button>
             </div>

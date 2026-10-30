@@ -189,11 +189,11 @@ export function ReportesAnalisisPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col" style={{ gap: '2rem' }}>
       <PageHeader
-        title="Análisis Tributario y Reportes de Gestión Municipal"
-        subtitle="Inteligencia recaudatoria por distrito y tributo, cartera morosa y cumplimiento SLA (Wireframe #13, p. 120)"
-        badge="CU-RI-01 a CU-RI-05"
+        title="Reportes e indicadores municipales"
+        subtitle="Analice la recaudación, cartera morosa y eficiencia de los servicios municipales."
+        badge="Panel analítico"
         icon={<FileSpreadsheet className="h-6 w-6" />}
         actions={
           <>
@@ -213,56 +213,60 @@ export function ReportesAnalisisPage() {
                 )
               }
             >
-              <Download className="h-4 w-4" /> Exportar Reporte (CSV)
+              <Download className="h-4 w-4" /> Exportar CSV
             </Button>
           </>
         }
       />
 
       {/* Pestañas de Reportes */}
-      <div className="flex flex-wrap gap-2 border-b border-[#DCE3DE] pb-3">
+      <nav className="grid gap-3 rounded-2xl border border-[#DCE3DE] bg-white p-3 shadow-card sm:grid-cols-2 xl:grid-cols-4" aria-label="Tipos de reporte">
         <Button
           variant={activeTab === 'tributario' ? 'default' : 'outline'}
-          size="sm"
+          className="h-auto justify-start px-4 py-3"
           onClick={() => setActiveTab('tributario')}
         >
-          <BarChart3 className="h-4 w-4" /> Análisis Tributario (WF p. 120)
+          <BarChart3 className="h-4 w-4" /> Análisis tributario
         </Button>
         <Button
           variant={activeTab === 'morosidad' ? 'default' : 'outline'}
-          size="sm"
+          className="h-auto justify-start px-4 py-3"
           onClick={() => setActiveTab('morosidad')}
         >
-          <AlertTriangle className="h-4 w-4" /> Cartera Morosa (
+          <AlertTriangle className="h-4 w-4" /> Cartera morosa (
           {morosidadVistaQuery.data?.length ?? 0})
         </Button>
         <Button
           variant={activeTab === 'eficiencia' ? 'default' : 'outline'}
-          size="sm"
+          className="h-auto justify-start px-4 py-3"
           onClick={() => setActiveTab('eficiencia')}
         >
-          <Clock className="h-4 w-4" /> Eficiencia de Trámites y SLA
+          <Clock className="h-4 w-4" /> Eficiencia y plazos
         </Button>
         <Button
           variant={activeTab === 'gestion' ? 'default' : 'outline'}
-          size="sm"
+          className="h-auto justify-start px-4 py-3"
           onClick={() => setActiveTab('gestion')}
         >
-          <Database className="h-4 w-4" /> Explorador Gestión Municipal
+          <Database className="h-4 w-4" /> Gestión municipal
         </Button>
-      </div>
+      </nav>
 
       {/* TAB 1: ANÁLISIS TRIBUTARIO (Wireframe p. 120) */}
       {activeTab === 'tributario' && (
-        <div className="space-y-6">
+        <div className="flex flex-col" style={{ gap: '2rem' }}>
           {/* Barra de Periodo Fiscal y Píldoras de Distritos de Nicoya (Wireframe p. 120) */}
-          <Card>
-            <CardContent className="pt-5 space-y-4">
+          <Card className="overflow-hidden">
+            <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+              <CardTitle className="text-base">Filtros del análisis</CardTitle>
+              <CardDescription>Seleccione el periodo y los distritos incluidos en los indicadores.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-6 sm:pt-6">
               <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
                 <div className="flex flex-wrap items-end gap-3">
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-[#26352D]">
-                      Periodo Inicio (<code className="font-mono">/periodo</code>)
+                    <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                      Fecha de inicio
                     </label>
                     <Input
                       type="date"
@@ -272,8 +276,8 @@ export function ReportesAnalisisPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-[#26352D]">
-                      Periodo Fin
+                    <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                      Fecha de finalización
                     </label>
                     <Input
                       type="date"
@@ -328,8 +332,8 @@ export function ReportesAnalisisPage() {
           </Card>
 
           {/* 3 Tarjetas KPI del Wireframe p. 120 */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Card className="border-l-4 border-l-[#164B35]">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            <Card className="h-full border-l-4 border-l-[#164B35]">
               <CardHeader className="pb-2">
                 <CardDescription>Total Recaudación Cantonal</CardDescription>
                 <CardTitle className="text-2xl font-extrabold text-[#164B35]">
@@ -341,7 +345,7 @@ export function ReportesAnalisisPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-[#B6944A]">
+            <Card className="h-full border-l-4 border-l-[#B6944A]">
               <CardHeader className="pb-2">
                 <CardDescription>Índice de Cumplimiento Tributario</CardDescription>
                 <CardTitle className="text-2xl font-extrabold text-[#967736]">
@@ -349,11 +353,11 @@ export function ReportesAnalisisPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-xs text-[#5A6B61]">
-                Relación Recaudado / Facturado en <code className="font-mono">DB_Municipalidad_Nicoya</code>
+                Relación entre el monto recaudado y el total facturado.
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-red-600">
+            <Card className="h-full border-l-4 border-l-red-600">
               <CardHeader className="pb-2">
                 <CardDescription>Cartera Morosa Acumulada</CardDescription>
                 <CardTitle className="text-2xl font-extrabold text-red-700">
@@ -371,14 +375,14 @@ export function ReportesAnalisisPage() {
           {recaudacionDistritoQuery.isLoading || recaudacionTributoQuery.isLoading ? (
             <LoadingState message="Generando visualizaciones analíticas desde SQL Server..." />
           ) : (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-              <div className="lg:col-span-7">
+            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: '2rem' }}>
+              <div>
                 <ChartCard
                   title="Recaudación por Distrito del Cantón de Nicoya"
                   subtitle={
                     fechaInicio || fechaFin
-                      ? `sp_reporte_recaudacion_distrito (${fechaInicio || '...'} a ${fechaFin || '...'})`
-                      : 'vw_recaudacion_por_distrito (Histórico Acumulado)'
+                      ? `Periodo: ${fechaInicio || 'inicio'} a ${fechaFin || 'hoy'}`
+                      : 'Histórico acumulado por distrito'
                   }
                 >
                   <div className="h-72 w-full">
@@ -409,13 +413,13 @@ export function ReportesAnalisisPage() {
                 </ChartCard>
               </div>
 
-              <div className="lg:col-span-5">
+              <div>
                 <ChartCard
                   title="Distribución por Tipo de Tributo"
                   subtitle={
                     fechaInicio || fechaFin
-                      ? 'sp_reporte_recaudacion_tributo'
-                      : 'vw_recaudacion_por_tributo'
+                      ? 'Distribución para el periodo seleccionado'
+                      : 'Distribución histórica acumulada'
                   }
                 >
                   <div className="h-72 w-full">
@@ -448,17 +452,17 @@ export function ReportesAnalisisPage() {
           )}
 
           {/* Tabla Resumen de Recaudación por Tributo */}
-          <Card>
-            <CardHeader>
+          <Card className="overflow-hidden">
+            <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
               <CardTitle className="text-base">
                 Desglose Detallado de Recaudación por Tributo Municipal
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+            <CardContent className="p-0 sm:p-0">
+              <div className="overflow-x-auto" role="region" aria-label="Recaudación por tributo" tabIndex={0}>
+                <table className="w-full min-w-[760px] text-left text-sm">
                   <thead>
-                    <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
+                    <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
                       <th className="px-3 py-2.5">Código</th>
                       <th className="px-3 py-2.5">Nombre del Tributo</th>
                       <th className="px-3 py-2.5">Principal Recaudado</th>
@@ -468,7 +472,7 @@ export function ReportesAnalisisPage() {
                   </thead>
                   <tbody className="divide-y divide-[#DCE3DE]">
                     {tributosChartData.map((t) => (
-                      <tr key={t.codigoTributo} className="hover:bg-[#E8F0EC]/40">
+                      <tr key={t.codigoTributo} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
                         <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">
                           {t.codigoTributo}
                         </td>
@@ -492,16 +496,13 @@ export function ReportesAnalisisPage() {
 
       {/* TAB 2: CARTERA MOROSA (vw_morosidad_contribuyentes y sp_reporte_contribuyentes_morosos) */}
       {activeTab === 'morosidad' && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-col gap-4 border-b border-[#DCE3DE] bg-[#FAFCFB] sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle>
-                Reporte de Contribuyentes Morosos (<code className="font-mono">vw_morosidad_contribuyentes</code> /{' '}
-                <code className="font-mono">sp_reporte_contribuyentes_morosos</code>)
-              </CardTitle>
+              <CardTitle>Cartera morosa de contribuyentes</CardTitle>
               <CardDescription>
-                Registros en vista: {morosidadVistaQuery.data?.length ?? 0} · Registros en SP:{' '}
-                {contribuyentesMorososSpQuery.data?.length ?? 0}
+                {morosidadVistaQuery.data?.length ?? 0} obligaciones vencidas correspondientes a{' '}
+                {contribuyentesMorososSpQuery.data?.length ?? 0} contribuyentes reportados.
               </CardDescription>
             </div>
             <Button
@@ -517,7 +518,7 @@ export function ReportesAnalisisPage() {
               <Download className="h-4 w-4" /> Exportar Morosidad
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0 sm:p-0">
             {morosidadVistaQuery.isLoading ? (
               <LoadingState message="Consultando cartera morosa..." />
             ) : morosidadVistaQuery.isError ? (
@@ -526,10 +527,10 @@ export function ReportesAnalisisPage() {
                 onRetry={() => morosidadVistaQuery.refetch()}
               />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+              <div className="overflow-x-auto" role="region" aria-label="Cartera morosa" tabIndex={0}>
+                <table className="w-full min-w-[1100px] text-left text-sm">
                   <thead>
-                    <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
+                    <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
                       <th className="px-3 py-2.5">Deuda ID</th>
                       <th className="px-3 py-2.5">Contribuyente</th>
                       <th className="px-3 py-2.5">Finca / Distrito</th>
@@ -543,7 +544,7 @@ export function ReportesAnalisisPage() {
                   </thead>
                   <tbody className="divide-y divide-[#DCE3DE]">
                     {(morosidadVistaQuery.data ?? []).map((m) => (
-                      <tr key={m.idDeudaMunicipal} className="hover:bg-[#E8F0EC]/40">
+                      <tr key={m.idDeudaMunicipal} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
                         <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">
                           #{m.idDeudaMunicipal}
                         </td>
@@ -589,9 +590,7 @@ export function ReportesAnalisisPage() {
             {/* Solicitudes por Departamento */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">
-                  Solicitudes por Departamento (<code className="font-mono">sp_reporte_solicitudes_departamento</code>)
-                </CardTitle>
+                <CardTitle className="text-base">Solicitudes por departamento</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -628,9 +627,7 @@ export function ReportesAnalisisPage() {
             {/* Eficiencia SLA por Tipo de Trámite */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">
-                  Cumplimiento de SLA (<code className="font-mono">sp_reporte_eficiencia_tramites</code>)
-                </CardTitle>
+                <CardTitle className="text-base">Cumplimiento de plazos de atención</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">

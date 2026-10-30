@@ -9,7 +9,6 @@ import {
   Eye,
   EyeOff,
   KeyRound,
-  Landmark,
   Loader2,
   Lock,
   ShieldCheck,
@@ -85,22 +84,23 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col lg:flex-row bg-[#F5F7F4]">
       {/* Left Institutional Panel — Identidad Nicoya */}
-      <div className="relative flex flex-col justify-between bg-[#164B35] p-8 text-white lg:w-5/12 xl:w-1/2 lg:p-12 overflow-hidden">
-        {/* Decorative architectural silhouette inspired by Parroquia Colonial de San Blas de Nicoya */}
-        <div className="pointer-events-none absolute -right-16 -bottom-16 opacity-10">
-          <svg width="420" height="420" viewBox="0 0 200 200" fill="none">
-            <path
-              d="M100 15L135 55H65L100 15ZM60 55H140V185H60V55ZM85 110C85 101.716 91.7157 95 100 95C108.284 95 115 101.716 115 110V185H85V110ZM30 85H60V185H30V85ZM140 85H170V185H140V85Z"
-              fill="#B6944A"
-            />
-          </svg>
-        </div>
+      <div className="relative flex min-h-[34rem] flex-col justify-between overflow-hidden bg-[#123F2D] p-8 text-white lg:min-h-screen lg:w-5/12 lg:p-12 xl:w-1/2">
+        <img
+          src="/images/IglesiaNicoya.png"
+          alt="Iglesia colonial de San Blas de Nicoya"
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0A2A1E]/95 via-[#123F2D]/85 to-[#164B35]/45" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#071F16]/95 via-[#123F2D]/25 to-[#071F16]/35" />
+        <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10" />
 
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#B6944A] text-white shadow-md">
-              <Landmark className="h-6 w-6" />
-            </div>
+            <img
+              src="/images/logo2.png"
+              alt="Identidad visual de la Municipalidad de Nicoya"
+              className="h-14 w-14 shrink-0 rounded-2xl object-contain shadow-lg ring-1 ring-white/25"
+            />
             <div>
               <span className="text-xl font-extrabold tracking-wider text-white">SIGEMUN</span>
               <p className="text-xs font-medium text-[#D4B872]">
@@ -117,28 +117,12 @@ export function LoginPage() {
               Sistema de Gestión para la Municipalidad de Nicoya
             </h1>
             <p className="mt-4 text-sm leading-relaxed text-white/80">
-              Acceso unificado con control de seguridad basado en roles (RBAC), trazabilidad de
-              expedientes, padrón territorial y catastral, recaudación tributaria, auditoría forense
-              y consola técnica de administración de base de datos SQL Server.
+              Una plataforma segura para gestionar trámites, expedientes, catastro, recaudación y
+              servicios municipales desde una experiencia institucional integrada.
             </p>
           </div>
         </div>
 
-        <div className="relative z-10 mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2 text-xs">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3.5">
-            <p className="font-bold text-[#D4B872]">Seguridad Criptográfica</p>
-            <p className="mt-1 text-white/75">
-              Autenticación JWT (HS256) y verificación SHA-256 mediante{' '}
-              <code className="text-white">sp_autenticar_usuario</code>.
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3.5">
-            <p className="font-bold text-[#D4B872]">Integridad Transaccional</p>
-            <p className="mt-1 text-white/75">
-              Reglas de negocio, copropiedad, facturación y respaldos gobernados por SQL Server.
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* Right Authentication Form Panel */}
@@ -150,8 +134,7 @@ export function LoginPage() {
             </div>
             <h2 className="text-xl font-bold text-[#26352D]">Inicio de Sesión Institucional</h2>
             <p className="mt-1 text-xs text-[#5A6B61]">
-              Ingrese sus credenciales de funcionario municipal autorizadas en{' '}
-              <code className="font-mono text-[#164B35]">DB_Municipalidad_Nicoya</code>
+              Ingrese las credenciales asignadas a su cuenta institucional.
             </p>
           </div>
 
@@ -205,7 +188,8 @@ export function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword((s) => !s)}
                   className="absolute right-3 top-2.5 text-[#5A6B61] hover:text-[#164B35]"
-                  tabIndex={-1}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  aria-pressed={showPassword}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -225,8 +209,7 @@ export function LoginPage() {
 
           <div className="mt-6 border-t border-[#DCE3DE] pt-4 text-center">
             <p className="text-[11px] text-[#5A6B61]">
-              Conectado a <code className="font-mono text-[#164B35]">POST /api/auth/login</code> ·
-              Token JWT con verificación de roles activos.
+              Acceso exclusivo para personal autorizado de la Municipalidad de Nicoya.
             </p>
           </div>
         </div>

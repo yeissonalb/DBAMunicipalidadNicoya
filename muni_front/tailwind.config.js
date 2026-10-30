@@ -19,6 +19,8 @@ export default {
           text: '#26352D',
           muted: '#5A6B61',
           border: '#DCE3DE',
+          focus: '#287A58',
+          canvas: '#F4F7F5',
         },
       },
       fontFamily: {

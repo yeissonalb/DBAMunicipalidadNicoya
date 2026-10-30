@@ -47,11 +47,9 @@ export function hasAnyRole(userRoles: string[] | undefined, allowedRoles: readon
 }
 
 export function getDefaultRouteForRoles(roles: string[]): string {
-  if (roles.includes(ROLES.ADMIN)) return '/dashboard';
-  if (roles.includes(ROLES.ANALISTA)) return '/expedientes/seguimiento';
-  if (roles.includes(ROLES.CAJERO)) return '/pagos';
-  if (roles.includes(ROLES.DBA)) return '/dba/politicas';
-  if (roles.includes(ROLES.AUDITOR)) return '/reportes';
+  // Todos los perfiles ingresan al panel institucional. El contenido del panel,
+  // la navegación y las rutas operativas se filtran después por permisos reales.
+  void roles;
   return '/dashboard';
 }
 

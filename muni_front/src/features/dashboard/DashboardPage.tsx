@@ -33,16 +33,57 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCurrencyCRC, formatDateTime, formatNumber } from '@/lib/utils';
 
+const ROLE_DASHBOARD_COPY: Record<string, string> = {
+  [ROLES.ADMIN]: 'Visión ejecutiva de la operación municipal, seguridad y continuidad institucional',
+  [ROLES.ANALISTA]: 'Gestión de expedientes, revisión técnica, catastro y trazabilidad de trámites',
+  [ROLES.CAJERO]: 'Atención al contribuyente, recaudación, facturación y control de obligaciones',
+  [ROLES.AUDITOR]: 'Supervisión de indicadores, cartera, cumplimiento y trazabilidad institucional',
+  [ROLES.DBA]: 'Continuidad operativa, integridad de datos, respaldos y auditoría técnica',
+};
+
 export function DashboardPage() {
   const { user, hasRole } = useAuth();
 
+  const activeRole =
+    user?.roles.find((role) => ROLE_DASHBOARD_COPY[role]) || user?.rol || 'Perfil institucional';
+  const dashboardDescription =
+    ROLE_DASHBOARD_COPY[activeRole] || 'Resumen de operación y accesos autorizados para su sesión';
+
   const canTramites = hasRole(MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES);
   const canPagos = hasRole(MODULE_PERMISSIONS.TRIBUTOS_PAGOS);
+  const canContribuyentes = hasRole(MODULE_PERMISSIONS.CONTRIBUYENTES);
   const canInmuebles = hasRole(MODULE_PERMISSIONS.INMUEBLES);
   const canReportes = hasRole(MODULE_PERMISSIONS.REPORTES);
   const canAuditoria = hasRole(MODULE_PERMISSIONS.AUDITORIA);
   const canDba = hasRole(MODULE_PERMISSIONS.DBA_CONSOLA);
   const canAdmin = hasRole(MODULE_PERMISSIONS.USUARIOS_ROLES);
+  const visibleKpiCount = [
+    canTramites,
+    canInmuebles,
+    canPagos,
+    canReportes,
+    canAdmin,
+    canDba,
+  ].filter(Boolean).length;
+  const kpiGridColumns =
+    visibleKpiCount >= 3
+      ? 'lg:grid-cols-3'
+      : visibleKpiCount === 2
+        ? 'lg:grid-cols-2'
+        : 'lg:grid-cols-1';
+  const visibleModuleCount =
+    Number(canContribuyentes) +
+    Number(canInmuebles) +
+    Number(canTramites) * 3 +
+    Number(canPagos) * 2 +
+    Number(canReportes) +
+    Number(canAuditoria) +
+    Number(canAdmin) * 2 +
+    Number(canDba) * 2;
+  const moduleGridColumns =
+    visibleModuleCount === 2 || activeRole === ROLES.ANALISTA
+      ? 'lg:grid-cols-2'
+      : 'lg:grid-cols-3';
 
   const tramitesQuery = useQuery({
     queryKey: ['dashboard', 'tramites'],
@@ -109,19 +150,25 @@ export function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title={`Bienvenido(a), ${user?.nombreCompleto || user?.userName || 'Funcionario'}`}
-        subtitle={`Panel Ejecutivo Institucional · Departamento: ${
+        subtitle={`${dashboardDescription} · Departamento: ${
           user?.nombreDepartamento || 'Municipalidad de Nicoya'
         }`}
-        badge={user?.rol || 'Sesión Activa'}
-        icon={<Landmark className="h-6 w-6" />}
+        badge={activeRole}
+        icon={
+          <img
+            src="/images/logo2.png"
+            alt="Identidad visual de la Municipalidad de Nicoya"
+            className="h-10 w-10 rounded-xl object-contain shadow-sm"
+          />
+        }
       />
 
       {/* KPI Summary Cards Dynamically Loaded from Authorized Endpoints */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${kpiGridColumns}`}>
         {canTramites && (
           <Card className="border-l-4 border-l-[#164B35]">
             <CardHeader className="pb-2">
-              <CardDescription>Expedientes Municipales (vw_tramites_seguimiento)</CardDescription>
+              <CardDescription>Expedientes municipales</CardDescription>
               <CardTitle className="text-2xl font-extrabold text-[#164B35]">
                 {tramitesQuery.isLoading ? '...' : formatNumber(totalTramites)}
               </CardTitle>
@@ -137,7 +184,7 @@ export function DashboardPage() {
         {canInmuebles && (
           <Card className="border-l-4 border-l-[#B6944A]">
             <CardHeader className="pb-2">
-              <CardDescription>Fincas Registradas (vw_inmuebles_propietarios)</CardDescription>
+              <CardDescription>Fincas registradas</CardDescription>
               <CardTitle className="text-2xl font-extrabold text-[#26352D]">
                 {inmueblesQuery.isLoading ? '...' : formatNumber(totalInmueblesUnicos)}
               </CardTitle>
@@ -153,7 +200,7 @@ export function DashboardPage() {
         {canPagos && (
           <Card className="border-l-4 border-l-emerald-600">
             <CardHeader className="pb-2">
-              <CardDescription>Recaudación Histórica (vw_estado_cuenta)</CardDescription>
+              <CardDescription>Recaudación histórica</CardDescription>
               <CardTitle className="text-xl font-extrabold text-emerald-800">
                 {estadoCuentaQuery.isLoading ? '...' : formatCurrencyCRC(totalPagadoHistorico)}
               </CardTitle>
@@ -170,7 +217,7 @@ export function DashboardPage() {
         {canReportes && (
           <Card className="border-l-4 border-l-sky-600">
             <CardHeader className="pb-2">
-              <CardDescription>Recaudación Cantonal (vw_recaudacion_por_distrito)</CardDescription>
+              <CardDescription>Recaudación cantonal</CardDescription>
               <CardTitle className="text-xl font-extrabold text-sky-900">
                 {recaudacionDistritoQuery.isLoading
                   ? '...'
@@ -189,7 +236,7 @@ export function DashboardPage() {
         {canAdmin && (
           <Card className="border-l-4 border-l-[#164B35]">
             <CardHeader className="pb-2">
-              <CardDescription>Funcionarios del Sistema (sp_consultar_usuario)</CardDescription>
+              <CardDescription>Funcionarios del sistema</CardDescription>
               <CardTitle className="text-2xl font-extrabold text-[#164B35]">
                 {usuariosQuery.isLoading ? '...' : formatNumber(usuariosQuery.data?.length ?? 0)}
               </CardTitle>
@@ -208,7 +255,7 @@ export function DashboardPage() {
         {canDba && (
           <Card className="border-l-4 border-l-[#B6944A]">
             <CardHeader className="pb-2">
-              <CardDescription>Políticas de Respaldo DBA (vw_estado_respaldos)</CardDescription>
+              <CardDescription>Políticas de respaldo</CardDescription>
               <CardTitle className="text-2xl font-extrabold text-[#26352D]">
                 {respaldosEstadoQuery.isLoading
                   ? '...'
@@ -232,15 +279,14 @@ export function DashboardPage() {
       {/* Role-Based Quick Access Grid */}
       <Card>
         <CardHeader>
-          <CardTitle>Módulos Autorizados para su Perfil ({user?.roles.join(', ')})</CardTitle>
+          <CardTitle>Herramientas disponibles para su perfil</CardTitle>
           <CardDescription>
-            Seleccione un módulo operativo conectado a los controladores de{' '}
-            <code className="font-mono text-[#164B35]">muni-back</code>.
+            Accesos habilitados para {activeRole}, de acuerdo con los permisos de su sesión.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {hasRole(MODULE_PERMISSIONS.CONTRIBUYENTES) && (
+          <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${moduleGridColumns}`}>
+            {canContribuyentes && (
               <QuickModuleCard
                 title="Padrón de Contribuyentes"
                 description="Personas físicas, jurídicas, representantes legales y búsqueda multicriterio."
@@ -361,42 +407,73 @@ export function DashboardPage() {
 
       {/* Recent Audit Events if Authorized */}
       {canAuditoria && auditoriaRecienteQuery.data && auditoriaRecienteQuery.data.length > 0 && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Últimos Eventos Registrados en Bitácora de Auditoría</CardTitle>
-              <CardDescription>
-                Fuente en tiempo real: <code className="font-mono">GET /api/auditoria/recientes</code>
-              </CardDescription>
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-col gap-4 border-b border-[#DCE3DE] bg-gradient-to-r from-[#F2F7F4] to-white sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#164B35] text-[#E2C982] shadow-sm">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle>Actividad reciente</CardTitle>
+                <CardDescription className="mt-1">
+                  Últimos eventos registrados en la bitácora de auditoría.
+                </CardDescription>
+              </div>
             </div>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/auditoria">Ver Bitácora Completa</Link>
+            <Button asChild variant="outline" size="sm" className="w-full bg-white sm:w-auto">
+              <Link to="/auditoria">
+                Ver bitácora completa <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </Button>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+          <CardContent className="p-0 sm:p-0">
+            <div className="overflow-x-auto" role="region" aria-label="Actividad reciente de auditoría" tabIndex={0}>
+              <table className="w-full min-w-[820px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] text-[#5A6B61]">
-                    <th className="py-2 pr-4">Fecha</th>
-                    <th className="py-2 pr-4">Usuario</th>
-                    <th className="py-2 pr-4">Acción</th>
-                    <th className="py-2 pr-4">Tabla Afectada</th>
-                    <th className="py-2 pr-4">Registro ID</th>
-                    <th className="py-2">IP</th>
+                  <tr className="border-b border-[#DCE3DE] bg-[#FAFCFB] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                    <th scope="col" className="px-6 py-3.5">Fecha y hora</th>
+                    <th scope="col" className="px-4 py-3.5">Usuario</th>
+                    <th scope="col" className="px-4 py-3.5">Acción</th>
+                    <th scope="col" className="px-4 py-3.5">Entidad afectada</th>
+                    <th scope="col" className="px-4 py-3.5">Registro</th>
+                    <th scope="col" className="px-6 py-3.5">Origen</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#DCE3DE]">
                   {auditoriaRecienteQuery.data.slice(0, 6).map((ev) => (
-                    <tr key={ev.idAuditoria}>
-                      <td className="py-2 pr-4 whitespace-nowrap">{formatDateTime(ev.fechaEvento)}</td>
-                      <td className="py-2 pr-4 font-semibold text-[#164B35]">{ev.userName}</td>
-                      <td className="py-2 pr-4">
-                        <Badge variant="outline">{ev.tipoAccion}</Badge>
+                    <tr key={ev.idAuditoria} className="group transition-colors hover:bg-[#F2F7F4]">
+                      <td className="whitespace-nowrap px-6 py-4 font-medium text-[#26352D]">
+                        {ev.fechaEvento ? formatDateTime(ev.fechaEvento) : 'Fecha no disponible'}
                       </td>
-                      <td className="py-2 pr-4 font-mono">{ev.tablaAfectada}</td>
-                      <td className="py-2 pr-4 font-mono">{ev.idRegistroAfectado}</td>
-                      <td className="py-2 font-mono text-[#5A6B61]">{ev.direccionIp}</td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E8F0EC] text-xs font-bold text-[#164B35]">
+                            {(ev.userName || 'S').slice(0, 2).toUpperCase()}
+                          </span>
+                          <span className="font-semibold text-[#164B35]">{ev.userName || 'Sistema'}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <Badge variant={ev.tipoAccion ? 'gold' : 'outline'}>
+                          {ev.tipoAccion || 'Sin clasificar'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-4 font-medium text-[#26352D]">
+                        {(ev.tablaAfectada || 'Sin entidad').replace(/_/g, ' ')}
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="inline-flex rounded-lg bg-[#F2F5F3] px-2.5 py-1 font-mono text-xs font-semibold text-[#42534A]">
+                          #{ev.idRegistroAfectado ?? '—'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-[#607168]">
+                        <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
+                          {ev.direccionIp === '<local machine>'
+                            ? 'Servidor local'
+                            : ev.direccionIp || 'No disponible'}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -414,7 +491,6 @@ function QuickModuleCard({
   description,
   to,
   icon,
-  badge,
 }: {
   title: string;
   description: string;
@@ -432,7 +508,7 @@ function QuickModuleCard({
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#164B35] text-[#B6944A]">
             {icon}
           </div>
-          <Badge variant="gold">{badge}</Badge>
+          <Badge variant="success">Disponible</Badge>
         </div>
         <h3 className="mt-3 text-sm font-bold text-[#26352D] group-hover:text-[#164B35]">
           {title}

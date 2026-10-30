@@ -33,7 +33,6 @@ interface NavItem {
   to: string;
   icon: React.ReactNode;
   allowedRoles: readonly string[];
-  badge?: string;
 }
 
 interface NavGroup {
@@ -56,7 +55,6 @@ const NAV_GROUPS: NavGroup[] = [
         to: '/portal-ciudadano',
         icon: <Globe className="h-4 w-4" />,
         allowedRoles: MODULE_PERMISSIONS.PORTAL_CIUDADANO,
-        badge: 'WF-2',
       },
     ],
   },
@@ -215,29 +213,36 @@ export function AppLayout() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F5F7F4] text-[#26352D]">
+    <div className="flex min-h-screen bg-[#F4F7F5] text-[#23342B]">
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-[#071A12]/60 backdrop-blur-sm lg:hidden"
           onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
         />
       )}
 
       {/* Institutional Dark Green Sidebar (#164B35) */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex flex-col bg-[#164B35] text-white shadow-xl transition-all duration-200 lg:static',
+          'fixed inset-y-0 left-0 z-50 flex flex-col bg-[#103D2B] text-white shadow-xl transition-all duration-200 lg:sticky lg:top-0 lg:h-screen',
           collapsed ? 'w-20' : 'w-72',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
         {/* Top Brand Header */}
-        <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
-          <Link to="/dashboard" className="flex items-center gap-3 overflow-hidden">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#B6944A] text-[#164B35] font-extrabold shadow-xs">
-              <Landmark className="h-5 w-5 text-white" />
-            </div>
+        <div className="flex h-[4.5rem] items-center justify-between border-b border-white/10 px-4">
+          <Link
+            to="/dashboard"
+            aria-label="Ir al panel principal de SIGEMUN"
+            className="flex items-center gap-3 overflow-hidden"
+          >
+            <img
+              src="/images/logo2.png"
+              alt=""
+              className="h-11 w-11 shrink-0 rounded-xl object-contain shadow-md ring-1 ring-white/20"
+            />
             {!collapsed && (
               <div className="leading-tight">
                 <div className="flex items-center gap-1.5">
@@ -264,13 +269,14 @@ export function AppLayout() {
             type="button"
             onClick={() => setMobileOpen(false)}
             className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white lg:hidden"
+            aria-label="Cerrar menú de navegación"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+        <nav className="sidebar-scroll flex-1 space-y-6 overflow-y-auto px-3 py-5" aria-label="Navegación principal">
           {visibleGroups.map((group) => (
             <div key={group.groupTitle}>
               {!collapsed && (
@@ -286,9 +292,9 @@ export function AppLayout() {
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) =>
                       cn(
-                        'flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium transition-all',
+                        'flex min-h-10 items-center gap-3 rounded-xl px-3 py-2.5 text-[0.8125rem] font-medium transition-all',
                         isActive
-                          ? 'bg-[#B6944A] text-white font-semibold shadow-xs'
+                          ? 'bg-[#B6944A] text-white font-semibold shadow-sm ring-1 ring-white/10'
                           : 'text-white/80 hover:bg-white/10 hover:text-white',
                         collapsed && 'justify-center px-2'
                       )
@@ -299,11 +305,6 @@ export function AppLayout() {
                     {!collapsed && (
                       <span className="flex-1 truncate">{item.label}</span>
                     )}
-                    {!collapsed && item.badge && (
-                      <span className="rounded bg-white/15 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                        {item.badge}
-                      </span>
-                    )}
                   </NavLink>
                 ))}
               </div>
@@ -312,7 +313,7 @@ export function AppLayout() {
         </nav>
 
         {/* Bottom User Profile & Logout */}
-        <div className="border-t border-white/10 p-3">
+        <div className="safe-bottom border-t border-white/10 p-3">
           {!collapsed && user && (
             <div className="mb-2 rounded-lg bg-white/5 p-2.5">
               <p className="truncate text-xs font-semibold text-white">
@@ -344,7 +345,7 @@ export function AppLayout() {
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Top Institutional Header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#DCE3DE] bg-white px-4 shadow-2xs sm:px-6">
+        <header className="sticky top-0 z-30 flex h-[4.5rem] items-center justify-between border-b border-[#DCE3DE] bg-white/95 px-4 shadow-sm backdrop-blur sm:px-6">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
@@ -389,7 +390,7 @@ export function AppLayout() {
         </header>
 
         {/* Page Container */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto">
+        <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>
 
