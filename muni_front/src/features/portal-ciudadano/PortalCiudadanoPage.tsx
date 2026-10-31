@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -8,12 +8,17 @@ import {
   Download,
   FileCheck2,
   FileText,
+  Lock,
   Receipt,
   Search,
+  ShieldCheck,
   Smartphone,
   Upload,
   UserCheck,
 } from 'lucide-react';
+import { useAuth } from '@/app/providers/AuthProvider';
+import { normalizeRoleName, ROLES } from '@/features/auth/permissions';
+import { consultarCedulaHacienda, type HaciendaContribuyenteInfo } from '@/services/haciendaCedulaApi';
 import {
   contribuyenteApi,
   facturacionPagoApi,
@@ -48,6 +53,18 @@ function getStageIndex(estado: string | undefined): number {
 
 export function PortalCiudadanoPage() {
   const queryClient = useQueryClient();
+  const { session } = useAuth();
+
+  const userRoles = session?.roles ?? [];
+  const isCitizen = useMemo(() => {
+    const roles = userRoles.map(normalizeRoleName);
+    return (
+      roles.includes(ROLES.CIUDADANO) &&
+      !roles.includes(ROLES.ADMIN) &&
+      !roles.includes(ROLES.DBA)
+    );
+  }, [userRoles]);
+
   const [activeTab, setActiveTab] = useState<
     'resumen' | 'inmuebles' | 'estado-cuenta' | 'requisitos'
   >('resumen');
@@ -57,6 +74,9 @@ export function PortalCiudadanoPage() {
   const [cedulaFiltro, setCedulaFiltro] = useState<string>('');
   const [selectedTramiteId, setSelectedTramiteId] = useState<number>(1);
   const [selectedTipoTramiteReq, setSelectedTipoTramiteReq] = useState<number>(1);
+
+  // Información oficial en tiempo real desde el Ministerio de Hacienda (API Cédulas)
+  const [haciendaInfo, setHaciendaInfo] = useState<HaciendaContribuyenteInfo | null>(null);
 
   // Modales interactivos del Portal Ciudadano
   const [openUploadModal, setOpenUploadModal] = useState(false);
@@ -71,6 +91,29 @@ export function PortalCiudadanoPage() {
     queryKey: ['portal-ciudadano', 'padron'],
     queryFn: () => contribuyenteApi.padron(),
   });
+
+  // Aislamiento de datos: si el usuario autenticado es Ciudadano, vincular automáticamente a su perfil
+  useEffect(() => {
+    if (!isCitizen || !padronQuery.data || padronQuery.data.length === 0) return;
+    const loginUser = (session?.userName || '').toLowerCase();
+    const cleanUserCed = loginUser.replace(/\D/g, '');
+
+    const matched = padronQuery.data.find((p) => {
+      const pClean = (p.identificacion || '').replace(/\D/g, '');
+      return (
+        (cleanUserCed && pClean && pClean === cleanUserCed) ||
+        (p.correoElectronico && p.correoElectronico.toLowerCase() === loginUser) ||
+        (session?.nombreFuncionario &&
+          p.nombreCompletoORazonSocial
+            .toLowerCase()
+            .includes(session.nombreFuncionario.toLowerCase()))
+      );
+    });
+
+    if (matched && matched.idContribuyente !== selectedContribuyenteId) {
+      setSelectedContribuyenteId(matched.idContribuyente);
+    }
+  }, [isCitizen, padronQuery.data, session, selectedContribuyenteId]);
 
   const contribuyenteDetalleQuery = useQuery({
     queryKey: ['portal-ciudadano', 'contribuyente', selectedContribuyenteId],
@@ -95,6 +138,25 @@ export function PortalCiudadanoPage() {
     queryFn: () => inmuebleApi.porContribuyente(selectedContribuyenteId),
     enabled: selectedContribuyenteId > 0,
   });
+
+  // Consultar únicamente los trámites de este contribuyente
+  const tramitesContribuyenteQuery = useQuery({
+    queryKey: ['portal-ciudadano', 'tramites-por-contribuyente', selectedContribuyenteId],
+    queryFn: () => tramiteApi.porContribuyente(selectedContribuyenteId),
+    enabled: selectedContribuyenteId > 0,
+  });
+
+  const tramitesContribuyenteList = tramitesContribuyenteQuery.data ?? [];
+
+  // Sincronizar el trámite activo con el primero de su lista si existe
+  useEffect(() => {
+    if (tramitesContribuyenteList.length > 0) {
+      const first = tramitesContribuyenteList[0];
+      if (first.idTramite && first.idTramite !== selectedTramiteId) {
+        setSelectedTramiteId(first.idTramite);
+      }
+    }
+  }, [tramitesContribuyenteList, selectedTramiteId]);
 
   const tramiteActivoQuery = useQuery({
     queryKey: ['portal-ciudadano', 'tramite', selectedTramiteId],
@@ -138,6 +200,18 @@ export function PortalCiudadanoPage() {
       distrito: 'Nicoya',
     };
   }, [contribuyenteDetalleQuery.data, padronQuery.data, selectedContribuyenteId]);
+
+  // Consulta automática y no invasiva a la API de Hacienda con la cédula del contribuyente activo
+  useEffect(() => {
+    const idNum = contribuyenteActual?.identificacion;
+    if (!idNum) return;
+    const clean = idNum.replace(/\D/g, '');
+    if (clean.length >= 9) {
+      consultarCedulaHacienda(clean)
+        .then((info) => setHaciendaInfo(info))
+        .catch(() => setHaciendaInfo(null));
+    }
+  }, [contribuyenteActual?.identificacion]);
 
   const tramiteActual = tramiteActivoQuery.data?.[0] ?? {
     idTramite: selectedTramiteId,
@@ -319,33 +393,50 @@ export function PortalCiudadanoPage() {
             </div>
           </div>
 
-          {/* Buscador rápido de cédula o cambio de contribuyente para pruebas */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="w-48">
-              <Input
-                placeholder="Buscar por cédula..."
-                value={cedulaFiltro}
-                onChange={(e) => setCedulaFiltro(e.target.value)}
-              />
+          {/* Identificación del perfil del ciudadano o selector de funcionario */}
+          {isCitizen ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-[10px] border border-[#BFDBFE] bg-[#EFF6FF] px-3.5 py-2 text-xs font-semibold text-[#1E3A8A]">
+              <ShieldCheck className="h-4 w-4 text-[#1D4ED8]" />
+              <span>
+                Contribuyente Autenticado:{' '}
+                <strong>{contribuyenteActual.nombreCompleto}</strong> (ID{' '}
+                {contribuyenteActual.identificacion})
+              </span>
+              {haciendaInfo && (
+                <Badge variant={haciendaInfo.moroso ? 'danger' : 'success'}>
+                  Hacienda: {haciendaInfo.estadoTributario}{' '}
+                  {haciendaInfo.moroso ? '· MOROSO' : '· AL DÍA'}
+                </Badge>
+              )}
             </div>
-            <Button variant="secondary" onClick={handleBuscarPorCedula}>
-              <Search className="h-4 w-4" /> Consultar
-            </Button>
-            {padronQuery.data && padronQuery.data.length > 0 && (
-              <div className="w-60">
-                <Select
-                  value={selectedContribuyenteId}
-                  onChange={(e) => setSelectedContribuyenteId(Number(e.target.value))}
-                >
-                  {padronQuery.data.map((p) => (
-                    <option key={p.idContribuyente} value={p.idContribuyente}>
-                      {p.identificacion} — {p.nombreCompletoORazonSocial}
-                    </option>
-                  ))}
-                </Select>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="w-48">
+                <Input
+                  placeholder="Buscar por cédula..."
+                  value={cedulaFiltro}
+                  onChange={(e) => setCedulaFiltro(e.target.value)}
+                />
               </div>
-            )}
-          </div>
+              <Button variant="secondary" onClick={handleBuscarPorCedula}>
+                <Search className="h-4 w-4" /> Consultar
+              </Button>
+              {padronQuery.data && padronQuery.data.length > 0 && (
+                <div className="w-60">
+                  <Select
+                    value={selectedContribuyenteId}
+                    onChange={(e) => setSelectedContribuyenteId(Number(e.target.value))}
+                  >
+                    {padronQuery.data.map((p) => (
+                      <option key={p.idContribuyente} value={p.idContribuyente}>
+                        {p.identificacion} — {p.nombreCompletoORazonSocial}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -362,15 +453,23 @@ export function PortalCiudadanoPage() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-[#4B5563]">Expediente #</span>
-                <div className="w-24">
-                  <Input
-                    type="number"
-                    min={1}
-                    value={selectedTramiteId}
-                    onChange={(e) => setSelectedTramiteId(Math.max(1, Number(e.target.value) || 1))}
-                  />
-                </div>
+                <span className="text-xs font-semibold text-[#4B5563]">Expediente</span>
+                {tramitesContribuyenteList.length > 1 ? (
+                  <div className="min-w-[210px]">
+                    <Select
+                      value={selectedTramiteId}
+                      onChange={(e) => setSelectedTramiteId(Number(e.target.value))}
+                    >
+                      {tramitesContribuyenteList.map((tr) => (
+                        <option key={tr.idTramite} value={tr.idTramite}>
+                          {tr.numeroExpediente} — {tr.nombreTramite}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                ) : (
+                  <Badge variant="blue">{tramiteActual.numeroExpediente}</Badge>
+                )}
               </div>
             </CardHeader>
 
@@ -388,7 +487,21 @@ export function PortalCiudadanoPage() {
                     {tramiteActual.diasSlaMaximo} días hábiles
                   </p>
                 </div>
-                <Badge variant="blue">{tramiteActual.estadoActual}</Badge>
+                <Badge
+                  variant={
+                    tramiteActual.estadoActual.toUpperCase().includes('APR')
+                      ? 'success'
+                      : tramiteActual.estadoActual.toUpperCase().includes('RECH')
+                      ? 'danger'
+                      : 'blue'
+                  }
+                >
+                  {tramiteActual.estadoActual.toUpperCase().includes('APR')
+                    ? 'Estado: Finalizado (Aprobado)'
+                    : tramiteActual.estadoActual.toUpperCase().includes('RECH')
+                    ? 'Estado: Finalizado (Rechazado)'
+                    : `Estado: ${tramiteActual.estadoActual}`}
+                </Badge>
               </div>
 
               {/* Barra de Progreso Horizontal de 4 Etapas (Exacta al Wireframe) */}

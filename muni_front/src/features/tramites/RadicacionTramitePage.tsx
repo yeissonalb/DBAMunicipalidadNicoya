@@ -3,11 +3,14 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
+  ArrowRight,
   CheckCircle2,
+  ChevronRight,
   Clock,
   FilePlus2,
   FolderKanban,
   Search,
+  ShieldCheck,
   Trash2,
   Upload,
 } from 'lucide-react';
@@ -17,6 +20,7 @@ import {
   tipoTramiteApi,
   tramiteApi,
 } from '@/services/api';
+import { consultarCedulaHacienda, type HaciendaContribuyenteInfo } from '@/services/haciendaCedulaApi';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -65,6 +69,10 @@ export function RadicacionTramitePage() {
     },
   ]);
   const [nuevoArchivoNombre, setNuevoArchivoNombre] = useState('');
+
+  // Verificación oficial con API del Ministerio de Hacienda
+  const [haciendaInfo, setHaciendaInfo] = useState<HaciendaContribuyenteInfo | null>(null);
+  const [consultandoHacienda, setConsultandoHacienda] = useState(false);
 
   // Resultado tras radicar
   const [expedienteCreadoId, setExpedienteCreadoId] = useState<number | null>(null);
@@ -119,6 +127,33 @@ export function RadicacionTramitePage() {
       toast.success(`Ciudadano autocompletado: ${match.nombreCompletoORazonSocial}`);
     } else {
       toast.error('No se encontró ningún contribuyente con esa cédula en el padrón.');
+    }
+  };
+
+  const handleConsultarHacienda = async () => {
+    if (!cedulaBusqueda.trim()) return;
+    setConsultandoHacienda(true);
+    try {
+      const info = await consultarCedulaHacienda(cedulaBusqueda);
+      setHaciendaInfo(info);
+      toast.success(`Cédula verificada en Hacienda: ${info.nombreCompleto}`);
+
+      // Buscar si ya existe en el padrón local por cédula
+      const q = info.identificacionLimpia;
+      const match = (padronQuery.data ?? []).find(
+        (c) => c.identificacion.replace(/\D/g, '') === q
+      );
+      if (match) {
+        setSelectedContribuyenteId(match.idContribuyente);
+        toast.info(`Contribuyente vinculado al padrón municipal (ID #${match.idContribuyente}).`);
+      }
+    } catch (err) {
+      setHaciendaInfo(null);
+      toast.error(
+        err instanceof Error ? err.message : 'Error al consultar la API del Ministerio de Hacienda.'
+      );
+    } finally {
+      setConsultandoHacienda(false);
     }
   };
 
@@ -204,23 +239,48 @@ export function RadicacionTramitePage() {
         }
       />
 
+      {/* FLUJO DE TRABAJO SECUENCIAL (SISTEMA DE EXPEDIENTES SIGEMUN) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-[#BFDBFE] bg-[#EFF6FF] p-3.5 text-xs shadow-xs">
+        <div className="flex items-center gap-2 font-bold text-[#1E3A8A]">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1D4ED8] text-white font-mono text-[11px]">1</span>
+          <span>Paso 1: Radicación de Expediente</span>
+          <Badge variant="blue">Paso Actual</Badge>
+        </div>
+        <ChevronRight className="hidden sm:block h-4 w-4 text-[#93C5FD]" />
+        <Link
+          to="/tramites/revision"
+          className="flex items-center gap-2 text-[#4B5563] hover:text-[#171717] transition-colors"
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white border border-[#D1D5DB] text-[#4B5563] font-mono text-[11px]">2</span>
+          <span>Paso 2: Revisión Técnica y Cotejo</span>
+        </Link>
+        <ChevronRight className="hidden sm:block h-4 w-4 text-[#93C5FD]" />
+        <Link
+          to="/tramites/seguimiento"
+          className="flex items-center gap-2 text-[#4B5563] hover:text-[#171717] transition-colors"
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white border border-[#D1D5DB] text-[#4B5563] font-mono text-[11px]">3</span>
+          <span>Paso 3: Seguimiento y Resolución Final</span>
+        </Link>
+      </div>
+
       {expedienteCreadoId && (
         <div className="flex flex-col items-start justify-between gap-4 rounded-[12px] border border-[#BBF7D0] bg-[#F0FDF4] p-4 text-xs text-[#15803D] sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
-            <CheckCircle2 className="h-5 w-5 shrink-0" />
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-[#15803D]" />
             <div>
-              <p className="font-bold">
-                Expediente ID #{expedienteCreadoId} radicado exitosamente en SQL Server
+              <p className="font-bold text-sm">
+                Expediente #{expedienteCreadoId} radicado exitosamente en SQL Server
               </p>
-              <p>
-                Puede pasar directamente al cotejo de requisitos o seguimiento técnico del
-                expediente.
+              <p className="mt-0.5 text-[#15803D]/90">
+                La información del ciudadano y los requisitos documentales fueron registrados. Ya puede avanzar a la revisión técnica.
               </p>
             </div>
           </div>
           <Button asChild>
-            <Link to={`/tramites/seguimiento?id=${expedienteCreadoId}`}>
-              Ver Trazabilidad del Expediente #{expedienteCreadoId}
+            <Link to={`/tramites/revision?id=${expedienteCreadoId}`}>
+              Siguiente Paso: Continuar a Revisión y Cotejo (Paso 2)
+              <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
         </div>
@@ -234,35 +294,93 @@ export function RadicacionTramitePage() {
             <CardTitle>Paso 1: Datos del Trámite y Ciudadano</CardTitle>
           </div>
           <CardDescription>
-            Busque al ciudadano por número de cédula o selecciónelo del padrón para autocompletar
-            sus datos de contacto y fincas.
+            Busque al ciudadano por número de cédula o verifíquelo en la API de Hacienda para autocompletar
+            sus datos oficiales, contacto y fincas.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-8">
           {/* SECCIÓN 1: DETALLES DEL CIUDADANO */}
           <div className="space-y-4">
-            <h3 className="text-sm font-bold text-[#171717]">Detalles del Ciudadano</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-[#171717]">Detalles del Ciudadano</h3>
+              {haciendaInfo && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-[#15803D]">
+                  <ShieldCheck className="h-4 w-4 text-[#15803D]" /> Verificado con Ministerio de Hacienda
+                </span>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
-              <div className="md:col-span-4">
-                <FormField label="Cédula de Identidad" required>
-                  <div className="flex gap-2">
+              <div className="md:col-span-5">
+                <FormField label="Cédula de Identidad (Física o Jurídica)" required>
+                  <div className="flex gap-1.5">
                     <Input
                       value={cedulaBusqueda}
                       onChange={(e) => setCedulaBusqueda(e.target.value)}
-                      placeholder="1-2345-6789"
+                      placeholder="Ej. 508570485"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleBuscarCiudadano();
+                        }
+                      }}
                     />
-                    <Button type="button" onClick={handleBuscarCiudadano}>
-                      <Search className="h-4 w-4" /> Buscar
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handleBuscarCiudadano}
+                      title="Buscar en padrón municipal"
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={consultandoHacienda || !cedulaBusqueda.trim()}
+                      onClick={handleConsultarHacienda}
+                      className="whitespace-nowrap px-3 text-xs"
+                      title="Verificar en tiempo real contra API Ministerio de Hacienda"
+                    >
+                      <ShieldCheck className="h-4 w-4 text-[#93C5FD]" />
+                      {consultandoHacienda ? '...' : 'Hacienda'}
                     </Button>
                   </div>
                 </FormField>
               </div>
 
-              <div className="md:col-span-4">
-                <FormField label="Nombre Completo (Autocompletado)">
+              <div className="md:col-span-7">
+                <FormField label="Nombre Completo / Razón Social (Padrón Municipal)">
                   <Select
                     value={selectedContribuyenteId}
+                    onChange={(e) => {
+                      setSelectedContribuyenteId(Number(e.target.value));
+                      setSelectedInmuebleId('');
+                    }}
+                  >
+                    {(padronQuery.data ?? []).map((c) => (
+                      <option key={c.idContribuyente} value={c.idContribuyente}>
+                        {c.nombreCompletoORazonSocial} ({c.identificacion})
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+              </div>
+            </div>
+
+            {haciendaInfo && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-2.5 text-xs text-[#1E3A8A]">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-[#1D4ED8]" />
+                  <span>
+                    <strong>Registro Oficial Hacienda:</strong> {haciendaInfo.nombreCompleto} · Régimen:{' '}
+                    {haciendaInfo.regimenDescripcion}
+                  </span>
+                </div>
+                <Badge variant={haciendaInfo.moroso ? 'danger' : 'success'}>
+                  {haciendaInfo.estadoTributario} {haciendaInfo.moroso ? '· MOROSO' : '· AL DÍA'}
+                </Badge>
+              </div>
+            )}
                     onChange={(e) => {
                       setSelectedContribuyenteId(Number(e.target.value));
                       setSelectedInmuebleId('');
@@ -481,25 +599,43 @@ export function RadicacionTramitePage() {
               />
             </FormField>
 
-            {/* Botones de Acción Inferiores: RADICAR EXPEDIENTE | Cancelar */}
-            <div className="flex items-center gap-3 pt-2">
-              <Button
-                type="button"
-                disabled={radicarExpedienteMut.isPending}
-                onClick={() => radicarExpedienteMut.mutate()}
-              >
-                {radicarExpedienteMut.isPending ? 'Radicando...' : 'RADICAR EXPEDIENTE'}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setObservacionInicial('');
-                  toast.info('Formulario restablecido.');
-                }}
-              >
-                Cancelar
-              </Button>
+            {/* Botones de Acción Inferiores: RADICAR EXPEDIENTE | Siguiente Paso */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E5E7EB] pt-4">
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  disabled={radicarExpedienteMut.isPending}
+                  onClick={() => radicarExpedienteMut.mutate()}
+                >
+                  <FilePlus2 className="h-4 w-4" />
+                  {radicarExpedienteMut.isPending ? 'Radicando...' : 'RADICAR EXPEDIENTE'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setObservacionInicial('');
+                    toast.info('Formulario restablecido.');
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+
+              {expedienteCreadoId ? (
+                <Button asChild>
+                  <Link to={`/tramites/revision?id=${expedienteCreadoId}`}>
+                    Siguiente Paso: Ir a Revisión y Cotejo (Paso 2)
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              ) : (
+                <Button variant="secondary" asChild>
+                  <Link to="/tramites/revision">
+                    Ver Expedientes en Revisión <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>

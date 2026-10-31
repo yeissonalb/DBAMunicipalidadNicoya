@@ -1,9 +1,12 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
+  ArrowLeft,
+  ArrowRight,
   CheckCircle2,
+  ChevronRight,
   ClipboardCheck,
   Clock,
   FolderKanban,
@@ -21,8 +24,18 @@ import { FormField } from '@/components/forms/FormField';
 
 export function RevisionExpedientePage() {
   const queryClient = useQueryClient();
-  const [idTramiteInput, setIdTramiteInput] = useState('1');
-  const [idTramiteActivo, setIdTramiteActivo] = useState<number>(1);
+  const [searchParams] = useSearchParams();
+  const initialId = Number(searchParams.get('id')) || 1;
+  const [idTramiteInput, setIdTramiteInput] = useState(String(initialId));
+  const [idTramiteActivo, setIdTramiteActivo] = useState<number>(initialId);
+
+  useEffect(() => {
+    const pId = Number(searchParams.get('id'));
+    if (pId > 0) {
+      setIdTramiteInput(String(pId));
+      setIdTramiteActivo(pId);
+    }
+  }, [searchParams]);
 
   // Panel Derecho del Wireframe: Acción Operativa: Actualizar Estado del Trámite
   const [idEstadoSeleccionado, setIdEstadoSeleccionado] = useState<number>(2);
@@ -122,6 +135,31 @@ export function RevisionExpedientePage() {
           </div>
         }
       />
+
+      {/* FLUJO DE TRABAJO SECUENCIAL (SISTEMA DE EXPEDIENTES SIGEMUN) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-[#BFDBFE] bg-[#EFF6FF] p-3.5 text-xs shadow-xs">
+        <Link
+          to="/tramites/radicacion"
+          className="flex items-center gap-2 text-[#4B5563] hover:text-[#171717] transition-colors"
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white border border-[#D1D5DB] text-[#4B5563] font-mono text-[11px]">1</span>
+          <span>Paso 1: Radicación de Expediente</span>
+        </Link>
+        <ChevronRight className="hidden sm:block h-4 w-4 text-[#93C5FD]" />
+        <div className="flex items-center gap-2 font-bold text-[#1E3A8A]">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1D4ED8] text-white font-mono text-[11px]">2</span>
+          <span>Paso 2: Revisión Técnica y Cotejo</span>
+          <Badge variant="blue">Paso Actual</Badge>
+        </div>
+        <ChevronRight className="hidden sm:block h-4 w-4 text-[#93C5FD]" />
+        <Link
+          to={`/tramites/seguimiento?id=${idTramiteActivo}`}
+          className="flex items-center gap-2 text-[#4B5563] hover:text-[#171717] transition-colors"
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white border border-[#D1D5DB] text-[#4B5563] font-mono text-[11px]">3</span>
+          <span>Paso 3: Seguimiento y Resolución Final</span>
+        </Link>
+      </div>
 
       {tramiteQuery.isLoading ? (
         <LoadingState message="Consultando expediente en SQL Server..." />
@@ -259,6 +297,15 @@ export function RevisionExpedientePage() {
                     ? 'Registrando Cambio...'
                     : 'Registrar Cambio de Estado'}
                 </Button>
+
+                <div className="border-t border-[#E5E7EB] pt-3">
+                  <Button asChild className="w-full">
+                    <Link to={`/tramites/seguimiento?id=${idTramiteActivo}`}>
+                      Siguiente Paso: Ir a Seguimiento y Resolución (Paso 3)
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
