@@ -298,7 +298,13 @@ export function normalizeRoleName(rol: string): string {
     return ROLES.ANALISTA_TRAMITES;
   }
   if (lower.includes('auditor')) return ROLES.AUDITOR;
-  if (lower.includes('ciudadano') || lower.includes('cliente')) return ROLES.CIUDADANO;
+  if (
+    lower.includes('ciudadano') ||
+    lower.includes('cliente') ||
+    lower.includes('contribuyente')
+  ) {
+    return ROLES.CIUDADANO;
+  }
   return r;
 }
 
@@ -436,7 +442,6 @@ export const MODULE_PERMISSIONS = {
     ROLES.CAJERO,
     ROLES.ANALISTA_TRAMITES,
     ROLES.AUDITOR,
-    ROLES.CIUDADANO,
   ],
   PORTAL_CIUDADANO: [ROLES.CIUDADANO, ROLES.ADMIN],
   CONTRIBUYENTES: [ROLES.ADMIN, ROLES.ANALISTA_TRAMITES, ROLES.CAJERO],
@@ -522,7 +527,11 @@ export function hasAnyRole(userRoles: string[], allowedRoles: readonly string[])
 export function getDefaultRouteForRoles(roles: string[]): string {
   if (!roles || roles.length === 0) return '/dashboard';
   const normalized = roles.map(normalizeRoleName);
-  if (normalized.includes(ROLES.CIUDADANO) && normalized.length === 1) {
+  if (
+    normalized.includes(ROLES.CIUDADANO) &&
+    !normalized.includes(ROLES.ADMIN) &&
+    !normalized.includes(ROLES.DBA)
+  ) {
     return '/portal-ciudadano';
   }
   return '/dashboard';

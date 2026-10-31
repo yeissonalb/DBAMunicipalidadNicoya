@@ -25,7 +25,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
-import { canPerformCrud, type CrudModuleKey } from '@/features/auth/permissions';
+import { canPerformCrud, normalizeRoleName, ROLES, type CrudModuleKey } from '@/features/auth/permissions';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
@@ -181,11 +181,32 @@ export function AppLayout() {
 
   const userRoles = React.useMemo(() => session?.roles ?? [], [session?.roles]);
 
+  const isCitizenOnly = React.useMemo(() => {
+    const normalized = userRoles.map(normalizeRoleName);
+    return (
+      normalized.includes(ROLES.CIUDADANO) &&
+      !normalized.includes(ROLES.ADMIN) &&
+      !normalized.includes(ROLES.DBA)
+    );
+  }, [userRoles]);
+
   // Filtrar estrictamente los módulos a los que el rol actual tiene permiso de CONSULTAR
   const groupedSections = React.useMemo(() => {
     void rbacTick;
     const map = new Map<string, NavItem[]>();
     for (const item of NAV_ITEMS) {
+      // Si el rol es exclusivamente Ciudadano / Contribuyente, únicamente se le permite el Portal Ciudadano
+      if (isCitizenOnly) {
+        if (item.to !== '/portal-ciudadano') continue;
+      } else {
+        if (item.to === '/') {
+          const list = map.get(item.section) ?? [];
+          list.push(item);
+          map.set(item.section, list);
+          continue;
+        }
+      }
+
       const authorized =
         !item.moduleKey || canPerformCrud(userRoles, item.moduleKey, 'CONSULTAR');
       if (!authorized) continue;
@@ -195,7 +216,7 @@ export function AppLayout() {
       map.set(item.section, list);
     }
     return Array.from(map.entries());
-  }, [userRoles, rbacTick]);
+  }, [userRoles, rbacTick, isCitizenOnly]);
 
   const currentNav = NAV_ITEMS.find((item) =>
     item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)

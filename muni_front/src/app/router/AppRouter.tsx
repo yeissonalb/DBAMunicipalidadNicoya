@@ -1,7 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { useAuth } from '@/app/providers/AuthProvider';
 import { AppLayout } from '@/app/layouts/AppLayout';
 import { ProtectedRoute } from '@/app/router/ProtectedRoute';
-import { MODULE_PERMISSIONS } from '@/features/auth/permissions';
+import { MODULE_PERMISSIONS, getDefaultRouteForRoles } from '@/features/auth/permissions';
 
 import { LoginPage } from '@/features/auth/LoginPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
@@ -21,6 +22,12 @@ import { MatrizPermisosPage } from '@/features/roles-permisos/MatrizPermisosPage
 import { DbaPoliticasPage } from '@/features/dba/DbaPoliticasPage';
 import { DbaRespaldosPage } from '@/features/dba/DbaRespaldosPage';
 
+function IndexRedirect() {
+  const { user } = useAuth();
+  const target = getDefaultRouteForRoles(user?.roles ?? []);
+  return <Navigate to={target} replace />;
+}
+
 export function AppRouter() {
   return (
     <BrowserRouter>
@@ -36,7 +43,7 @@ export function AppRouter() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<DashboardPage />} />
+          <Route index element={<IndexRedirect />} />
           <Route
             path="/dashboard"
             element={
