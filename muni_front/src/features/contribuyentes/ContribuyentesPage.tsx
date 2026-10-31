@@ -11,6 +11,8 @@ import {
   Link2,
   Plus,
   RefreshCw,
+  Search,
+  ShieldCheck,
   UserCheck,
   UserPlus,
   Users,
@@ -20,6 +22,7 @@ import {
   contribuyenteApi,
   inmuebleApi,
 } from '@/services/api';
+import { consultarCedulaHacienda } from '@/services/haciendaCedulaApi';
 import type { VwPadronContribuyente } from '@/types/api';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/common/StateFeedback';
@@ -102,6 +105,64 @@ export function ContribuyentesPage() {
   const [editingContribuyente, setEditingContribuyente] = useState<VwPadronContribuyente | null>(
     null
   );
+
+  // Estados de consulta en tiempo real a la API de Hacienda en los formularios
+  const [buscandoHaciendaFisica, setBuscandoHaciendaFisica] = useState(false);
+  const [haciendaFisicaResumen, setHaciendaFisicaResumen] = useState<string | null>(null);
+
+  const [buscandoHaciendaJuridica, setBuscandoHaciendaJuridica] = useState(false);
+  const [haciendaJuridicaResumen, setHaciendaJuridicaResumen] = useState<string | null>(null);
+
+  const handleConsultarHaciendaFisica = async () => {
+    const rawCed = fisicaForm.getValues('identificacion');
+    if (!rawCed || rawCed.trim().length < 8) {
+      toast.error('Ingrese un número de cédula válido para consultar en Hacienda.');
+      return;
+    }
+    setBuscandoHaciendaFisica(true);
+    try {
+      const info = await consultarCedulaHacienda(rawCed);
+      fisicaForm.setValue('nombre', info.nombre, { shouldValidate: true });
+      fisicaForm.setValue('primerApellido', info.primerApellido, { shouldValidate: true });
+      fisicaForm.setValue('segundoApellido', info.segundoApellido, { shouldValidate: true });
+      if (info.idTipoIdentificacionSugerido) {
+        fisicaForm.setValue('idTipoIdentificacion', info.idTipoIdentificacionSugerido, { shouldValidate: true });
+      }
+      setHaciendaFisicaResumen(
+        `${info.nombreCompleto} — ${info.estadoTributario} (${info.moroso ? 'MOROSO' : 'AL DÍA'})`
+      );
+      toast.success(`Hacienda: ${info.nombreCompleto}`);
+    } catch (err) {
+      setHaciendaFisicaResumen(null);
+      toast.error(err instanceof Error ? err.message : 'Error al consultar Hacienda.');
+    } finally {
+      setBuscandoHaciendaFisica(false);
+    }
+  };
+
+  const handleConsultarHaciendaJuridica = async () => {
+    const rawCed = juridicaForm.getValues('identificacion');
+    if (!rawCed || rawCed.trim().length < 9) {
+      toast.error('Ingrese una cédula jurídica válida (mín. 10 dígitos) para consultar en Hacienda.');
+      return;
+    }
+    setBuscandoHaciendaJuridica(true);
+    try {
+      const info = await consultarCedulaHacienda(rawCed);
+      juridicaForm.setValue('razonSocial', info.nombreCompleto, { shouldValidate: true });
+      juridicaForm.setValue('nombreComercial', info.nombreCompleto, { shouldValidate: true });
+      juridicaForm.setValue('idTipoIdentificacion', 2, { shouldValidate: true });
+      setHaciendaJuridicaResumen(
+        `${info.nombreCompleto} — ${info.estadoTributario} (${info.moroso ? 'MOROSO' : 'AL DÍA'})`
+      );
+      toast.success(`Hacienda: ${info.nombreCompleto}`);
+    } catch (err) {
+      setHaciendaJuridicaResumen(null);
+      toast.error(err instanceof Error ? err.message : 'Error al consultar Hacienda.');
+    } finally {
+      setBuscandoHaciendaJuridica(false);
+    }
+  };
 
   // Catálogos
   const distritosQuery = useQuery({
@@ -735,12 +796,40 @@ export function ContribuyentesPage() {
           </FormField>
 
           <FormField
-            label="Número de Identificación"
+            label="Número de Identificación (Cédula)"
             required
             error={fisicaForm.formState.errors.identificacion?.message}
           >
-            <Input placeholder="Ej. 5-0412-0891" {...fisicaForm.register('identificacion')} />
+            <div className="flex gap-2">
+              <Input
+                placeholder="Ej. 508570485"
+                {...fisicaForm.register('identificacion')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleConsultarHaciendaFisica();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={buscandoHaciendaFisica}
+                onClick={handleConsultarHaciendaFisica}
+                title="Autocompletar nombres desde el Ministerio de Hacienda"
+              >
+                <Search className="h-4 w-4 text-[#1D4ED8]" />
+                {buscandoHaciendaFisica ? '...' : 'Hacienda'}
+              </Button>
+            </div>
           </FormField>
+
+          {haciendaFisicaResumen && (
+            <div className="sm:col-span-2 flex items-center gap-2 rounded-[8px] border border-[#BFDBFE] bg-[#EFF6FF] px-3.5 py-2 text-xs text-[#1E3A8A]">
+              <ShieldCheck className="h-4 w-4 text-[#1D4ED8] shrink-0" />
+              <span className="font-semibold">{haciendaFisicaResumen}</span>
+            </div>
+          )}
 
           <FormField
             label="Nombre"
@@ -891,12 +980,40 @@ export function ContribuyentesPage() {
           </FormField>
 
           <FormField
-            label="Cédula Jurídica"
+            label="Cédula Jurídica (10 dígitos)"
             required
             error={juridicaForm.formState.errors.identificacion?.message}
           >
-            <Input placeholder="Ej. 3-101-784512" {...juridicaForm.register('identificacion')} />
+            <div className="flex gap-2">
+              <Input
+                placeholder="Ej. 3101123456"
+                {...juridicaForm.register('identificacion')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleConsultarHaciendaJuridica();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={buscandoHaciendaJuridica}
+                onClick={handleConsultarHaciendaJuridica}
+                title="Autocompletar Razón Social desde el Ministerio de Hacienda"
+              >
+                <Search className="h-4 w-4 text-[#1D4ED8]" />
+                {buscandoHaciendaJuridica ? '...' : 'Hacienda'}
+              </Button>
+            </div>
           </FormField>
+
+          {haciendaJuridicaResumen && (
+            <div className="sm:col-span-2 flex items-center gap-2 rounded-[8px] border border-[#BFDBFE] bg-[#EFF6FF] px-3.5 py-2 text-xs text-[#1E3A8A]">
+              <ShieldCheck className="h-4 w-4 text-[#1D4ED8] shrink-0" />
+              <span className="font-semibold">{haciendaJuridicaResumen}</span>
+            </div>
+          )}
 
           <FormField
             label="Razón Social"

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Building2,
+  ChevronDown,
   ClipboardCheck,
   Database,
   FileSpreadsheet,
@@ -9,13 +10,17 @@ import {
   FolderKanban,
   Globe,
   HardDrive,
+  KeyRound,
   LayoutDashboard,
   Lock,
   LogOut,
   Menu,
+  PanelLeft,
+  PanelLeftClose,
   Receipt,
   Scale,
   ShieldCheck,
+  User,
   Users,
   X,
 } from 'lucide-react';
@@ -152,12 +157,26 @@ export function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = React.useState(false);
   const [rbacTick, setRbacTick] = React.useState(0);
+
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const onRbacChange = () => setRbacTick((t) => t + 1);
     window.addEventListener('sigemun-rbac-updated', onRbacChange);
     return () => window.removeEventListener('sigemun-rbac-updated', onRbacChange);
+  }, []);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const userRoles = React.useMemo(() => session?.roles ?? [], [session?.roles]);
@@ -191,15 +210,16 @@ export function AppLayout() {
         />
       )}
 
-      {/* SIDEBAR INSTITUCIONAL ESTANDARIZADO */}
+      {/* SIDEBAR INSTITUCIONAL FIJO AL HACER SCROLL */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-[268px] flex-col border-r border-[#1E293B] bg-[#0F172A] text-white transition-transform duration-200 lg:static lg:translate-x-0',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+          'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[#1E293B] bg-[#0F172A] text-white transition-all duration-300 lg:sticky lg:top-0 lg:h-screen',
+          mobileOpen ? 'translate-x-0 w-[268px]' : '-translate-x-full lg:translate-x-0',
+          sidebarCollapsed ? 'lg:w-0 lg:overflow-hidden lg:border-r-0' : 'w-[268px]'
         )}
       >
         {/* Cabecera con Escudo Oficial de la Municipalidad de Nicoya */}
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-5 py-4">
           <div className="flex items-center gap-3">
             <img
               src="/images/escudo-nicoya.jpg"
@@ -226,81 +246,80 @@ export function AppLayout() {
           </button>
         </div>
 
-        {/* Navegación por Módulos (Solo visibles los permitidos para el rol) */}
-        <nav
-          className="flex-1 space-y-5 overflow-y-auto px-3 py-4"
-          aria-label="Navegación principal del sistema"
-        >
-          {groupedSections.map(([sectionTitle, items]) => (
-            <div key={sectionTitle}>
-              <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                {sectionTitle}
-              </p>
-              <div className="space-y-1">
-                {items.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.to === '/'}
-                    onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-xs font-medium transition-colors',
-                        isActive
-                          ? 'bg-[#1D4ED8] font-semibold text-white shadow-xs'
-                          : 'text-slate-300 hover:bg-white/8 hover:text-white'
-                      )
-                    }
-                  >
-                    {item.icon}
-                    <span className="truncate">{item.label}</span>
-                  </NavLink>
-                ))}
+        {/* Contenedor Unificado: Navegación + Tarjeta de Usuario inmediatamente abajo (Sin espacio vacío) */}
+        <div className="flex flex-1 flex-col overflow-y-auto px-3 py-4">
+          <nav className="space-y-5" aria-label="Navegación principal del sistema">
+            {groupedSections.map(([sectionTitle, items]) => (
+              <div key={sectionTitle}>
+                <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                  {sectionTitle}
+                </p>
+                <div className="space-y-1">
+                  {items.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.to === '/'}
+                      onClick={() => setMobileOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-xs font-medium transition-colors',
+                          isActive
+                            ? 'bg-[#1D4ED8] font-semibold text-white shadow-xs'
+                            : 'text-slate-300 hover:bg-white/8 hover:text-white'
+                        )
+                      }
+                    >
+                      {item.icon}
+                      <span className="truncate">{item.label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </nav>
+
+          {/* Tarjeta de sesión activa ubicada inmediatamente al final de los links (Elimina el largo espaciado) */}
+          <div className="mt-5 rounded-[10px] border border-white/10 bg-[#0B1120] p-3.5 shadow-sm">
+            <div className="mb-2.5 flex items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1E3A8A] text-xs font-bold text-white shadow-xs ring-2 ring-[#1D4ED8]/30">
+                {(session?.nombreFuncionario || session?.userName || 'MN')
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-bold text-white">
+                  {session?.nombreFuncionario || session?.userName}
+                </p>
+                <p className="truncate font-mono text-[11px] text-slate-400">
+                  @{session?.userName} · ID #{session?.idUsuario}
+                </p>
               </div>
             </div>
-          ))}
-        </nav>
 
-        {/* Tarjeta inferior de sesión activa */}
-        <div className="border-t border-white/10 bg-[#0B1120] p-4">
-          <div className="mb-3 flex items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#1E3A8A] text-xs font-bold text-white">
-              {(session?.nombreFuncionario || session?.userName || 'MN')
-                .slice(0, 2)
-                .toUpperCase()}
+            <div className="mb-3 flex flex-wrap gap-1">
+              {userRoles.map((r) => (
+                <span
+                  key={r}
+                  className="rounded-[6px] border border-[#1D4ED8]/40 bg-[#1E3A8A]/50 px-2 py-0.5 text-[10px] font-semibold text-[#BFDBFE]"
+                >
+                  {r}
+                </span>
+              ))}
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-bold text-white">
-                {session?.nombreFuncionario || session?.userName}
-              </p>
-              <p className="truncate font-mono text-[11px] text-slate-400">
-                @{session?.userName} · ID #{session?.idUsuario}
-              </p>
-            </div>
-          </div>
 
-          <div className="mb-3 flex flex-wrap gap-1">
-            {userRoles.map((r) => (
-              <span
-                key={r}
-                className="rounded-[6px] border border-[#1D4ED8]/40 bg-[#1E3A8A]/50 px-2 py-0.5 text-[10px] font-semibold text-[#BFDBFE]"
-              >
-                {r}
-              </span>
-            ))}
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+                navigate('/login');
+              }}
+              className="flex h-[36px] w-full items-center justify-center gap-2 rounded-[10px] border border-white/15 bg-white/5 px-3 text-xs font-semibold text-white transition-colors hover:bg-[#DC2626] hover:border-[#DC2626]"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Cerrar sesión segura
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              logout();
-              navigate('/login');
-            }}
-            className="flex h-[38px] w-full items-center justify-center gap-2 rounded-[10px] border border-white/15 bg-white/5 px-3 text-xs font-semibold text-white transition-colors hover:bg-[#DC2626] hover:border-[#DC2626]"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Cerrar sesión segura
-          </button>
         </div>
       </aside>
 
@@ -309,6 +328,7 @@ export function AppLayout() {
         {/* TOPBAR INSTITUCIONAL */}
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#E5E7EB] bg-white px-4 shadow-xs sm:px-8">
           <div className="flex items-center gap-3">
+            {/* Botón para dispositivos móviles */}
             <Button
               variant="secondary"
               size="icon"
@@ -318,11 +338,25 @@ export function AppLayout() {
             >
               <Menu className="h-5 w-5" />
             </Button>
+
+            {/* Botón para Ocultar / Mostrar la Barra de Navegación (Desktop) */}
+            <Button
+              variant="secondary"
+              size="icon"
+              className="hidden lg:inline-flex"
+              title={sidebarCollapsed ? 'Mostrar barra de navegación' : 'Ocultar barra de navegación'}
+              aria-label={sidebarCollapsed ? 'Mostrar barra de navegación' : 'Ocultar barra de navegación'}
+              onClick={() => setSidebarCollapsed((v) => !v)}
+            >
+              {sidebarCollapsed ? <PanelLeft className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+            </Button>
+
+            {/* Logo Nicoya Azul alargado y proporcionado + Título de cabecera */}
             <div className="flex items-center gap-3">
               <img
                 src="/images/nicoya-azul.jpg"
                 alt="Nicoya Azul"
-                className="hidden h-9 w-9 rounded-[8px] object-cover sm:block"
+                className="hidden h-10 w-auto max-w-[155px] rounded-[6px] object-contain sm:block"
               />
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#1D4ED8]">
@@ -335,20 +369,96 @@ export function AppLayout() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Badge variant="success" className="hidden sm:inline-flex">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#15803D]" />
-              SQL Server Conectado
-            </Badge>
-            <div className="hidden items-center gap-2 rounded-[10px] border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-1.5 text-xs md:flex">
-              <span className="font-semibold text-[#171717]">
-                {session?.nombreFuncionario || session?.userName}
-              </span>
-              <span className="text-[#9CA3AF]">|</span>
-              <span className="font-medium text-[#1E3A8A]">
-                {userRoles[0] || 'Usuario Municipal'}
-              </span>
-            </div>
+          {/* Menú de Usuario Visual (Círculo de Usuario para Actualizar Credenciales / Restablecer Contraseña) */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setUserDropdownOpen((v) => !v)}
+              className="flex items-center gap-2.5 rounded-full border border-[#D1D5DB] bg-white p-1.5 pr-3 text-left transition-all hover:border-[#1D4ED8] hover:bg-[#F8FAFC] focus:outline-hidden focus:ring-2 focus:ring-[#1D4ED8]/30"
+              title="Cuenta de Usuario · Configuración de Credenciales"
+              aria-expanded={userDropdownOpen}
+            >
+              {/* Círculo de Usuario Oficial con indicador en vivo */}
+              <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-[#1D4ED8] text-xs font-bold text-white shadow-xs">
+                {(session?.nombreFuncionario || session?.userName || 'MN')
+                  .slice(0, 2)
+                  .toUpperCase()}
+                <span
+                  className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#15803D] ring-2 ring-white"
+                  title="Sesión activa"
+                />
+              </div>
+
+              <div className="hidden flex-col md:flex">
+                <span className="text-xs font-bold leading-tight text-[#171717]">
+                  {session?.nombreFuncionario || session?.userName}
+                </span>
+                <span className="text-[10px] font-medium leading-tight text-[#4B5563]">
+                  {userRoles[0] || 'Usuario Municipal'}
+                </span>
+              </div>
+
+              <ChevronDown className="h-4 w-4 text-[#6B7280]" />
+            </button>
+
+            {/* Menú Desplegable Visual de Cuenta y Credenciales */}
+            {userDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-[10px] border border-[#E5E7EB] bg-white py-1.5 shadow-xl z-50">
+                <div className="border-b border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3">
+                  <p className="text-xs font-bold text-[#171717]">
+                    {session?.nombreFuncionario || session?.userName}
+                  </p>
+                  <p className="font-mono text-[11px] text-[#4B5563]">@{session?.userName}</p>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {userRoles.map((r) => (
+                      <span
+                        key={r}
+                        className="rounded-[4px] bg-[#EFF6FF] px-1.5 py-0.5 text-[9px] font-bold text-[#1E3A8A]"
+                      >
+                        {r}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="py-1 text-xs">
+                  <div className="flex items-center justify-between px-4 py-2 text-[#4B5563] hover:bg-[#F8FAFC] cursor-pointer">
+                    <span className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-[#1D4ED8]" /> Mi Perfil
+                    </span>
+                    <Badge variant="neutral" className="text-[9px]">Ver</Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between px-4 py-2 text-[#4B5563] hover:bg-[#F8FAFC] cursor-pointer">
+                    <span className="flex items-center gap-2">
+                      <KeyRound className="h-4 w-4 text-[#1E3A8A]" /> Actualizar Credenciales
+                    </span>
+                    <Badge variant="blue" className="text-[9px]">Próximamente</Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between px-4 py-2 text-[#4B5563] hover:bg-[#F8FAFC] cursor-pointer">
+                    <span className="flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-[#B45309]" /> Restablecer Contraseña
+                    </span>
+                    <Badge variant="blue" className="text-[9px]">Próximamente</Badge>
+                  </div>
+                </div>
+
+                <div className="border-t border-[#E5E7EB] pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      logout();
+                      navigate('/login');
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-xs font-semibold text-[#DC2626] hover:bg-[#FEF2F2]"
+                  >
+                    <LogOut className="h-4 w-4" /> Cerrar sesión
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </header>
 

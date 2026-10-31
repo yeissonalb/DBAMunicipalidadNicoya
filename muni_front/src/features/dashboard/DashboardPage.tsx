@@ -226,7 +226,8 @@ export function DashboardPage() {
       {(canSeeContribuyentes || canSeeInmuebles || canSeeFacturacion || canSeeTramites) && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {canSeeContribuyentes && (
-            <Card className="border-l-4 border-l-[#1D4ED8]">
+            <Card>
+              <div className="h-1.5 w-full bg-[#1D4ED8]" />
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#4B5563]">
                   <span>Padrón Municipal</span>
@@ -243,7 +244,8 @@ export function DashboardPage() {
           )}
 
           {canSeeInmuebles && (
-            <Card className="border-l-4 border-l-[#1E3A8A]">
+            <Card>
+              <div className="h-1.5 w-full bg-[#1E3A8A]" />
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#4B5563]">
                   <span>Fincas en Catastro</span>
@@ -260,7 +262,8 @@ export function DashboardPage() {
           )}
 
           {canSeeFacturacion && (
-            <Card className="border-l-4 border-l-[#DC2626]">
+            <Card>
+              <div className="h-1.5 w-full bg-[#DC2626]" />
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#4B5563]">
                   <span>Saldo Pendiente Cobro</span>
@@ -277,7 +280,8 @@ export function DashboardPage() {
           )}
 
           {canSeeTramites && (
-            <Card className="border-l-4 border-l-[#15803D]">
+            <Card>
+              <div className="h-1.5 w-full bg-[#15803D]" />
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#4B5563]">
                   <span>Catálogo de Trámites</span>
