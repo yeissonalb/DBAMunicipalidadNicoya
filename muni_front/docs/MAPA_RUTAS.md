@@ -10,7 +10,11 @@ Todas las rutas privadas están protegidas por `ProtectedRoute.tsx`, que valida 
 |---|---|---|---|---|
 | `/login` | `LoginPage.tsx` | WF #1 (p. 113, 114, 116) | Público (`AllowAnonymous`) | `AuthController` |
 | `/dashboard` | `DashboardPage.tsx` | Panel General | Todos los roles autenticados | `Auth`, `Tramite`, `Inmueble`, `FacturacionPago`, `Reportes`, `Auditoria`, `RespaldosDba`, `Usuario` (según rol) |
-| `/portal-ciudadano` | `PortalCiudadanoPage.tsx` | WF #2 (p. 113) | Todos los roles autenticados (Vista demostrativa con bloqueo documentado) | *Ninguno (bloqueo de autenticación ciudadana documentado)* |
+| `/portal-ciudadano` | `PortalCiudadanoPage.tsx` | WF #2 (p. 113) | Todos los roles autenticados (página informativa con enlace al portal) | *Ninguno* |
+| `/portal/login` | `PortalLoginPage.tsx` | WF #2 (p. 113) | Público (contribuyentes) | `POST /api/auth/ciudadano/login`, `POST /api/auth/ciudadano/activar` |
+| `/portal` | `PortalHomePage.tsx` | WF #2 (p. 113) | Token ciudadano (`Ciudadano`) | `GET/POST /api/portal/*` |
+| `/datawarehouse` | `DataWarehousePage.tsx` | WF #13 (p. 120) | `Admin`, `Auditor`, `DBA` (ETL: `Admin`, `DBA`) | `GET/POST /api/datawarehouse/*` |
+| `/dba/monitoreo` | `DbaMonitoreoPage.tsx` | CU-DBA-04/06 | `Admin`, `DBA` | `GET/POST /api/monitoreodba/*` |
 | `/contribuyentes` | `ContribuyentesPage.tsx` | WF #11 (p. 119 sup.) | `Administrador del Sistema`, `Cajero de Recaudación` | `ContribuyenteController` |
 | `/inmuebles` | `InmueblesPage.tsx` | WF #11 (p. 119 sup.) | `Administrador del Sistema`, `Analista de Plataforma y Trámites` | `InmuebleController`, `CatalogosInmuebleController`, `ContribuyenteController` (si es Admin) |
 | `/tramites/radicar` | `RadicacionTramitePage.tsx` | WF #8 (p. 117 inf.) | `Administrador del Sistema`, `Analista de Plataforma y Trámites` | `TramiteController`, `TipoTramiteController`, `InmuebleController` |

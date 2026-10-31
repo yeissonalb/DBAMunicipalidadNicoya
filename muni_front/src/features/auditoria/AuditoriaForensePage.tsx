@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
 import { FormField } from '@/components/forms/FormField';
 import { exportToCsv, formatDateTime } from '@/lib/utils';
+import type { VwAuditoriaDetallada } from '@/types/api';
 
 interface AuditRowNormalized {
   idAuditoria: number;
@@ -33,6 +34,23 @@ interface AuditRowNormalized {
   userName: string;
   nombreFuncionario?: string;
   nombreDepartamento?: string;
+}
+
+/** vw_auditoria_detallada / sp_consultar_auditoria / sp_filtrar_auditoria → fila de la tabla. */
+function normalizarAuditoria(r: VwAuditoriaDetallada): AuditRowNormalized {
+  return {
+    idAuditoria: r.idAuditoria,
+    fechaEvento: r.fechaHora,
+    tablaAfectada: r.tablaAfectada ?? '',
+    idRegistroAfectado: r.idRegistroAfectado ?? '',
+    tipoAccion: r.operacionDml ?? '',
+    valoresAnteriores: r.valoresAnteriores,
+    valoresNuevos: r.valoresNuevos,
+    direccionIp: r.direccionIp ?? '',
+    userName: r.usuarioEjecutor ?? 'SISTEMA_INTERNO',
+    nombreFuncionario: r.usuarioEjecutor ?? undefined,
+    nombreDepartamento: r.nombreDepartamento ?? undefined,
+  };
 }
 
 function formatDiffContent(raw: string | null | undefined): string {
@@ -104,12 +122,12 @@ export function AuditoriaForensePage() {
 
   const baseRows: AuditRowNormalized[] = useMemo(() => {
     if (consultarRegistroActivo) {
-      return registroPuntualQuery.data ?? [];
+      return (registroPuntualQuery.data ?? []).map(normalizarAuditoria);
     }
     if (useServerFilter) {
-      return filtrarQuery.data ?? [];
+      return (filtrarQuery.data ?? []).map(normalizarAuditoria);
     }
-    return detalladaQuery.data ?? [];
+    return (detalladaQuery.data ?? []).map(normalizarAuditoria);
   }, [
     consultarRegistroActivo,
     useServerFilter,

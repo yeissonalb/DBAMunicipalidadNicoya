@@ -8,6 +8,9 @@
 - **Fuente B:** `muni-back/` (.NET 9 / ASP.NET Core Web API, `Program.cs`, 14 controladores, middlewares, servicios, entidades y `tools/entity_columns.json`).
 - **Fuente C:** `BaseDeDatos/` (`Scripts_Ordinarios/`, `Database_Backend/` scripts 01–14, `DataWareHouse/`, `PlanDeMantenimientoBD/`).
 
+
+> **Nota (actualización):** esta auditoría describe el backend *antes* del script `15_portal_ciudadano_dw_monitoreo.sql`. Las limitaciones que menciona (portal ciudadano, acceso del Analista al padrón, listado de adjuntos, revocaciones, Data Warehouse y monitoreo DBA) ya están resueltas; ver [`PENDIENTES_BACKEND.md`](./PENDIENTES_BACKEND.md).
+
 ---
 
 ## 1. Arquitectura General y Configuración del Backend
@@ -16,7 +19,7 @@
 |---|---|
 | **Framework** | .NET 9 (`net9.0`), ASP.NET Core Web API + Entity Framework Core 9 (SQL Server) |
 | **Puerto por defecto** | `http://localhost:5080` (`https://localhost:7221`) — Base URL API: `http://localhost:5080/api` |
-| **Base de datos** | SQL Server — `DB_Municipalidad_Nicoya` (`DefaultConnection` en `appsettings.json`) |
+| **Base de datos** | SQL Server — `MunicipalidadNicoya2026` (`DefaultConnection` en `appsettings.json`) |
 | **Autenticación** | JWT Bearer (`HS256`, `Issuer: MunicipalidadNicoyaAPI`, `Audience: MunicipalidadNicoyaClient`, expiración por defecto `120` min) |
 | **CORS (`ReactApp`)** | Orígenes permitidos en `Program.cs`: `http://localhost:3000` y `http://localhost:5173`, `AllowAnyHeader()`, `AllowAnyMethod()` |
 | **Envoltorio de Respuesta** | Todos los endpoints devuelven `BaseResponse<T>`: `{ "success": bool, "message": string, "data": T }` |
@@ -263,6 +266,6 @@ Los atributos `[Authorize(Roles = ...)]` validan coincidencia exacta con los nom
 | **Auditoría Forense (`/api/auditoria`)** | Implementado en código | Implementado e integrado | Incluye comparativa `valoresAnteriores` vs `valoresNuevos` |
 | **Consola Técnica DBA (`/api/respaldosdba`)** | Implementado en código | Implementado e integrado | 11 endpoints (políticas, FULL, DIFF, DBCC CHECKDB, simulacro de restauración) |
 | **Portal Ciudadano en Línea (Wireframe 2, p. 113)** | **No disponible en API** | Interfaz implementada con aviso explícito de bloqueo | `dbo.Usuario` solo autentica funcionarios municipales; no existe rol ni endpoints de autoservicio ciudadano |
-| **Data Warehouse / ETL (`sp_etl_*`, `vw_dw_*`)** | **Solo en BD (No expuesto en API)** | Documentado en UI de Reportes/DBA sin simular ETL | `muni-back` no expone controladores para `DW_Municipalidad_Nicoya` |
+| **Data Warehouse / ETL (`sp_etl_*`, `vw_dw_*`)** | **Solo en BD (No expuesto en API)** | Documentado en UI de Reportes/DBA sin simular ETL | `muni-back` no expone controladores para `MunicipalidadNicoyaDataMart2026` |
 | **Monitoreo DMV y Mantenimiento Índices (Scripts 07 y 10)** | **Solo en BD (No expuesto en API)** | Documentado en Consola DBA | `RespaldosDbaController` solo expone respaldos y `DBCC CHECKDB` |
 

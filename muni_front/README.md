@@ -2,7 +2,7 @@
 
 Aplicación web frontend desarrollada para el **Hito 3** del curso **Administración de Bases de Datos** de la **Universidad Nacional de Costa Rica (UNA), Campus Nicoya**.
 
-Conectada a la Web API existente en `muni-back/` (**.NET 9 / ASP.NET Core Web API**) y a la base de datos **Microsoft SQL Server** (`DB_Municipalidad_Nicoya`).
+Conectada a la Web API existente en `muni-back/` (**.NET 9 / ASP.NET Core Web API**) y a la base de datos **Microsoft SQL Server** (`MunicipalidadNicoya2026`).
 
 ---
 
@@ -25,6 +25,8 @@ Conectada a la Web API existente en `muni-back/` (**.NET 9 / ASP.NET Core Web AP
 1. Asegúrese de tener ejecutados en su instancia de SQL Server los scripts de `BaseDeDatos/`, incluyendo obligatoriamente:
    - `BaseDeDatos/Database_Backend/13_sp_autenticar_usuario.sql`
    - `BaseDeDatos/Database_Backend/14_mejoras_catalogos_output.sql`
+   - `BaseDeDatos/Database_Backend/15_portal_ciudadano_dw_monitoreo.sql` (portal ciudadano, revocaciones, Data Warehouse y monitoreo DBA)
+   - Opcional: `BaseDeDatos/DataWareHouse/DWH_Structure.sql`, `DWH_ETL.sql`, `DWH_Vistas_Analiticas.sql` (pantalla Data Warehouse) y `BaseDeDatos/PlanDeMantenimientoBD/01`–`04` (historial de mantenimiento)
 2. Inicie el backend desde otra terminal:
    ```bash
    cd muni-back/MunicipalidadAPI
@@ -60,11 +62,17 @@ npm run build
 
 | Usuario (`user_name`) | Contraseña Semilla | Rol Principal en BD (`Roles.cs`) | Ruta Inicial |
 |---|---|---|---|
-| `admin_nicoya` | `password` | `Administrador del Sistema` | `/dashboard` (Acceso a los 14 controladores) |
+| `admin_nicoya` | `password` | `Administrador del Sistema` | `/dashboard` (acceso a todos los módulos internos) |
 | `analista_curb` | `4` | `Analista de Plataforma y Trámites` | `/expedientes/seguimiento` |
 | `cajero_caja1` | `password123` | `Cajero de Recaudación` | `/pagos` |
 | `auditor_muni` | `admin` | `Auditor Interno` | `/reportes` |
 | `dba_sys` | `password` *(tras ejecutar el `UPDATE` de `13_sp_autenticar_usuario.sql`)* | `DBA Administrador de Base de Datos` | `/dba/politicas` |
+
+### 3.1 Portal ciudadano (`/portal/login`)
+
+El contribuyente no usa `dbo.Usuario`: activa su cuenta en **«Activar mi cuenta»** con su cédula, el correo registrado en el padrón y una contraseña nueva (mínimo 8 caracteres), y luego inicia sesión con cédula y contraseña. Ejemplo con los datos semilla: cédula `5-0321-0456`, correo `maria.gonzalez@gmail.com`.
+
+La sesión del portal es independiente de la institucional (otra clave en `sessionStorage` y otro cliente HTTP), por lo que se pueden tener abiertas ambas en el mismo navegador.
 
 ---
 
@@ -78,5 +86,5 @@ npm run build
 - [`docs/INTEGRACION_API.md`](./docs/INTEGRACION_API.md) — Detalles de comunicación HTTP, JWT, `TimeSpan` y subida de archivos.
 - [`docs/MATRIZ_FUNCIONALIDADES.md`](./docs/MATRIZ_FUNCIONALIDADES.md) — Correspondencia entre cada función de `api.ts` y su endpoint REST.
 - [`docs/PRUEBAS_FRONTEND.md`](./docs/PRUEBAS_FRONTEND.md) — Resultados de compilación TypeScript/Vite y pruebas de integración.
-- [`docs/PENDIENTES_BACKEND.md`](./docs/PENDIENTES_BACKEND.md) — Registro transparente de limitaciones y pendientes del backend sin modificar `muni-back/`.
+- [`docs/PENDIENTES_BACKEND.md`](./docs/PENDIENTES_BACKEND.md) — Estado de los pendientes del backend (todos resueltos con el script 15) y requisitos de despliegue.
 

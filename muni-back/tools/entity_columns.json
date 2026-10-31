@@ -690,6 +690,269 @@
     "id_tipo_de_respaldo",
     "nombre_tipo_respaldo"
    ]
+  ],
+  "SpCiudadanoAutenticadoResultDto": [
+   "sp_autenticar_ciudadano",
+   [
+    "id_contribuyente",
+    "identificacion_oficial",
+    "nombre_o_razon_social",
+    "tipo_persona",
+    "correo_electronico",
+    "telefono"
+   ]
+  ],
+  "SpArchivoTramiteResultDto": [
+   "sp_consultar_archivos_tramite",
+   [
+    "id_archivo_adjunto",
+    "id_tramite",
+    "nombre_original",
+    "ruta_almacenamiento",
+    "peso_bytes",
+    "fecha_subida",
+    "id_requisito",
+    "nombre_requisito"
+   ]
+  ],
+  "SpRequisitoTramiteEstadoResultDto": [
+   "sp_consultar_requisitos_tramite",
+   [
+    "id_requisito",
+    "nombre_requisito",
+    "descripcion",
+    "es_obligatorio",
+    "presentado",
+    "cantidad_archivos",
+    "fecha_ultima_presentacion"
+   ]
+  ],
+  "SpPermisoRolResultDto": [
+   "sp_consultar_permisos_por_rol",
+   [
+    "id_permiso",
+    "modulo",
+    "accion"
+   ]
+  ],
+  "SpAsignacionRolResultDto": [
+   "sp_consultar_asignaciones_roles",
+   [
+    "id_usuario",
+    "user_name",
+    "id_rol",
+    "nombre_rol"
+   ]
+  ],
+  "SpDwEstadoResultDto": [
+   "sp_dw_estado",
+   [
+    "dw_instalado",
+    "ultima_carga_inicio",
+    "ultima_carga_fin",
+    "ultima_carga_estado",
+    "filas_fact_recaudacion",
+    "filas_fact_morosidad",
+    "filas_fact_eficiencia"
+   ]
+  ],
+  "SpDwValidacionEtlResultDto": [
+   "sp_dw_ejecutar_etl",
+   [
+    "id_carga",
+    "control",
+    "total_oltp",
+    "total_dw",
+    "resultado"
+   ]
+  ],
+  "SpDwHistorialCargaResultDto": [
+   "sp_dw_historial_cargas",
+   [
+    "id_carga",
+    "fecha_inicio",
+    "fecha_fin",
+    "duracion_segundos",
+    "estado",
+    "detalle",
+    "ejecutado_por"
+   ]
+  ],
+  "SpDwRecaudacionPeriodoResultDto": [
+   "sp_dw_recaudacion_periodo",
+   [
+    "anio",
+    "trimestre",
+    "mes",
+    "nombre_mes",
+    "total_recaudado_principal",
+    "total_recaudado_intereses",
+    "total_descuentos_aplicados",
+    "total_recaudado_general",
+    "transacciones_registradas"
+   ]
+  ],
+  "SpDwRecaudacionTributoResultDto": [
+   "sp_dw_recaudacion_tributo",
+   [
+    "codigo_tributo",
+    "nombre_tributo",
+    "categoria_tributo",
+    "periodicidad",
+    "total_principal",
+    "total_intereses",
+    "total_recaudado"
+   ]
+  ],
+  "SpDwRecaudacionUbicacionResultDto": [
+   "sp_dw_recaudacion_ubicacion",
+   [
+    "distrito",
+    "zona_rural_urbana",
+    "total_principal",
+    "total_intereses",
+    "total_recaudado",
+    "total_pagos_distrito"
+   ]
+  ],
+  "SpDwMorosidadResultDto": [
+   "sp_dw_morosidad",
+   [
+    "anio",
+    "mes",
+    "nombre_mes",
+    "distrito",
+    "zona_rural_urbana",
+    "nombre_tributo",
+    "saldo_vencido",
+    "cantidad_contribuyentes_morosos"
+   ]
+  ],
+  "SpDwEficienciaTramitesResultDto": [
+   "sp_dw_eficiencia_tramites",
+   [
+    "nombre_tramite",
+    "plazo_compromiso_sla",
+    "nombre_departamento",
+    "estado_final",
+    "dias_promedio_consumidos",
+    "cantidad_tramites",
+    "estado_cumplimiento"
+   ]
+  ],
+  "SpDwIndicadoresDepartamentoResultDto": [
+   "sp_dw_indicadores_departamento",
+   [
+    "nombre_departamento",
+    "volumen_total_gestionado",
+    "promedio_dias_resolucion_area",
+    "tramites_aprobados",
+    "tramites_rechazados"
+   ]
+  ],
+  "SpDbaMonitorResumenResultDto": [
+   "sp_dba_monitor_resumen",
+   [
+    "servidor",
+    "version_motor",
+    "edicion",
+    "base_datos",
+    "inicio_servicio",
+    "minutos_activo",
+    "cpus",
+    "cpu_sql_pct",
+    "cpu_otros_pct",
+    "memoria_sql_mb",
+    "memoria_total_mb",
+    "memoria_disponible_mb",
+    "memoria_uso_pct",
+    "conexiones_usuario",
+    "solicitudes_activas",
+    "sesiones_bloqueadas",
+    "transacciones_activas",
+    "datos_mb",
+    "datos_usado_mb",
+    "log_mb",
+    "log_usado_pct",
+    "ultimo_backup_full",
+    "ultimo_backup_diferencial"
+   ]
+  ],
+  "SpDbaMonitorSesionResultDto": [
+   "sp_dba_monitor_sesiones",
+   [
+    "session_id",
+    "login_name",
+    "host_name",
+    "direccion_ip",
+    "programa",
+    "estado",
+    "comando",
+    "base_datos",
+    "tipo_espera",
+    "bloqueada_por",
+    "es_bloqueante",
+    "segundos_ejecucion",
+    "consulta_lenta",
+    "cpu_ms",
+    "lecturas_logicas",
+    "consulta",
+    "ultima_solicitud",
+    "es_sesion_actual"
+   ]
+  ],
+  "SpDbaMonitorArchivoResultDto": [
+   "sp_dba_monitor_archivos",
+   [
+    "base_datos",
+    "archivo_logico",
+    "tipo",
+    "ruta_fisica",
+    "tamano_mb",
+    "usado_mb",
+    "maximo_mb",
+    "volumen",
+    "volumen_total_mb",
+    "volumen_libre_mb",
+    "volumen_libre_pct"
+   ]
+  ],
+  "SpDbaFragmentacionResultDto": [
+   "sp_dba_monitor_fragmentacion",
+   [
+    "tabla",
+    "indice",
+    "tipo_indice",
+    "fragmentacion_pct",
+    "paginas",
+    "accion_recomendada"
+   ]
+  ],
+  "SpDbaMantenimientoResultDto": [
+   "sp_dba_ejecutar_mantenimiento",
+   [
+    "orden",
+    "tarea",
+    "estado",
+    "detalle",
+    "duracion_segundos"
+   ]
+  ],
+  "SpDbaHistorialMantenimientoResultDto": [
+   "sp_dba_historial_mantenimiento",
+   [
+    "id",
+    "base_datos",
+    "objeto",
+    "indice",
+    "tipo_comando",
+    "comando",
+    "inicio",
+    "fin",
+    "duracion_segundos",
+    "numero_error",
+    "mensaje_error"
+   ]
   ]
  }
 }

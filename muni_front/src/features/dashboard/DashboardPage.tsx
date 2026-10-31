@@ -111,7 +111,7 @@ export function DashboardPage() {
 
   const respaldosEstadoQuery = useQuery({
     queryKey: ['dashboard', 'respaldos-estado'],
-    queryFn: () => respaldosDbaApi.estado(),
+    queryFn: () => respaldosDbaApi.configuraciones(),
     enabled: canDba,
   });
 
@@ -129,20 +129,25 @@ export function DashboardPage() {
 
   const totalTramites = tramitesQuery.data?.length ?? 0;
   const tramitesEnCurso =
-    tramitesQuery.data?.filter((t) => !t.esEstadoFinal).length ?? 0;
+    tramitesQuery.data?.filter((t) => !t.fechaResolucionFinal).length ?? 0;
   const totalInmueblesUnicos = new Set(
     (inmueblesQuery.data ?? []).map((i) => i.idInmueble)
   ).size;
-  const totalPagadoHistorico = (estadoCuentaQuery.data ?? []).reduce(
-    (acc, c) => acc + (c.totalPagadoHistorico ?? 0),
+  // vw_estado_cuenta_contribuyente trae una fila por deuda y copropietario: se deduplica por deuda.
+  const deudasUnicas = Array.from(
+    new Map((estadoCuentaQuery.data ?? []).map((c) => [c.idDeudaMunicipal, c])).values()
+  );
+  const totalPagadoHistorico = deudasUnicas.reduce(
+    (acc, c) =>
+      acc + (c.idFactura ? Math.max(0, (c.totalAPagar ?? 0) - (c.saldoPendiente ?? 0)) : 0),
     0
   );
-  const totalPendienteDeuda = (estadoCuentaQuery.data ?? []).reduce(
-    (acc, c) => acc + (c.montoPendienteDeuda ?? 0),
-    0
-  );
+  const totalPendienteDeuda = deudasUnicas.reduce((acc, c) => {
+    if (c.codigoEstadoDeuda === 'PAG') return acc;
+    return acc + (c.idFactura ? c.saldoPendiente ?? 0 : c.totalDeuda ?? 0);
+  }, 0);
   const totalRecaudadoCantonal = (recaudacionDistritoQuery.data ?? []).reduce(
-    (acc, d) => acc + (d.totalRecaudadoDistrito ?? 0),
+    (acc, d) => acc + (d.recaudacionDistritalTotal ?? 0),
     0
   );
 
@@ -267,7 +272,7 @@ export function DashboardPage() {
                 Políticas activas:{' '}
                 <strong>
                   {formatNumber(
-                    respaldosEstadoQuery.data?.filter((r) => r.configuracionActiva).length ?? 0
+                    respaldosEstadoQuery.data?.filter((r) => r.activo).length ?? 0
                   )}
                 </strong>
               </p>
@@ -443,19 +448,19 @@ export function DashboardPage() {
                   {auditoriaRecienteQuery.data.slice(0, 6).map((ev) => (
                     <tr key={ev.idAuditoria} className="group transition-colors hover:bg-[#F2F7F4]">
                       <td className="whitespace-nowrap px-6 py-4 font-medium text-[#26352D]">
-                        {ev.fechaEvento ? formatDateTime(ev.fechaEvento) : 'Fecha no disponible'}
+                        {ev.fechaHora ? formatDateTime(ev.fechaHora) : 'Fecha no disponible'}
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2.5">
                           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E8F0EC] text-xs font-bold text-[#164B35]">
-                            {(ev.userName || 'S').slice(0, 2).toUpperCase()}
+                            {(ev.usuarioEjecutor || 'S').slice(0, 2).toUpperCase()}
                           </span>
-                          <span className="font-semibold text-[#164B35]">{ev.userName || 'Sistema'}</span>
+                          <span className="font-semibold text-[#164B35]">{ev.usuarioEjecutor || 'Sistema'}</span>
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <Badge variant={ev.tipoAccion ? 'gold' : 'outline'}>
-                          {ev.tipoAccion || 'Sin clasificar'}
+                        <Badge variant={ev.operacionDml ? 'gold' : 'outline'}>
+                          {ev.operacionDml || 'Sin clasificar'}
                         </Badge>
                       </td>
                       <td className="px-4 py-4 font-medium text-[#26352D]">

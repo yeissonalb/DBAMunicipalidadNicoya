@@ -159,6 +159,73 @@ SP_RESULTS = {
         "retencion_dias:int", "cifrado:string", "ruta_destino:string", "activo:bool", "fecha_creacion:DateTime",
         "fecha_modificacion:DateTime?", "id_frecuencia:int", "nombre_frecuencia:string",
         "id_tipo_de_respaldo:int", "nombre_tipo_respaldo:string"]),
+    # ---- Script 15 ----
+    "SpCiudadanoAutenticadoResultDto": ("sp_autenticar_ciudadano", [
+        "id_contribuyente:int", "identificacion_oficial:string", "nombre_o_razon_social:string",
+        "tipo_persona:string", "correo_electronico:string", "telefono:string"]),
+    "SpArchivoTramiteResultDto": ("sp_consultar_archivos_tramite", [
+        "id_archivo_adjunto:int", "id_tramite:int", "nombre_original:string", "ruta_almacenamiento:string",
+        "peso_bytes:double", "fecha_subida:DateTime", "id_requisito:int?", "nombre_requisito:string"]),
+    "SpRequisitoTramiteEstadoResultDto": ("sp_consultar_requisitos_tramite", [
+        "id_requisito:int", "nombre_requisito:string", "descripcion:string", "es_obligatorio:bool",
+        "presentado:bool", "cantidad_archivos:int", "fecha_ultima_presentacion:DateTime?"]),
+    "SpPermisoRolResultDto": ("sp_consultar_permisos_por_rol", ["id_permiso:int", "modulo:string", "accion:string"]),
+    "SpAsignacionRolResultDto": ("sp_consultar_asignaciones_roles", [
+        "id_usuario:int", "user_name:string", "id_rol:int", "nombre_rol:string"]),
+    "SpDwEstadoResultDto": ("sp_dw_estado", [
+        "dw_instalado:bool", "ultima_carga_inicio:DateTime?", "ultima_carga_fin:DateTime?",
+        "ultima_carga_estado:string", "filas_fact_recaudacion:int", "filas_fact_morosidad:int",
+        "filas_fact_eficiencia:int"]),
+    "SpDwValidacionEtlResultDto": ("sp_dw_ejecutar_etl", [
+        "id_carga:int", "control:string", "total_oltp:decimal?", "total_dw:decimal?", "resultado:string"]),
+    "SpDwHistorialCargaResultDto": ("sp_dw_historial_cargas", [
+        "id_carga:int", "fecha_inicio:DateTime", "fecha_fin:DateTime?", "duracion_segundos:int?",
+        "estado:string", "detalle:string", "ejecutado_por:string"]),
+    "SpDwRecaudacionPeriodoResultDto": ("sp_dw_recaudacion_periodo", [
+        "anio:int?", "trimestre:int?", "mes:int?", "nombre_mes:string", "total_recaudado_principal:decimal?",
+        "total_recaudado_intereses:decimal?", "total_descuentos_aplicados:decimal?",
+        "total_recaudado_general:decimal?", "transacciones_registradas:int?"]),
+    "SpDwRecaudacionTributoResultDto": ("sp_dw_recaudacion_tributo", [
+        "codigo_tributo:string", "nombre_tributo:string", "categoria_tributo:string", "periodicidad:string",
+        "total_principal:decimal?", "total_intereses:decimal?", "total_recaudado:decimal?"]),
+    "SpDwRecaudacionUbicacionResultDto": ("sp_dw_recaudacion_ubicacion", [
+        "distrito:string", "zona_rural_urbana:string", "total_principal:decimal?", "total_intereses:decimal?",
+        "total_recaudado:decimal?", "total_pagos_distrito:int?"]),
+    "SpDwMorosidadResultDto": ("sp_dw_morosidad", [
+        "anio:int?", "mes:int?", "nombre_mes:string", "distrito:string", "zona_rural_urbana:string",
+        "nombre_tributo:string", "saldo_vencido:decimal?", "cantidad_contribuyentes_morosos:int?"]),
+    "SpDwEficienciaTramitesResultDto": ("sp_dw_eficiencia_tramites", [
+        "nombre_tramite:string", "plazo_compromiso_sla:int?", "nombre_departamento:string", "estado_final:string",
+        "dias_promedio_consumidos:int?", "cantidad_tramites:int?", "estado_cumplimiento:string"]),
+    "SpDwIndicadoresDepartamentoResultDto": ("sp_dw_indicadores_departamento", [
+        "nombre_departamento:string", "volumen_total_gestionado:int?", "promedio_dias_resolucion_area:int?",
+        "tramites_aprobados:int?", "tramites_rechazados:int?"]),
+    "SpDbaMonitorResumenResultDto": ("sp_dba_monitor_resumen", [
+        "servidor:string", "version_motor:string", "edicion:string", "base_datos:string",
+        "inicio_servicio:DateTime?", "minutos_activo:int?", "cpus:int?", "cpu_sql_pct:int?", "cpu_otros_pct:int?",
+        "memoria_sql_mb:decimal?", "memoria_total_mb:decimal?", "memoria_disponible_mb:decimal?",
+        "memoria_uso_pct:decimal?", "conexiones_usuario:int?", "solicitudes_activas:int?",
+        "sesiones_bloqueadas:int?", "transacciones_activas:int?", "datos_mb:decimal?", "datos_usado_mb:decimal?",
+        "log_mb:decimal?", "log_usado_pct:decimal?", "ultimo_backup_full:DateTime?",
+        "ultimo_backup_diferencial:DateTime?"]),
+    "SpDbaMonitorSesionResultDto": ("sp_dba_monitor_sesiones", [
+        "session_id:int", "login_name:string", "host_name:string", "direccion_ip:string", "programa:string",
+        "estado:string", "comando:string", "base_datos:string", "tipo_espera:string", "bloqueada_por:int?",
+        "es_bloqueante:bool", "segundos_ejecucion:int?", "consulta_lenta:bool", "cpu_ms:int?",
+        "lecturas_logicas:long?", "consulta:string", "ultima_solicitud:DateTime?", "es_sesion_actual:bool"]),
+    "SpDbaMonitorArchivoResultDto": ("sp_dba_monitor_archivos", [
+        "base_datos:string", "archivo_logico:string", "tipo:string", "ruta_fisica:string", "tamano_mb:decimal?",
+        "usado_mb:decimal?", "maximo_mb:decimal?", "volumen:string", "volumen_total_mb:decimal?",
+        "volumen_libre_mb:decimal?", "volumen_libre_pct:decimal?"]),
+    "SpDbaFragmentacionResultDto": ("sp_dba_monitor_fragmentacion", [
+        "tabla:string", "indice:string", "tipo_indice:string", "fragmentacion_pct:decimal?", "paginas:long?",
+        "accion_recomendada:string"]),
+    "SpDbaMantenimientoResultDto": ("sp_dba_ejecutar_mantenimiento", [
+        "orden:int", "tarea:string", "estado:string", "detalle:string", "duracion_segundos:int?"]),
+    "SpDbaHistorialMantenimientoResultDto": ("sp_dba_historial_mantenimiento", [
+        "id:int?", "base_datos:string", "objeto:string", "indice:string", "tipo_comando:string", "comando:string",
+        "inicio:DateTime?", "fin:DateTime?", "duracion_segundos:int?", "numero_error:int?",
+        "mensaje_error:string"]),
 }
 
 
@@ -218,3 +285,44 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "entity_colum
     json.dump({"views": {c: [v, [x.split(':')[0] for x in cols]] for c, (v, cols) in VIEWS.items()},
                "sp": {c: [s, [x.split(':')[0] for x in cols]] for c, (s, cols) in SP_RESULTS.items()}}, fh, indent=1)
 print("ok", len(VIEWS), len(SP_RESULTS))
+
+# ---------------------------------------------------------------------------
+# Tipos TypeScript para el frontend (muni_front/src/types/generated.ts).
+# Mismos nombres que serializa ASP.NET (camelCase de la propiedad C#).
+# ---------------------------------------------------------------------------
+def camel(name: str) -> str:
+    p = pascal(name)
+    return p[:1].lower() + p[1:]
+
+
+def ts_prop(col: str) -> str:
+    name, typ = col.split(":")
+    nullable = typ.endswith("?")
+    base = typ.rstrip("?")
+    ts = {"int": "number", "long": "number", "double": "number", "decimal": "number", "bool": "boolean",
+          "DateTime": "string", "TimeSpan": "string", "string": "string"}[base]
+    if base == "string" or nullable:
+        ts += " | null"
+    return f"  /** {name} */\n  {camel(name)}: {ts};\n"
+
+
+front = os.path.join(ROOT, "..", "muni_front", "src", "types")
+if os.path.isdir(front):
+    out = ["// ============================================================================",
+           "// ARCHIVO GENERADO por muni-back/tools/generar_entities.py. NO EDITAR A MANO.",
+           "// Recordsets de las vistas dbo.vw_* y de los procedimientos dbo.sp_* tal como",
+           "// los devuelve la API (camelCase). Los valores de texto pueden venir en null.",
+           "// ============================================================================", ""]
+    for cls, (view, cols) in VIEWS.items():
+        out.append(f"/** Vista dbo.{view} */")
+        out.append(f"export interface {cls} {{")
+        out.append("".join(ts_prop(c) for c in cols).rstrip("\n"))
+        out.append("}\n")
+    for cls, (sp, cols) in SP_RESULTS.items():
+        out.append(f"/** Recordset de dbo.{sp} */")
+        out.append(f"export interface {cls} {{")
+        out.append("".join(ts_prop(c) for c in cols).rstrip("\n"))
+        out.append("}\n")
+    with open(os.path.join(front, "generated.ts"), "w", encoding="utf-8", newline="\n") as fh:
+        fh.write("\n".join(out))
+    print("ts ok", os.path.join(front, "generated.ts"))

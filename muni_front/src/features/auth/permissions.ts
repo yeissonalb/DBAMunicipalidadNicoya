@@ -16,7 +16,7 @@ export type SystemRole = (typeof ROLES)[keyof typeof ROLES];
  * Permisos exactos de cada controlador C# en muni-back:
  * - UsuarioController: Admin
  * - RolPermisoController: Admin
- * - ContribuyenteController: Admin, Cajero
+ * - ContribuyenteController: Admin, Cajero (escritura) · Admin, Cajero, Analista (lectura del padrón)
  * - InmuebleController: Admin, Analista
  * - CatalogosInmuebleController: Admin, Analista
  * - TipoTramiteController: Admin, Analista
@@ -26,18 +26,24 @@ export type SystemRole = (typeof ROLES)[keyof typeof ROLES];
  * - ReportesController: Auditor, Admin
  * - AuditoriaController: Admin, Auditor, Dba
  * - RespaldosDbaController: Admin, Dba
+ * - DataWarehouseController: Admin, Auditor, Dba (consulta) · Admin, Dba (ejecutar ETL)
+ * - MonitoreoDbaController: Admin, Dba
+ * - PortalCiudadanoController: Ciudadano (token propio del portal, no es un rol de dbo.Rol)
  */
 export const MODULE_PERMISSIONS = {
   DASHBOARD: [ROLES.ADMIN, ROLES.ANALISTA, ROLES.CAJERO, ROLES.AUDITOR, ROLES.DBA],
   PORTAL_CIUDADANO: [ROLES.ADMIN, ROLES.ANALISTA, ROLES.CAJERO, ROLES.AUDITOR, ROLES.DBA],
   USUARIOS_ROLES: [ROLES.ADMIN],
   CONTRIBUYENTES: [ROLES.ADMIN, ROLES.CAJERO],
+  PADRON_LECTURA: [ROLES.ADMIN, ROLES.CAJERO, ROLES.ANALISTA],
   INMUEBLES: [ROLES.ADMIN, ROLES.ANALISTA],
   TRAMITES_EXPEDIENTES: [ROLES.ADMIN, ROLES.ANALISTA],
   TRIBUTOS_PAGOS: [ROLES.ADMIN, ROLES.CAJERO],
   REPORTES: [ROLES.ADMIN, ROLES.AUDITOR],
   AUDITORIA: [ROLES.ADMIN, ROLES.AUDITOR, ROLES.DBA],
   DBA_CONSOLA: [ROLES.ADMIN, ROLES.DBA],
+  DATA_WAREHOUSE: [ROLES.ADMIN, ROLES.AUDITOR, ROLES.DBA],
+  DATA_WAREHOUSE_ETL: [ROLES.ADMIN, ROLES.DBA],
 } as const;
 
 export function hasAnyRole(userRoles: string[] | undefined, allowedRoles: readonly string[]): boolean {

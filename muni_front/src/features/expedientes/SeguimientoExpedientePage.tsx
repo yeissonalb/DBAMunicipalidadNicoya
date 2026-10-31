@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { tramiteApi } from '@/services/api';
 import { BACKEND_ORIGIN } from '@/services/httpClient';
-import type { ArchivoAdjuntadoDto } from '@/types/api';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/common/StateFeedback';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +23,7 @@ import { Input, Select, Textarea } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { FormField } from '@/components/forms/FormField';
 import { formatBytes, formatDate, formatDateTime } from '@/lib/utils';
+import { codigoEstadoPorNombre, esCodigoFinal } from '@/lib/tramites';
 
 const STEPPER_STATES = [
   { code: 'REC', label: '1. Radicado / Recibido' },
@@ -43,7 +43,6 @@ export function SeguimientoExpedientePage() {
   // Actualizar estado desde el panel derecho del Wireframe 10
   const [nuevoEstado, setNuevoEstado] = useState('REV');
   const [observaciones, setObservaciones] = useState('');
-  const [archivosRecientes, setArchivosRecientes] = useState<ArchivoAdjuntadoDto[]>([]);
 
   const seguimientoQuery = useQuery({
     queryKey: ['tramites', 'seguimiento'],
@@ -64,9 +63,9 @@ export function SeguimientoExpedientePage() {
   const listaFiltrada = (seguimientoQuery.data ?? []).filter((t) => {
     const matchExp =
       !busquedaExpediente.trim() ||
-      t.numeroExpediente.toLowerCase().includes(busquedaExpediente.trim().toLowerCase()) ||
-      t.nombreTramite.toLowerCase().includes(busquedaExpediente.trim().toLowerCase()) ||
-      (t.contribuyente || '').toLowerCase().includes(busquedaExpediente.trim().toLowerCase());
+      (t.numeroExpediente ?? '').toLowerCase().includes(busquedaExpediente.trim().toLowerCase()) ||
+      (t.nombreTramite ?? '').toLowerCase().includes(busquedaExpediente.trim().toLowerCase()) ||
+      (t.solicitante || '').toLowerCase().includes(busquedaExpediente.trim().toLowerCase());
     const matchContrib =
       !busquedaContribuyenteId.trim() ||
       String(t.idContribuyente) === busquedaContribuyenteId.trim();
@@ -77,6 +76,18 @@ export function SeguimientoExpedientePage() {
     listaFiltrada.find((t) => t.idTramite === selectedIdTramite) ??
     listaFiltrada[0] ??
     null;
+
+  // Documentos del expediente guardados en la BD (sp_consultar_archivos_tramite)
+  const archivosQuery = useQuery({
+    queryKey: ['tramites', 'archivos', activeTramite?.idTramite],
+    queryFn: () => tramiteApi.archivos(activeTramite!.idTramite),
+    enabled: Boolean(activeTramite?.idTramite),
+  });
+
+  // vw_historial_tramites_detallado no trae al solicitante: se toma del seguimiento
+  const solicitantePorTramite = new Map(
+    (seguimientoQuery.data ?? []).map((t) => [t.idTramite, t.solicitante])
+  );
 
   const historialIndividualQuery = useQuery({
     queryKey: ['tramites', 'historial', activeTramite?.idTramite],
@@ -105,8 +116,8 @@ export function SeguimientoExpedientePage() {
     if (!activeTramite) return;
     try {
       const res = await tramiteApi.adjuntarArchivo(activeTramite.idTramite, file, null);
-      setArchivosRecientes((prev) => [res.data, ...prev]);
-      toast.success(res.message || 'Archivo adjuntado.');
+      toast.success(`${res.message || 'Archivo adjuntado.'} (${res.data.nombreOriginal})`);
+      queryClient.invalidateQueries({ queryKey: ['tramites', 'archivos', activeTramite.idTramite] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al adjuntar archivo.');
     }
@@ -205,7 +216,7 @@ export function SeguimientoExpedientePage() {
                 </thead>
                 <tbody className="divide-y divide-[#DCE3DE]">
                   {(bitacoraDetalladaQuery.data ?? []).map((row) => (
-                    <tr key={row.idHistorialTramite} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
+                    <tr key={row.idHistorial} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         {formatDateTime(row.fechaCambio)}
                       </td>
@@ -213,9 +224,9 @@ export function SeguimientoExpedientePage() {
                         {row.numeroExpediente}
                       </td>
                       <td className="px-3 py-2.5">{row.nombreTramite}</td>
-                      <td className="px-3 py-2.5">{row.contribuyente || '—'}</td>
+                      <td className="px-3 py-2.5">{solicitantePorTramite.get(row.idTramite) || '—'}</td>
                       <td className="px-3 py-2.5">
-                        <Badge variant={row.esEstadoFinal ? 'success' : 'gold'}>
+                        <Badge variant={esCodigoFinal(row.codigoEstado) ? 'success' : 'gold'}>
                           {row.codigoEstado} — {row.nombreEstado}
                         </Badge>
                       </td>
@@ -261,24 +272,24 @@ export function SeguimientoExpedientePage() {
                       </td>
                       <td className="px-4 py-3 font-semibold">{t.nombreTramite}</td>
                       <td className="px-4 py-3">
-                        {t.contribuyente || `#${t.idContribuyente}`}
+                        {t.solicitante || `#${t.idContribuyente}`}
                       </td>
                       <td className="px-4 py-3 font-mono">{t.numeroFinca || '—'}</td>
-                      <td className="px-4 py-3">{t.funcionarioAsignado}</td>
+                      <td className="px-4 py-3">{t.funcionarioAnalista}</td>
                       <td className="px-4 py-3">
                         {t.diasTranscurridos ?? 0} / {t.diasResolucionMax} d
                       </td>
                       <td className="px-4 py-3">
                         <Badge
                           variant={
-                            t.codigoEstado === 'APR'
+                            codigoEstadoPorNombre(t.estadoActual, estadosQuery.data) === 'APR'
                               ? 'success'
-                              : t.codigoEstado === 'RECH'
+                              : codigoEstadoPorNombre(t.estadoActual, estadosQuery.data) === 'RECH'
                               ? 'danger'
                               : 'gold'
                           }
                         >
-                          {t.codigoEstado} — {t.nombreEstado}
+                          {t.estadoActual}
                         </Badge>
                       </td>
                     </tr>
@@ -301,7 +312,7 @@ export function SeguimientoExpedientePage() {
                 <CardContent className="pt-6 sm:pt-6">
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                     {STEPPER_STATES.map((step) => {
-                      const currentCode = activeTramite.codigoEstado || 'REC';
+                      const currentCode = codigoEstadoPorNombre(activeTramite.estadoActual, estadosQuery.data);
                       const isFinal = currentCode === 'APR' || currentCode === 'RECH';
                       const isCurrent =
                         step.code === currentCode || (step.code === 'FINAL' && isFinal);
@@ -344,7 +355,7 @@ export function SeguimientoExpedientePage() {
                     ) : (
                       <div className="relative border-l-2 border-[#164B35]/30 pl-4 space-y-4">
                         {historialIndividualQuery.data.map((h) => (
-                          <div key={h.idHistorialTramite} className="relative text-xs">
+                          <div key={h.idHistorial} className="relative text-xs">
                             <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-[#164B35]" />
                             <div className="flex items-center justify-between">
                               <span className="font-bold text-[#164B35]">
@@ -386,29 +397,35 @@ export function SeguimientoExpedientePage() {
                       />
                     </label>
 
-                    {archivosRecientes
-                      .filter((a) => a.idTramite === activeTramite.idTramite)
-                      .map((a, idx) => (
+                    {archivosQuery.isLoading ? (
+                      <p className="text-[11px] text-[#5A6B61]">Consultando documentos...</p>
+                    ) : (archivosQuery.data ?? []).length === 0 ? (
+                      <p className="text-[11px] text-[#5A6B61]">Este expediente aún no tiene documentos.</p>
+                    ) : (
+                      (archivosQuery.data ?? []).map((a) => (
                         <div
-                          key={idx}
+                          key={a.idArchivoAdjunto}
                           className="flex items-center justify-between rounded-lg border border-[#DCE3DE] p-2.5 text-xs"
                         >
                           <div className="min-w-0 pr-2">
                             <p className="truncate font-semibold">{a.nombreOriginal}</p>
                             <p className="text-[10px] text-[#5A6B61]">
-                              {formatBytes(a.pesoBytes)}
+                              {a.nombreRequisito ?? 'Adjunto general'} · {formatBytes(a.pesoBytes)} ·{' '}
+                              {formatDate(a.fechaSubida)}
                             </p>
                           </div>
                           <a
-                            href={`${BACKEND_ORIGIN}/${a.rutaRelativa}`}
+                            href={`${BACKEND_ORIGIN}/${a.rutaAlmacenamiento}`}
                             target="_blank"
                             rel="noreferrer"
                             className="text-[#164B35] hover:underline"
+                            title="Abrir documento"
                           >
                             <ExternalLink className="h-4 w-4" />
                           </a>
                         </div>
-                      ))}
+                      ))
+                    )}
 
                     <p className="text-[11px] text-[#5A6B61]">
                       <FileText className="mr-1 inline h-3 w-3" /> Los documentos se vinculan de forma segura al expediente.
@@ -429,8 +446,8 @@ export function SeguimientoExpedientePage() {
                         onChange={(e) => setNuevoEstado(e.target.value)}
                       >
                         {(estadosQuery.data ?? []).map((e) => (
-                          <option key={e.idEstadoTramite} value={e.codigoEstado}>
-                            {e.codigoEstado} — {e.nombreEstado}
+                          <option key={e.idEstado} value={e.codigo ?? ''}>
+                            {e.codigo} — {e.nombreEstado}
                           </option>
                         ))}
                       </Select>

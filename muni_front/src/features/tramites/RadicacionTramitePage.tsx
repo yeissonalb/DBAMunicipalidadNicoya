@@ -63,7 +63,7 @@ type RadicarForm = z.infer<typeof radicarSchema>;
 export function RadicacionTramitePage() {
   const queryClient = useQueryClient();
   const { hasRole } = useAuth();
-  const canReadPadron = hasRole(MODULE_PERMISSIONS.CONTRIBUYENTES);
+  const canReadPadron = hasRole(MODULE_PERMISSIONS.PADRON_LECTURA);
 
   const [criterioContribuyente, setCriterioContribuyente] = useState('');
   const [radicadoIdTramite, setRadicadoIdTramite] = useState<number | null>(null);
@@ -123,17 +123,17 @@ export function RadicacionTramitePage() {
     if (canReadPadron && padronQuery.data) {
       return padronQuery.data.map((c) => ({
         idContribuyente: c.idContribuyente,
-        nombre: `${c.nombreCompletoORazonSocial || 'Sin nombre'} (${c.identificacion || c.tipoContribuyente})`,
+        nombre: `${c.nombreORazonSocial || 'Sin nombre'} (${c.identificacionOficial || c.tipoPersona || 'sin cédula'})`,
         correo: c.correoElectronico,
         telefono: c.telefono,
       }));
     }
     const map = new Map<number, { idContribuyente: number; nombre: string }>();
     for (const row of inmueblesAllQuery.data ?? []) {
-      if (row.idContribuyente && row.propietario) {
+      if (row.idContribuyente && row.nombreORazonSocial) {
         map.set(row.idContribuyente, {
           idContribuyente: row.idContribuyente,
-          nombre: row.propietario,
+          nombre: `${row.nombreORazonSocial} (${row.identificacionOficial ?? 'sin cédula'})`,
         });
       }
     }

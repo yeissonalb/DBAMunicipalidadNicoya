@@ -28,7 +28,14 @@ No existe ningún `_context.Tabla.Add/Where`: el contexto solo mapea las vistas.
      - 404 en las actualizaciones;
      - 409 en duplicados.
 
-   Sin el 14, los endpoints de registro de rol, permiso, tipo de trámite y requisito, y los de catálogo, fallan porque esos SP no tienen el `OUTPUT` ni existen.
+   - `../BaseDeDatos/Database_Backend/15_portal_ciudadano_dw_monitoreo.sql`:
+     - portal ciudadano (`dbo.Cuenta_Ciudadana`, activación, login y consultas con validación de pertenencia);
+     - listado de archivos y estado de requisitos de un trámite;
+     - consulta y revocación de roles y permisos;
+     - Data Warehouse (estado, ETL, consultas) y monitoreo/mantenimiento DBA.
+
+   Sin el 14, los endpoints de registro de rol, permiso, tipo de trámite y requisito, y los de catálogo, fallan porque esos SP no tienen el `OUTPUT` ni existen. Sin el 15 fallan el portal ciudadano, las revocaciones, `tramite/{id}/archivos`, `datawarehouse/*` y `monitoreodba/*`.
+   - **Opcionales:** `../BaseDeDatos/DataWareHouse/DWH_Structure.sql`, `DWH_ETL.sql` y `DWH_Vistas_Analiticas.sql` (sin ellos `datawarehouse/estado` responde `dwInstalado: false` y las consultas 404 / 50034); `../BaseDeDatos/PlanDeMantenimientoBD/01`–`04` (sin MaintenanceDB el mantenimiento usa una rutina integrada y el historial sale vacío).
 3. **Compilar y ejecutar:**
 
 ```bash
@@ -58,6 +65,8 @@ La cadena de conexión y la clave JWT están en `MunicipalidadAPI/appsettings.js
 
 `dba_sys` tiene en la semilla un hash **MD5**, no SHA-256, así que no puede iniciar sesión. Descomente el `UPDATE` que está al final de `13_sp_autenticar_usuario.sql`; con eso su contraseña queda como `password`.
 
+**Portal ciudadano:** el contribuyente activa su cuenta con `POST /api/auth/ciudadano/activar` (cédula + correo registrado en el padrón + contraseña nueva) y luego entra con `POST /api/auth/ciudadano/login`. Ejemplo semilla: `5-0321-0456` / `maria.gonzalez@gmail.com`. El token lleva el rol `Ciudadano` y el claim `id_contribuyente`; solo sirve para `api/portal/*`.
+
 ---
 
 ## 2. Estructura
@@ -66,7 +75,7 @@ La cadena de conexión y la clave JWT están en `MunicipalidadAPI/appsettings.js
 muni-back.sln
 ├── Entities/            Modelos sin lógica
 │   ├── Views/           12 vistas [Keyless]
-│   └── SpResults/       30 DTO de recordsets de SP
+│   └── SpResults/       DTO de recordsets de SP (generados por tools/generar_entities.py)
 ├── Services/            Acceso a datos (solo SP y vistas)
 │   ├── genericResponse/BaseResponse.cs
 │   ├── MyDbContext/MunicipalidadContext.cs
@@ -74,10 +83,10 @@ muni-back.sln
 │   └── Auth/, UsuarioService/, RolPermisoService/, ContribuyenteService/, InmuebleService/,
 │       CatalogosInmuebleService/, TipoTramiteService/, TramiteService/, TributoDeudaService/,
 │       FacturacionPagoService/, ReportesService/, AuditoriaService/, RespaldosDbaService/,
-│       CatalogosGeneralesService/
+│       CatalogosGeneralesService/, PortalCiudadanoService/, DataWarehouseService/,
+│       MonitoreoDbaService/
 │   (Common/SessionContextInterceptor.cs: envía el id_usuario del JWT a SQL Server)
 ├── MunicipalidadAPI/    Controladores, JWT, CORS, Swagger, middleware, wwwroot/uploads/tramites
-├── Database/13_sp_autenticar_usuario.sql, 14_mejoras_catalogos_output.sql
 └── tools/               Generador de Entities y verificador de firmas SP
 ```
 
@@ -85,14 +94,18 @@ muni-back.sln
 
 ## 3. Endpoints
 
-Todas las rutas empiezan con `/api/`. Salvo el login, todas requieren `Authorization: Bearer <token>`.
+Todas las rutas empiezan con `/api/`. Salvo los dos login y la activación ciudadana, todas requieren `Authorization: Bearer <token>`.
+
+El rol **Administrador del Sistema** está incluido en todos los controladores internos (tal como están los `[Authorize]` del código). La columna *Rol* muestra los roles reales de cada ruta.
 
 ### Seguridad
 
 | Rol | Ruta | Procedimiento / vista |
 |---|---|---|
 | Anónimo | `POST auth/login` | `sp_autenticar_usuario` |
-| Cualquier usuario | `GET auth/me` | Datos del token |
+| Anónimo | `POST auth/ciudadano/activar` | `sp_activar_cuenta_ciudadana` (15) |
+| Anónimo | `POST auth/ciudadano/login` | `sp_autenticar_ciudadano` (15) |
+| Cualquier token | `GET auth/me` | Datos del token |
 | Admin | `GET usuario?userName=` | `sp_consultar_usuario` |
 | Admin | `POST usuario` | `sp_registrar_usuario` (OUTPUT) |
 | Admin | `PUT usuario/{id}` | `sp_actualizar_usuario` |
@@ -102,17 +115,21 @@ Todas las rutas empiezan con `/api/`. Salvo el login, todas requieren `Authoriza
 | Admin | `GET rolpermiso/permisos` | `sp_consultar_permisos` (14) |
 | Admin | `POST rolpermiso/rol` | `sp_registrar_rol` (OUTPUT, 14) |
 | Admin | `POST rolpermiso/permiso` | `sp_registrar_permiso` (OUTPUT, 14) |
-| Cualquier usuario | `GET catalogosgenerales/departamentos` | `sp_consultar_departamentos` (14) |
+| Cualquier funcionario | `GET catalogosgenerales/departamentos` | `sp_consultar_departamentos` (14) |
 | Admin | `POST rolpermiso/asignar-rol` | `sp_asignar_rol_usuario` |
 | Admin | `POST rolpermiso/asignar-permiso` | `sp_asignar_permiso_rol` |
 | Admin | `GET rolpermiso/usuario/{id}` | `sp_consultar_roles_permisos_usuario` |
+| Admin | `GET rolpermiso/rol/{idRol}/permisos` | `sp_consultar_permisos_por_rol` (15) |
+| Admin | `GET rolpermiso/asignaciones` | `sp_consultar_asignaciones_roles` (15) |
+| Admin | `DELETE rolpermiso/usuario/{idUsuario}/rol/{idRol}` | `sp_revocar_rol_usuario` (15; 409 si es el último administrador) |
+| Admin | `DELETE rolpermiso/rol/{idRol}/permiso/{idPermiso}` | `sp_revocar_permiso_rol` (15) |
 
 ### Contribuyentes e inmuebles (GCBI)
 
 | Rol | Ruta | Procedimiento / vista |
 |---|---|---|
-| Admin, Cajero | `GET contribuyente` | `vw_padron_contribuyentes` |
-| Admin, Cajero | `GET contribuyente/buscar?criterio=` | `sp_consultar_contribuyente` |
+| Admin, Cajero, Analista | `GET contribuyente` | `vw_padron_contribuyentes` |
+| Admin, Cajero, Analista | `GET contribuyente/buscar?criterio=` | `sp_consultar_contribuyente` |
 | Admin, Cajero | `POST contribuyente/fisico` | `sp_registrar_contribuyente_fisico` (OUTPUT) |
 | Admin, Cajero | `POST contribuyente/juridico` | `sp_registrar_contribuyente_juridico` (OUTPUT) |
 | Admin, Cajero | `PUT contribuyente/{id}` | `sp_actualizar_contribuyente` |
@@ -137,18 +154,20 @@ Todas las rutas empiezan con `/api/`. Salvo el login, todas requieren `Authoriza
 | Admin, Analista | `POST tipotramite/requisito` | `sp_registrar_requisito` (OUTPUT, 14) |
 | Admin, Analista | `POST tipotramite/{id}/requisitos/{idReq}` | `sp_configurar_requisito_tramite` |
 | Admin, Analista | `GET tipotramite/{id}/requisitos` | `sp_consultar_requisitos_por_tipo_tramite` |
-| Analista | `GET tramite` | `vw_tramites_seguimiento` |
-| Analista | `GET tramite/historial-detallado` | `vw_historial_tramites_detallado` |
-| Analista | `GET tramite/buscar?numeroExpediente=&idContribuyente=` | `sp_consultar_tramite` |
-| Analista | `POST tramite` | `sp_registrar_tramite` (OUTPUT; `@id_usuario` sale del JWT) |
-| Analista | `PUT tramite/{id}` | `sp_actualizar_tramite` |
-| Analista | `POST tramite/adjuntar-archivo` (multipart) | Archivo a disco + `sp_adjuntar_archivo_tramite` |
-| Analista | `POST tramite/requisito-presentado` (multipart) | Archivo a disco + `sp_registrar_requisito_presentado` |
-| Analista | `POST tramite/{id}/estado` | `sp_cambiar_estado_tramite` |
-| Analista | `GET tramite/estados` | `sp_consultar_estados_tramite` |
-| Analista | `GET tramite/{id}/historial` | `sp_consultar_historial_tramite` |
-| Analista | `POST tramite/{id}/resolucion` | `sp_registrar_resolucion_tramite` |
-| Analista | `GET tramite/contribuyente/{id}` | `sp_consultar_tramites_por_contribuyente` |
+| Admin, Analista | `GET tramite` | `vw_tramites_seguimiento` |
+| Admin, Analista | `GET tramite/historial-detallado` | `vw_historial_tramites_detallado` |
+| Admin, Analista | `GET tramite/buscar?numeroExpediente=&idContribuyente=` | `sp_consultar_tramite` |
+| Admin, Analista | `POST tramite` | `sp_registrar_tramite` (OUTPUT; `@id_usuario` sale del JWT) |
+| Admin, Analista | `PUT tramite/{id}` | `sp_actualizar_tramite` |
+| Admin, Analista | `POST tramite/adjuntar-archivo` (multipart) | Archivo a disco + `sp_adjuntar_archivo_tramite` |
+| Admin, Analista | `POST tramite/requisito-presentado` (multipart) | Archivo a disco + `sp_registrar_requisito_presentado` |
+| Admin, Analista | `POST tramite/{id}/estado` | `sp_cambiar_estado_tramite` |
+| Admin, Analista | `GET tramite/estados` | `sp_consultar_estados_tramite` |
+| Admin, Analista | `GET tramite/{id}/historial` | `sp_consultar_historial_tramite` |
+| Admin, Analista | `POST tramite/{id}/resolucion` | `sp_registrar_resolucion_tramite` |
+| Admin, Analista | `GET tramite/contribuyente/{id}` | `sp_consultar_tramites_por_contribuyente` |
+| Admin, Analista | `GET tramite/{id}/archivos` | `sp_consultar_archivos_tramite` (15) |
+| Admin, Analista | `GET tramite/{id}/requisitos-estado` | `sp_consultar_requisitos_tramite` (15) |
 
 ### Cobros y pagos (CPG)
 
@@ -160,14 +179,14 @@ Todas las rutas empiezan con `/api/`. Salvo el login, todas requieren `Authoriza
 | Cajero, Admin | `GET tributodeuda/contribuyente/{id}/deudas` | `sp_consultar_deudas_contribuyente` |
 | Cajero, Admin | `PATCH tributodeuda/deuda/{id}/estado` | `sp_actualizar_estado_deuda` |
 | Cajero, Admin | `POST tributodeuda/deuda/{id}/recalcular` | `sp_calcular_recargos_intereses` |
-| Cajero | `GET facturacionpago/estado-cuenta` | `vw_estado_cuenta_contribuyente` |
-| Cajero | `GET facturacionpago/contribuyente/{id}/estado-cuenta` | `sp_consultar_estado_cuenta` |
-| Cajero | `POST facturacionpago/factura` | `sp_generar_factura` (OUTPUT) |
-| Cajero | `GET facturacionpago/factura?claveNumericaHacienda=&idFactura=` | `sp_consultar_factura` |
-| Cajero | `GET facturacionpago/contribuyente/{id}/facturas` | `sp_consultar_facturas_contribuyente` |
-| Cajero | `GET facturacionpago/medios-pago` | `sp_consultar_medios_pago` |
-| Cajero | `POST facturacionpago/pago` | `sp_registrar_pago_municipal` (OUTPUT) |
-| Cajero | `POST facturacionpago/pago/{idPago}/aplicar` | `sp_aplicar_pago_factura` |
+| Admin, Cajero | `GET facturacionpago/estado-cuenta` | `vw_estado_cuenta_contribuyente` |
+| Admin, Cajero | `GET facturacionpago/contribuyente/{id}/estado-cuenta` | `sp_consultar_estado_cuenta` |
+| Admin, Cajero | `POST facturacionpago/factura` | `sp_generar_factura` (OUTPUT) |
+| Admin, Cajero | `GET facturacionpago/factura?claveNumericaHacienda=&idFactura=` | `sp_consultar_factura` |
+| Admin, Cajero | `GET facturacionpago/contribuyente/{id}/facturas` | `sp_consultar_facturas_contribuyente` |
+| Admin, Cajero | `GET facturacionpago/medios-pago` | `sp_consultar_medios_pago` |
+| Admin, Cajero | `POST facturacionpago/pago` | `sp_registrar_pago_municipal` (OUTPUT) |
+| Admin, Cajero | `POST facturacionpago/pago/{idPago}/aplicar` | `sp_aplicar_pago_factura` |
 
 ### Reportes (GRI)
 
@@ -188,28 +207,65 @@ Todas las rutas empiezan con `/api/`. Salvo el login, todas requieren `Authoriza
 
 | Rol | Ruta | Procedimiento / vista |
 |---|---|---|
-| Auditor, DBA | `GET auditoria` | `vw_auditoria_detallada` |
-| Auditor, DBA | `GET auditoria/recientes` | `sp_consultar_auditoria` |
-| Auditor, DBA | `GET auditoria/filtrar?tablaAfectada=&idUsuario=&fechaInicio=&fechaFin=` | `sp_filtrar_auditoria` |
-| Auditor, DBA | `GET auditoria/registro?tablaAfectada=&idRegistroAfectado=` | `sp_consultar_auditoria_registro` |
-| Auditor, DBA | `POST auditoria/tipo-accion` | `sp_registrar_tipo_accion_auditoria` |
-| Auditor, DBA | `POST auditoria` | `sp_registrar_auditoria` (`@id_usuario` del JWT, IP de la conexión) |
+| Admin, Auditor, DBA | `GET auditoria` | `vw_auditoria_detallada` |
+| Admin, Auditor, DBA | `GET auditoria/recientes` | `sp_consultar_auditoria` |
+| Admin, Auditor, DBA | `GET auditoria/filtrar?tablaAfectada=&idUsuario=&fechaInicio=&fechaFin=` | `sp_filtrar_auditoria` |
+| Admin, Auditor, DBA | `GET auditoria/registro?tablaAfectada=&idRegistroAfectado=` | `sp_consultar_auditoria_registro` |
+| Admin, Auditor, DBA | `POST auditoria/tipo-accion` | `sp_registrar_tipo_accion_auditoria` |
+| Admin, Auditor, DBA | `POST auditoria` | `sp_registrar_auditoria` (`@id_usuario` del JWT, IP de la conexión) |
 
 ### Respaldos (DBA)
 
 | Rol | Ruta | Procedimiento / vista |
 |---|---|---|
-| DBA | `GET respaldosdba/estado` | `vw_estado_respaldos` |
-| DBA | `GET respaldosdba/frecuencias` | `sp_consultar_frecuencias` (14) |
-| DBA | `GET respaldosdba/tipos-respaldo` | `sp_consultar_tipos_respaldo` (14) |
-| DBA | `GET respaldosdba/configuraciones` | `sp_consultar_configuraciones_respaldo` (14) |
-| DBA | `GET respaldosdba/historial?fechaInicio=&fechaFin=` | `sp_consultar_historial_respaldos` |
-| DBA | `POST respaldosdba/configuracion` | `sp_registrar_configuracion_respaldo` (OUTPUT) |
-| DBA | `PUT respaldosdba/configuracion/{id}` | `sp_actualizar_configuracion_respaldo` |
-| DBA | `POST respaldosdba/backup-full` | `sp_dba_ejecutar_backup_full` |
-| DBA | `POST respaldosdba/backup-diferencial` | `sp_dba_ejecutar_backup_diferencial` |
-| DBA | `POST respaldosdba/verificar-integridad` | `sp_dba_verificar_integridad_dbcc` |
-| DBA | `POST respaldosdba/simular-restauracion` | `sp_dba_simular_restauracion_contingencia` (`@id_usuario_dba` del JWT) |
+| Admin, DBA | `GET respaldosdba/estado` | `vw_estado_respaldos` |
+| Admin, DBA | `GET respaldosdba/frecuencias` | `sp_consultar_frecuencias` (14) |
+| Admin, DBA | `GET respaldosdba/tipos-respaldo` | `sp_consultar_tipos_respaldo` (14) |
+| Admin, DBA | `GET respaldosdba/configuraciones` | `sp_consultar_configuraciones_respaldo` (14) |
+| Admin, DBA | `GET respaldosdba/historial?fechaInicio=&fechaFin=` | `sp_consultar_historial_respaldos` |
+| Admin, DBA | `POST respaldosdba/configuracion` | `sp_registrar_configuracion_respaldo` (OUTPUT) |
+| Admin, DBA | `PUT respaldosdba/configuracion/{id}` | `sp_actualizar_configuracion_respaldo` |
+| Admin, DBA | `POST respaldosdba/backup-full` | `sp_dba_ejecutar_backup_full` |
+| Admin, DBA | `POST respaldosdba/backup-diferencial` | `sp_dba_ejecutar_backup_diferencial` |
+| Admin, DBA | `POST respaldosdba/verificar-integridad` | `sp_dba_verificar_integridad_dbcc` |
+| Admin, DBA | `POST respaldosdba/simular-restauracion` | `sp_dba_simular_restauracion_contingencia` (`@id_usuario_dba` del JWT) |
+
+### Monitoreo y mantenimiento (DBA, script 15)
+
+| Rol | Ruta | Procedimiento |
+|---|---|---|
+| Admin, DBA | `GET monitoreodba/resumen` | `sp_dba_monitor_resumen` (CPU, memoria, conexiones, espacio, últimos backups) |
+| Admin, DBA | `GET monitoreodba/sesiones?umbralSegundos=5` | `sp_dba_monitor_sesiones` (bloqueos y consultas lentas) |
+| Admin, DBA | `POST monitoreodba/sesiones/{id}/terminar` | `sp_dba_terminar_sesion` (`KILL`; no permite la sesión propia ni de sistema) |
+| Admin, DBA | `GET monitoreodba/archivos` | `sp_dba_monitor_archivos` |
+| Admin, DBA | `GET monitoreodba/fragmentacion` | `sp_dba_monitor_fragmentacion` |
+| Admin, DBA | `POST monitoreodba/mantenimiento` | `sp_dba_ejecutar_mantenimiento` (índices, estadísticas, purga de respaldos) |
+| Admin, DBA | `GET monitoreodba/mantenimiento/historial` | `sp_dba_historial_mantenimiento` (MaintenanceDB.dbo.CommandLog) |
+
+### Data Warehouse (script 15 + `BaseDeDatos/DataWareHouse`)
+
+| Rol | Ruta | Procedimiento |
+|---|---|---|
+| Admin, Auditor, DBA | `GET datawarehouse/estado` | `sp_dw_estado` |
+| Admin, DBA | `POST datawarehouse/etl` | `sp_dw_ejecutar_etl` → `MunicipalidadNicoyaDataMart2026.dbo.sp_etl_ejecutar_carga_periodica` |
+| Admin, Auditor, DBA | `GET datawarehouse/historial-cargas` | `sp_dw_historial_cargas` |
+| Admin, Auditor, DBA | `GET datawarehouse/recaudacion-periodo`, `recaudacion-tributo`, `recaudacion-ubicacion`, `morosidad`, `eficiencia-tramites`, `indicadores-departamento` | `sp_dw_*` sobre las vistas del Data Mart |
+
+### Portal ciudadano (token `Ciudadano`, script 15)
+
+El id del contribuyente sale siempre del token; cada SP verifica que el trámite o la factura le pertenezca (404 / 50030–50031 si no).
+
+| Ruta | Procedimiento |
+|---|---|
+| `GET portal/tramites` | `sp_consultar_tramites_por_contribuyente` |
+| `GET portal/tramites/{id}/historial` | `sp_ciudadano_historial_tramite` |
+| `GET portal/tramites/{id}/requisitos` | `sp_ciudadano_requisitos_tramite` |
+| `GET portal/tramites/{id}/archivos` | `sp_ciudadano_archivos_tramite` |
+| `POST portal/tramites/{id}/requisitos/{idReq}/archivo` (multipart, campo `Archivo`) | Archivo a disco + `sp_ciudadano_adjuntar_requisito` |
+| `GET portal/inmuebles` | `sp_consultar_inmuebles_por_contribuyente` |
+| `GET portal/estado-cuenta` | `sp_consultar_estado_cuenta` |
+| `GET portal/facturas` | `sp_consultar_facturas_contribuyente` |
+| `POST portal/facturas/{id}/pago-sinpe` | `sp_ciudadano_pagar_factura_sinpe` (pago simulado: el ciudadano registra el comprobante) |
 
 Formato de todas las respuestas: `{ "success": bool, "message": string, "data": ... }`.
 
@@ -219,10 +275,10 @@ Formato de todas las respuestas: `{ "success": bool, "message": string, "data": 
 
 | `ex.Number` | HTTP | Origen |
 |---|---|---|
-| 50001–50020 | 400 | `THROW` de negocio (50001–50012; 50003, 50004 y 50006 ya no se usan desde el script 14) |
-| 50021–50040 | 404 | Script 14: registro inexistente al actualizar (50021–50028) y contribuyente jurídico inexistente (50029) |
-| 50041–50060 | 409 | Script 14: rol, permiso o tipo de trámite duplicado (50041–50043) |
-| 50061–50080 | 403 | Autenticación: `sp_autenticar_usuario` (50061 credenciales, 50062 inactivo, 50063 sin rol) |
+| 50001–50020 | 400 | `THROW` de negocio (50001–50012; 50003, 50004 y 50006 ya no se usan desde el script 14). Script 15: 50013–50018 (montos de pago, factura sin saldo, sesión no terminable, requisito ajeno, trámite resuelto) |
+| 50021–50040 | 404 | Script 14: registro inexistente al actualizar (50021–50028) y contribuyente jurídico inexistente (50029). Script 15: trámite o factura ajenos (50030–50031), rol/permiso no asignado (50032–50033), DW no instalado (50034), sesión inexistente (50035) |
+| 50041–50060 | 409 | Script 14: rol, permiso o tipo de trámite duplicado (50041–50043). Script 15: último administrador (50044), cuenta ciudadana ya activa (50045), comprobante SINPE repetido (50047) |
+| 50061–50080 | 403 | Autenticación: `sp_autenticar_usuario` (50061 credenciales, 50062 inactivo, 50063 sin rol); portal ciudadano (50064 credenciales, 50065 cuenta inactiva, 50066 datos de activación no coinciden) |
 | 2627 / 2601 | 409 | UNIQUE o PK duplicada (*agregado*) |
 | 547 | 400 | FOREIGN KEY o CHECK (*agregado*) |
 | 2628 / 8152 | 400 | Texto truncado (*agregado*) |
@@ -240,7 +296,7 @@ En todos los casos se respetó la **BD real**: con la firma de la especificació
 
 | Especificación | BD real | Qué se hizo |
 |---|---|---|
-| `sp_autenticar_usuario` | No existía | Se creó en `Database/13_sp_autenticar_usuario.sql` |
+| `sp_autenticar_usuario` | No existía | Se creó en `BaseDeDatos/Database_Backend/13_sp_autenticar_usuario.sql` |
 | `sp_registrar_rol`, `_permiso`, `_tipo_tramite` y `_requisito` con `OUTPUT` | Sin `OUTPUT` | **Resuelto con el script 14** (`@nuevo_id_* INT = NULL OUTPUT`) |
 | `sp_registrar_configuracion_respaldo` sin `OUTPUT` | Tiene `@nuevo_id_config OUTPUT` | Se devuelve el id generado |
 | `sp_generar_factura` con `@id_usuario` | No lo recibe | No se envía |
@@ -255,7 +311,7 @@ En todos los casos se respetó la **BD real**: con la firma de la especificació
 
 ---
 
-## 6. Mejoras del script 14 y limitaciones pendientes
+## 6. Mejoras de los scripts 14 y 15 y limitaciones pendientes
 
 ### Resuelto con el script 14
 
@@ -274,6 +330,15 @@ En todos los casos se respetó la **BD real**: con la firma de la especificació
 5. **Representante legal.** `sp_registrar_representante_legal` acepta `@id_contribuyente`, el id del padrón, y resuelve internamente `id_contribuyente_juridico`. Si el contribuyente no es persona jurídica, responde 404 (50029). `@id_contribuyente_juridico` sigue aceptándose como opcional.
 6. **"No existe" de contribuyente e inmueble pasa al rango 404:** 50003 → 50027 y 50006 → 50028.
 7. **Catálogos DBA:** frecuencias, tipos de respaldo y configuraciones. Las configuraciones incluyen el `id_respaldos_config` que necesita el `PUT`.
+
+### Resuelto con el script 15
+
+1. **Portal ciudadano** con sesión propia (rol `Ciudadano`, sin fila en `dbo.Usuario`). El token tiene `NameIdentifier = ciudadano:{id}`; como no es numérico, `SessionContextInterceptor` envía `NULL` y la auditoría registra `SYSTEM_USER`.
+2. **Analista con lectura del padrón** (`GET contribuyente`, `GET contribuyente/buscar`); la escritura sigue siendo de Admin y Cajero.
+3. **Listado de adjuntos y estado de requisitos** de un trámite ya existente.
+4. **Revocación** de roles (no deja sin administradores al sistema) y de permisos; consultas que incluyen roles sin permisos y roles sin usuarios.
+5. **Data Warehouse:** el ETL se ejecuta con `INSERT … EXEC` para capturar la validación y cada carga queda en `dbo.Control_Cargas_ETL`.
+6. **Monitoreo DMV y mantenimiento** (CU-DBA-04, CU-DBA-06), con o sin MaintenanceDB.
 
 ### Pendiente (decisiones de la especificación, no errores)
 
@@ -295,18 +360,21 @@ En todos los casos se respetó la **BD real**: con la firma de la especificació
 2. **Verificación de firmas**, si cambia la BD:
 
    ```bash
-   python tools/verificar_firmas_sp.py ..\02_Creacion_Tablas.sql ..\04_Vistas_Consultas.sql ..\05_Procedimientos_Operacionales.sql ..\08_Estrategia_Respaldos_DBA.sql Database\13_sp_autenticar_usuario.sql Database\14_mejoras_catalogos_output.sql Services tools\entity_columns.json
+   cd muni-back
+   python tools/verificar_firmas_sp.py ..\BaseDeDatos\Scripts_Ordinarios\02_Creacion_Tablas.sql ..\BaseDeDatos\Scripts_Ordinarios\04_Vistas_Consultas.sql ..\BaseDeDatos\Scripts_Ordinarios\05_Procedimientos_Operacionales.sql ..\BaseDeDatos\Scripts_Ordinarios\08_Estrategia_Respaldos_DBA.sql ..\BaseDeDatos\Database_Backend\13_sp_autenticar_usuario.sql ..\BaseDeDatos\Database_Backend\14_mejoras_catalogos_output.sql ..\BaseDeDatos\Database_Backend\15_portal_ciudadano_dw_monitoreo.sql Services tools\entity_columns.json
    ```
 
    El script compara cada llamada `EXEC` contra la firma T-SQL (nombres, obligatorios, `OUTPUT`, tipos y tamaños `VARCHAR`). También compara cada DTO o vista contra las columnas reales del `SELECT`.
 
-   Resultado actual: **76 SP, 48 modelos, 0 errores**.
+   Resultado actual: **109 llamadas, 68 modelos, 0 errores**.
+
+   Si cambia un recordset, actualice `tools/generar_entities.py` y ejecútelo (`python tools/generar_entities.py .`): regenera los DTO de C# y `muni_front/src/types/generated.ts`, de modo que el frontend usa exactamente los mismos nombres de campo.
 3. **Pruebas de humo en Swagger** (también están en `MunicipalidadAPI.http`):
    - Login con `admin_nicoya` / `password` → 200 con token.
    - Login con una contraseña errónea → **403**, `sqlErrorCode: 50061`.
    - `GET /api/contribuyente` → 200 con el padrón.
    - `POST /api/contribuyente/fisico` con la cédula `5-0321-0456`, que ya existe → **400**, `sqlErrorCode: 50001`.
-   - Con el token del admin, `GET /api/tramite` → **403**, porque es solo para Analista.
+   - Con el token de `cajero_caja1`, `GET /api/tramite` → **403** (trámites es de Admin y Analista).
    - Con `analista_curb` / `4`:
      - `POST /api/tramite/adjuntar-archivo` con un PDF → 201. El archivo queda en `wwwroot/uploads/tramites/`.
      - Lo mismo con un `idTramite` inexistente → 400 (547). El archivo se borra del disco.

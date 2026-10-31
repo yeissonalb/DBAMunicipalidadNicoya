@@ -45,6 +45,52 @@ namespace MunicipalidadAPI
             return (new JwtSecurityTokenHandler().WriteToken(token), expira);
         }
 
+        /// <summary>Claim con el id_contribuyente de un token del portal ciudadano.</summary>
+        public const string ClaimIdContribuyente = "id_contribuyente";
+
+        /// <summary>
+        /// JWT del portal ciudadano. NameIdentifier no es numérico ("ciudadano:{id}") a propósito:
+        /// así el interceptor de SESSION_CONTEXT y GetIdUsuario nunca lo confunden con un funcionario.
+        /// </summary>
+        public static (string Token, DateTime ExpiraUtc) CreateTokenCiudadano(CiudadanoTokenDto ciudadano, IConfiguration config)
+        {
+            var key = config["Jwt:Key"] ?? throw new InvalidOperationException("Falta Jwt:Key en appsettings.json");
+            var expireMinutes = int.TryParse(config["Jwt:ExpireMinutes"], out var m) ? m : 480;
+            var expira = DateTime.UtcNow.AddMinutes(expireMinutes);
+
+            var claims = new List<Claim>
+            {
+                new(ClaimTypes.NameIdentifier, $"ciudadano:{ciudadano.IdContribuyente}"),
+                new(ClaimTypes.Name, ciudadano.Identificacion),
+                new(ClaimTypes.Role, Constantes.Roles.Ciudadano),
+                new(ClaimIdContribuyente, ciudadano.IdContribuyente.ToString()),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            var credentials = new SigningCredentials(
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+                SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                issuer: config["Jwt:Issuer"],
+                audience: config["Jwt:Audience"],
+                claims: claims,
+                notBefore: DateTime.UtcNow,
+                expires: expira,
+                signingCredentials: credentials);
+
+            return (new JwtSecurityTokenHandler().WriteToken(token), expira);
+        }
+
+        /// <summary>Extrae el id_contribuyente de un token del portal ciudadano.</summary>
+        public static int GetIdContribuyente(ClaimsPrincipal user)
+        {
+            var valor = user.FindFirstValue(ClaimIdContribuyente);
+            return int.TryParse(valor, out var id)
+                ? id
+                : throw new UnauthorizedAccessException("El token no corresponde a una cuenta ciudadana.");
+        }
+
         /// <summary>Extrae @id_usuario del claim NameIdentifier del JWT.</summary>
         public static int GetIdUsuario(ClaimsPrincipal user)
         {

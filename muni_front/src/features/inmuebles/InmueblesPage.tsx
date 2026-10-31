@@ -64,7 +64,7 @@ type AsignarDerechoForm = z.infer<typeof asignarDerechoSchema>;
 export function InmueblesPage() {
   const queryClient = useQueryClient();
   const { hasRole } = useAuth();
-  const canReadPadron = hasRole(MODULE_PERMISSIONS.CONTRIBUYENTES);
+  const canReadPadron = hasRole(MODULE_PERMISSIONS.PADRON_LECTURA);
 
   const [fincaFiltro, setFincaFiltro] = useState('');
   const [distritoFiltro, setDistritoFiltro] = useState<string>('');
@@ -75,6 +75,13 @@ export function InmueblesPage() {
   const inmueblesPropietariosQuery = useQuery({
     queryKey: ['inmuebles', 'propietarios'],
     queryFn: () => inmuebleApi.listarConPropietarios(),
+  });
+
+  // sp_consultar_inmueble sin filtros = catastro completo, incluidas fincas aún sin propietario
+  // (vw_inmuebles_propietarios solo muestra fincas con al menos un derecho registrado).
+  const catastroQuery = useQuery({
+    queryKey: ['inmuebles', 'catastro'],
+    queryFn: () => inmuebleApi.buscar(),
   });
 
   const distritosQuery = useQuery({
@@ -163,10 +170,10 @@ export function InmueblesPage() {
 
   const openEdit = (row: VwInmueblesPropietario) => {
     setEditingInmueble(row);
-    const matchingUso = tiposUsoQuery.data?.find((u) => u.descripcionUso === row.tipoUso);
+    const matchingUso = tiposUsoQuery.data?.find((u) => u.codigoUso === row.codigoUso);
     editForm.reset({
-      planoCatastrado: row.planoCatastrado,
-      direccionExacta: row.direccionExacta,
+      planoCatastrado: row.planoCatastrado ?? '',
+      direccionExacta: row.direccionExacta ?? '',
       areaTerrenoM2: row.areaTerrenoM2,
       areaConstruccionM2: row.areaConstruccionM2,
       valorFiscal: row.valorFiscal,
@@ -175,19 +182,42 @@ export function InmueblesPage() {
   };
 
   // Lista única de inmuebles para el selector de asignación de derechos
+  const conPropietario = new Set((inmueblesPropietariosQuery.data ?? []).map((i) => i.idInmueble));
+  const sinPropietario: VwInmueblesPropietario[] = (catastroQuery.data ?? [])
+    .filter((c) => !conPropietario.has(c.idInmueble))
+    .map((c) => ({
+      idInmueble: c.idInmueble,
+      numeroFinca: c.numeroFinca,
+      nombreDistrito: c.nombreDistrito,
+      codigoDistrital: null,
+      codigoUso: c.codigoUso,
+      usoSuelo: c.usoSuelo,
+      direccionExacta: c.direccionExacta,
+      areaTerrenoM2: c.areaTerrenoM2,
+      areaConstruccionM2: c.areaConstruccionM2,
+      valorFiscal: c.valorFiscal,
+      planoCatastrado: c.planoCatastrado,
+      idContribuyente: 0,
+      identificacionOficial: null,
+      nombreORazonSocial: null,
+      porcentajeParticipacion: 0,
+      fechaAdquisicion: '',
+      valorFiscalProporcional: null,
+    }));
+  const todasLasFilas = [...(inmueblesPropietariosQuery.data ?? []), ...sinPropietario];
+
   const inmueblesUnicos = Array.from(
-    new Map(
-      (inmueblesPropietariosQuery.data ?? []).map((item) => [item.idInmueble, item])
-    ).values()
+    new Map(todasLasFilas.map((item) => [item.idInmueble, item])).values()
   );
 
   // Filtrado de tabla
-  const rows = (inmueblesPropietariosQuery.data ?? []).filter((r) => {
+  const rows = todasLasFilas.filter((r) => {
     const matchFinca =
       !fincaFiltro.trim() ||
-      r.numeroFinca.toLowerCase().includes(fincaFiltro.trim().toLowerCase()) ||
-      r.planoCatastrado.toLowerCase().includes(fincaFiltro.trim().toLowerCase()) ||
-      (r.propietario || '').toLowerCase().includes(fincaFiltro.trim().toLowerCase());
+      (r.numeroFinca ?? '').toLowerCase().includes(fincaFiltro.trim().toLowerCase()) ||
+      (r.planoCatastrado ?? '').toLowerCase().includes(fincaFiltro.trim().toLowerCase()) ||
+      (r.nombreORazonSocial ?? '').toLowerCase().includes(fincaFiltro.trim().toLowerCase()) ||
+      (r.identificacionOficial ?? '').toLowerCase().includes(fincaFiltro.trim().toLowerCase());
 
     const selectedDistritoObj = distritosQuery.data?.find(
       (d) => String(d.idDistrito) === distritoFiltro
@@ -195,7 +225,7 @@ export function InmueblesPage() {
     const matchDistrito =
       !distritoFiltro ||
       !selectedDistritoObj ||
-      r.nombreDistrito.toLowerCase() === selectedDistritoObj.nombreDistrito.toLowerCase();
+      (r.nombreDistrito ?? '').toLowerCase() === (selectedDistritoObj.nombreDistrito ?? '').toLowerCase();
 
     const matchContribuyente =
       !contribuyenteFiltroId ||
@@ -276,7 +306,7 @@ export function InmueblesPage() {
                     <option value="">Todos los distritos</option>
                     {(distritosQuery.data ?? []).map((d) => (
                       <option key={d.idDistrito} value={d.idDistrito}>
-                        {d.codigoDistrito} — {d.nombreDistrito}
+                        {d.codigoDistrital} — {d.nombreDistrito}
                       </option>
                     ))}
                   </Select>
@@ -338,7 +368,7 @@ export function InmueblesPage() {
                       <td className="px-3.5 py-3">
                         <p className="font-semibold text-[#26352D]">{r.nombreDistrito}</p>
                         <Badge variant="outline" className="mt-0.5 text-[10px]">
-                          {r.tipoUso}
+                          {r.usoSuelo}
                         </Badge>
                       </td>
                       <td className="px-3.5 py-3">
@@ -351,10 +381,10 @@ export function InmueblesPage() {
                         {formatCurrencyCRC(r.valorFiscal)}
                       </td>
                       <td className="px-3.5 py-3">
-                        {r.propietario ? (
+                        {r.nombreORazonSocial ? (
                           <div>
                             <p className="font-semibold text-[#26352D]">
-                              {r.propietario}{' '}
+                              {r.nombreORazonSocial}{' '}
                               <span className="font-mono text-[11px] text-[#5A6B61]">
                                 (#{r.idContribuyente})
                               </span>
@@ -467,8 +497,8 @@ export function InmueblesPage() {
                       <option value={0}>Seleccione un contribuyente...</option>
                       {padronQuery.data.map((c) => (
                         <option key={c.idContribuyente} value={c.idContribuyente}>
-                          #{c.idContribuyente} · {c.identificacion} —{' '}
-                          {c.nombreCompletoORazonSocial}
+                          #{c.idContribuyente} · {c.identificacionOficial} —{' '}
+                          {c.nombreORazonSocial}
                         </option>
                       ))}
                     </Select>
@@ -528,9 +558,11 @@ export function InmueblesPage() {
                     className="flex items-center justify-between rounded-lg bg-[#F5F7F4] px-3 py-1.5"
                   >
                     <span className="font-semibold text-[#26352D]">
-                      {d.codigoDistrito} · {d.nombreDistrito}
+                      {d.codigoDistrital} · {d.nombreDistrito}
                     </span>
-                    <span className="text-[#5A6B61]">{formatNumber(d.areaKm2, 1)} km²</span>
+                    <span className="text-[#5A6B61]">
+                      {formatNumber(inmueblesUnicos.filter((i) => i.nombreDistrito === d.nombreDistrito).length)} inmueble(s)
+                    </span>
                   </div>
                 ))}
               </div>
@@ -575,7 +607,7 @@ export function InmueblesPage() {
             <Select {...regForm.register('idDistrito')}>
               {(distritosQuery.data ?? []).map((d) => (
                 <option key={d.idDistrito} value={d.idDistrito}>
-                  {d.nombreDistrito} ({d.codigoDistrito})
+                  {d.nombreDistrito} ({d.codigoDistrital})
                 </option>
               ))}
             </Select>
@@ -589,7 +621,7 @@ export function InmueblesPage() {
             <Select {...regForm.register('idTipoUsoInmueble')}>
               {(tiposUsoQuery.data ?? []).map((u) => (
                 <option key={u.idTipoUsoInmueble} value={u.idTipoUsoInmueble}>
-                  {u.descripcionUso} ({u.codigoTipoUso})
+                  {u.descripcion} ({u.codigoUso})
                 </option>
               ))}
             </Select>
@@ -676,7 +708,7 @@ export function InmueblesPage() {
               <Select {...editForm.register('idTipoUsoInmueble')}>
                 {(tiposUsoQuery.data ?? []).map((u) => (
                   <option key={u.idTipoUsoInmueble} value={u.idTipoUsoInmueble}>
-                    {u.descripcionUso}
+                    {u.descripcion}
                   </option>
                 ))}
               </Select>

@@ -32,7 +32,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input, Select } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { exportToCsv, formatCurrencyCRC, formatDate, formatNumber } from '@/lib/utils';
+import { exportToCsv, formatCurrencyCRC, formatDate, formatDateTime, formatNumber } from '@/lib/utils';
 
 const CHART_COLORS = ['#164B35', '#B6944A', '#2E7D5B', '#D4B872', '#0F3626', '#967736', '#4C9A77'];
 
@@ -115,21 +115,31 @@ export function ReportesAnalisisPage() {
     enabled: activeTab === 'gestion',
   });
 
+  // Saldo moroso por distrito (vw_morosidad_contribuyentes) para contrastar con lo recaudado
+  const morosidadPorDistrito = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const m of morosidadVistaQuery.data ?? []) {
+      const k = m.nombreDistrito ?? '—';
+      map.set(k, (map.get(k) ?? 0) + (m.deudaTotal ?? 0));
+    }
+    return map;
+  }, [morosidadVistaQuery.data]);
+
   // Datos combinados para gráficos (usa el SP por periodo si hay fechas o la vista general)
   const distritosChartData = useMemo(() => {
     const base =
       fechaInicio || fechaFin
         ? (recaudacionDistritoPeriodoQuery.data ?? []).map((d) => ({
-            nombreDistrito: d.nombreDistrito,
-            codigoDistrito: d.codigoDistrito,
-            totalRecaudado: d.totalRecaudado,
-            totalFacturado: d.totalRecaudado,
+            nombreDistrito: d.nombreDistrito ?? '—',
+            codigoDistrito: d.codigoDistrital,
+            totalRecaudado: d.totalDistrito ?? 0,
+            saldoMoroso: morosidadPorDistrito.get(d.nombreDistrito ?? '—') ?? 0,
           }))
         : (recaudacionDistritoQuery.data ?? []).map((d) => ({
-            nombreDistrito: d.nombreDistrito,
-            codigoDistrito: d.codigoDistrito,
-            totalRecaudado: d.totalRecaudadoDistrito,
-            totalFacturado: d.totalFacturadoDistrito,
+            nombreDistrito: d.nombreDistrito ?? '—',
+            codigoDistrito: d.codigoDistrital,
+            totalRecaudado: d.recaudacionDistritalTotal ?? 0,
+            saldoMoroso: morosidadPorDistrito.get(d.nombreDistrito ?? '—') ?? 0,
           }));
 
     if (distritoSeleccionado === 'TODOS') return base;
@@ -140,6 +150,7 @@ export function ReportesAnalisisPage() {
     recaudacionDistritoPeriodoQuery.data,
     recaudacionDistritoQuery.data,
     distritoSeleccionado,
+    morosidadPorDistrito,
   ]);
 
   const tributosChartData = useMemo(() => {
@@ -147,17 +158,17 @@ export function ReportesAnalisisPage() {
       return (recaudacionTributoPeriodoQuery.data ?? []).map((t) => ({
         nombreTributo: t.nombreTributo,
         codigoTributo: t.codigoTributo,
-        totalRecaudado: t.totalRecaudado,
-        principal: t.recaudadoPrincipal,
-        intereses: t.recaudadoInteres,
+        totalRecaudado: t.granTotalRecaudado ?? 0,
+        principal: t.subtotalPrincipal,
+        intereses: t.subtotalIntereses,
       }));
     }
     return (recaudacionTributoQuery.data ?? []).map((t) => ({
       nombreTributo: t.nombreTributo,
       codigoTributo: t.codigoTributo,
-      totalRecaudado: t.totalGeneralRecaudado,
+      totalRecaudado: t.totalRecaudadoGeneral ?? 0,
       principal: t.totalPrincipalRecaudado,
-      intereses: t.totalInteresRecaudado,
+      intereses: t.totalInteresesRecaudados,
     }));
   }, [
     fechaInicio,
@@ -171,21 +182,17 @@ export function ReportesAnalisisPage() {
     (acc, d) => acc + (d.totalRecaudado ?? 0),
     0
   );
-  const totalFacturadoCantonal = (recaudacionDistritoQuery.data ?? []).reduce(
-    (acc, d) => acc + (d.totalFacturadoDistrito ?? 0),
-    0
-  );
   const totalCarteraMorosa = (morosidadVistaQuery.data ?? []).reduce(
-    (acc, m) => acc + (m.totalDeuda ?? 0),
+    (acc, m) => acc + (m.deudaTotal ?? 0),
     0
   );
+  // Cumplimiento = recaudado / (recaudado + saldo vencido pendiente)
+  const totalExigible = totalRecaudacionCantonal + totalCarteraMorosa;
   const indiceCumplimiento =
-    totalFacturadoCantonal > 0
-      ? Math.min(100, (totalRecaudacionCantonal / totalFacturadoCantonal) * 100)
-      : 0;
+    totalExigible > 0 ? Math.min(100, (totalRecaudacionCantonal / totalExigible) * 100) : 0;
 
   const distritosNombres = Array.from(
-    new Set((recaudacionDistritoQuery.data ?? []).map((d) => d.nombreDistrito))
+    new Set((recaudacionDistritoQuery.data ?? []).map((d) => d.nombreDistrito ?? '—'))
   );
 
   return (
@@ -341,7 +348,7 @@ export function ReportesAnalisisPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-xs text-[#5A6B61]">
-                Total facturado: <strong>{formatCurrencyCRC(totalFacturadoCantonal)}</strong>
+                Pagos aplicados en el periodo seleccionado.
               </CardContent>
             </Card>
 
@@ -353,7 +360,7 @@ export function ReportesAnalisisPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-xs text-[#5A6B61]">
-                Relación entre el monto recaudado y el total facturado.
+                Recaudado frente a recaudado + saldo vencido pendiente.
               </CardContent>
             </Card>
 
@@ -402,8 +409,8 @@ export function ReportesAnalisisPage() {
                           radius={[6, 6, 0, 0]}
                         />
                         <Bar
-                          dataKey="totalFacturado"
-                          name="Total Facturado (₡)"
+                          dataKey="saldoMoroso"
+                          name="Saldo moroso (₡)"
                           fill="#B6944A"
                           radius={[6, 6, 0, 0]}
                         />
@@ -549,9 +556,9 @@ export function ReportesAnalisisPage() {
                           #{m.idDeudaMunicipal}
                         </td>
                         <td className="px-3 py-2.5">
-                          <p className="font-semibold text-[#26352D]">{m.contribuyente}</p>
+                          <p className="font-semibold text-[#26352D]">{m.nombreORazonSocial}</p>
                           <p className="font-mono text-[11px] text-[#5A6B61]">
-                            {m.identificacion}
+                            {m.identificacionOficial}
                           </p>
                         </td>
                         <td className="px-3 py-2.5">
@@ -571,7 +578,7 @@ export function ReportesAnalisisPage() {
                           {formatCurrencyCRC(m.montoIntereses + m.montoMultas)}
                         </td>
                         <td className="px-3 py-2.5 font-bold text-red-700">
-                          {formatCurrencyCRC(m.totalDeuda)}
+                          {formatCurrencyCRC(m.deudaTotal)}
                         </td>
                       </tr>
                     ))}
@@ -599,22 +606,24 @@ export function ReportesAnalisisPage() {
                       <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
                         <th className="px-3 py-2">Departamento</th>
                         <th className="px-3 py-2">Recibidos</th>
-                        <th className="px-3 py-2">Abiertos</th>
-                        <th className="px-3 py-2">Cerrados</th>
-                        <th className="px-3 py-2">Prom. Días</th>
+                        <th className="px-3 py-2">En trámite</th>
+                        <th className="px-3 py-2">Resueltos</th>
+                        <th className="px-3 py-2">% Resolución</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#DCE3DE]">
                       {(solicitudesDeptoQuery.data ?? []).map((d) => (
-                        <tr key={d.codigoDepartamento}>
+                        <tr key={d.codigoInterno ?? d.nombreDepartamento}>
                           <td className="px-3 py-2 font-semibold">{d.nombreDepartamento}</td>
                           <td className="px-3 py-2 font-bold text-[#164B35]">
-                            {d.totalTramitesRecibidos ?? 0}
+                            {d.totalSolicitudesRecibidas ?? 0}
                           </td>
-                          <td className="px-3 py-2 text-amber-700">{d.tramitesAbiertos ?? 0}</td>
-                          <td className="px-3 py-2 text-emerald-700">{d.tramitesCerrados ?? 0}</td>
+                          <td className="px-3 py-2 text-amber-700">{d.totalEnTramite ?? 0}</td>
+                          <td className="px-3 py-2 text-emerald-700">{d.totalResueltas ?? 0}</td>
                           <td className="px-3 py-2">
-                            {formatNumber(d.promedioDiasResolucion, 1)} d
+                            {d.totalSolicitudesRecibidas > 0
+                              ? `${formatNumber(((d.totalResueltas ?? 0) / d.totalSolicitudesRecibidas) * 100, 1)}%`
+                              : '—'}
                           </td>
                         </tr>
                       ))}
@@ -635,27 +644,29 @@ export function ReportesAnalisisPage() {
                     <thead>
                       <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
                         <th className="px-3 py-2">Trámite</th>
-                        <th className="px-3 py-2">SLA Máx</th>
-                        <th className="px-3 py-2">Total / Resueltas</th>
+                        <th className="px-3 py-2">SLA</th>
+                        <th className="px-3 py-2">Volumen</th>
                         <th className="px-3 py-2">Prom. Real</th>
                         <th className="px-3 py-2">Fuera SLA</th>
+                        <th className="px-3 py-2">% Éxito</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#DCE3DE]">
                       {(eficienciaTramitesQuery.data ?? []).map((e) => (
                         <tr key={e.nombreTramite}>
                           <td className="px-3 py-2 font-semibold">{e.nombreTramite}</td>
-                          <td className="px-3 py-2">{e.diasSlaMaximo} d</td>
+                          <td className="px-3 py-2">{e.slaComprometido} d</td>
+                          <td className="px-3 py-2">{e.volumenTramites}</td>
+                          <td className="px-3 py-2">{formatNumber(e.promedioDiasResolucion, 1)} d</td>
                           <td className="px-3 py-2">
-                            {e.totalSolicitudes ?? 0} / {e.solicitudesResueltas ?? 0}
-                          </td>
-                          <td className="px-3 py-2">{formatNumber(e.promedioDiasReales, 1)} d</td>
-                          <td className="px-3 py-2">
-                            <Badge
-                              variant={(e.resueltosFueraSla ?? 0) > 0 ? 'danger' : 'success'}
-                            >
-                              {e.resueltosFueraSla ?? 0}
+                            <Badge variant={(e.totalFueraPlazo ?? 0) > 0 ? 'danger' : 'success'}>
+                              {e.totalFueraPlazo ?? 0}
                             </Badge>
+                          </td>
+                          <td className="px-3 py-2">
+                            {e.tasaExitoSlaPorcentaje == null
+                              ? '—'
+                              : `${formatNumber(e.tasaExitoSlaPorcentaje, 1)}%`}
                           </td>
                         </tr>
                       ))}
@@ -699,27 +710,29 @@ export function ReportesAnalisisPage() {
                       <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
                         <th className="px-3 py-2">Expediente</th>
                         <th className="px-3 py-2">Trámite</th>
-                        <th className="px-3 py-2">Solicitud</th>
-                        <th className="px-3 py-2">Cierre</th>
-                        <th className="px-3 py-2">Finca</th>
+                        <th className="px-3 py-2">Radicación</th>
+                        <th className="px-3 py-2">Resolución</th>
+                        <th className="px-3 py-2">Fecha cambio</th>
                         <th className="px-3 py-2">Estado</th>
-                        <th className="px-3 py-2">Días Gestión</th>
+                        <th className="px-3 py-2">Observaciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#DCE3DE]">
-                      {historialContribuyenteQuery.data.map((h) => (
-                        <tr key={h.idTramite}>
+                      {historialContribuyenteQuery.data.map((h, idx) => (
+                        <tr key={`${h.numeroExpediente}-${idx}`}>
                           <td className="px-3 py-2 font-mono font-bold text-[#164B35]">
                             {h.numeroExpediente}
                           </td>
                           <td className="px-3 py-2">{h.nombreTramite}</td>
-                          <td className="px-3 py-2">{formatDate(h.fechaSolicitud)}</td>
-                          <td className="px-3 py-2">{formatDate(h.fechaCierre)}</td>
-                          <td className="px-3 py-2 font-mono">{h.numeroFinca || '—'}</td>
+                          <td className="px-3 py-2">{formatDate(h.fechaRadicacion)}</td>
                           <td className="px-3 py-2">
-                            <Badge variant="gold">{h.estadoActual}</Badge>
+                            {h.fechaResolucionFinal ? formatDate(h.fechaResolucionFinal) : 'En curso'}
                           </td>
-                          <td className="px-3 py-2">{h.diasEnGestion ?? 0} d</td>
+                          <td className="px-3 py-2">{formatDateTime(h.fechaCambio)}</td>
+                          <td className="px-3 py-2">
+                            <Badge variant="gold">{h.nombreEstado}</Badge>
+                          </td>
+                          <td className="px-3 py-2 text-[#5A6B61]">{h.observaciones || '—'}</td>
                         </tr>
                       ))}
                     </tbody>

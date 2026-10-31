@@ -47,6 +47,24 @@ namespace MunicipalidadAPI.Controllers
         public async Task<IActionResult> AsignarPermiso([FromBody] AsignarPermisoRolDto dto)
             => Ok(await _svRolPermiso.AsignarPermisoRolAsync(dto));
 
+        /// <summary>sp_consultar_permisos_por_rol: permisos concedidos a un rol, tenga o no usuarios (script 15).</summary>
+        [HttpGet("rol/{idRol:int}/permisos")]
+        public async Task<IActionResult> PermisosPorRol(int idRol) => Ok(await _svRolPermiso.ConsultarPermisosPorRolAsync(idRol));
+
+        /// <summary>sp_consultar_asignaciones_roles: todas las asignaciones usuario-rol (script 15).</summary>
+        [HttpGet("asignaciones")]
+        public async Task<IActionResult> Asignaciones() => Ok(await _svRolPermiso.ConsultarAsignacionesAsync());
+
+        /// <summary>sp_revocar_rol_usuario (404 si no estaba asignado; 409 si es el último administrador).</summary>
+        [HttpDelete("usuario/{idUsuario:int}/rol/{idRol:int}")]
+        public async Task<IActionResult> RevocarRol(int idUsuario, int idRol)
+            => Ok(await _svRolPermiso.RevocarRolUsuarioAsync(idUsuario, idRol));
+
+        /// <summary>sp_revocar_permiso_rol (404 si el rol no tenía el permiso).</summary>
+        [HttpDelete("rol/{idRol:int}/permiso/{idPermiso:int}")]
+        public async Task<IActionResult> RevocarPermiso(int idRol, int idPermiso)
+            => Ok(await _svRolPermiso.RevocarPermisoRolAsync(idRol, idPermiso));
+
         /// <summary>sp_consultar_roles_permisos_usuario.</summary>
         [HttpGet("usuario/{idUsuario:int}")]
         public async Task<IActionResult> RolesPermisosUsuario(int idUsuario)

@@ -13,7 +13,7 @@ import {
   Upload,
   XCircle,
 } from 'lucide-react';
-import { tipoTramiteApi, tramiteApi } from '@/services/api';
+import { tramiteApi } from '@/services/api';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/common/StateFeedback';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +22,9 @@ import { Select, Textarea } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
 import { FormField } from '@/components/forms/FormField';
-import { formatDate } from '@/lib/utils';
+import { formatBytes, formatDate } from '@/lib/utils';
+import { BACKEND_ORIGIN } from '@/services/httpClient';
+import { codigoEstadoPorNombre, esCodigoFinal, tramiteCerrado } from '@/lib/tramites';
 
 export function RevisionExpedientePage() {
   const queryClient = useQueryClient();
@@ -45,25 +47,27 @@ export function RevisionExpedientePage() {
     queryFn: () => tramiteApi.estados(),
   });
 
-  const tiposQuery = useQuery({
-    queryKey: ['tipotramite', 'lista'],
-    queryFn: () => tipoTramiteApi.consultar(),
-  });
-
   const activeTramite =
     tramitesQuery.data?.find((t) => t.idTramite === selectedTramiteId) ??
     tramitesQuery.data?.[0] ??
     null;
 
-  const matchingTipo = tiposQuery.data?.find(
-    (tp) => tp.nombreTramite === activeTramite?.nombreTramite
-  );
-
+  // Requisitos del tipo de trámite con el indicador de presentación (sp_consultar_requisitos_tramite)
   const requisitosQuery = useQuery({
-    queryKey: ['tipotramite', 'requisitos', matchingTipo?.idTipoTramite],
-    queryFn: () => tipoTramiteApi.requisitosPorTipo(matchingTipo!.idTipoTramite),
-    enabled: Boolean(matchingTipo?.idTipoTramite),
+    queryKey: ['tramites', 'requisitos-estado', activeTramite?.idTramite],
+    queryFn: () => tramiteApi.requisitosEstado(activeTramite!.idTramite),
+    enabled: Boolean(activeTramite?.idTramite),
   });
+
+  // Todos los documentos del expediente, incluidos los de sesiones anteriores (sp_consultar_archivos_tramite)
+  const archivosQuery = useQuery({
+    queryKey: ['tramites', 'archivos', activeTramite?.idTramite],
+    queryFn: () => tramiteApi.archivos(activeTramite!.idTramite),
+    enabled: Boolean(activeTramite?.idTramite),
+  });
+
+  const codigoActual = codigoEstadoPorNombre(activeTramite?.estadoActual, estadosQuery.data);
+  const cerrado = tramiteCerrado(activeTramite);
 
   const historialQuery = useQuery({
     queryKey: ['tramites', 'historial', activeTramite?.idTramite],
@@ -115,6 +119,7 @@ export function RevisionExpedientePage() {
     try {
       const res = await tramiteApi.requisitoPresentado(activeTramite.idTramite, idRequisito, file);
       toast.success(`${res.message} (${res.data.nombreOriginal})`);
+      queryClient.invalidateQueries({ queryKey: ['tramites'] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al acreditar requisito.');
     }
@@ -137,9 +142,7 @@ export function RevisionExpedientePage() {
     );
   }
 
-  const slaRestante = activeTramite
-    ? activeTramite.diasResolucionMax - (activeTramite.diasTranscurridos ?? 0)
-    : 0;
+  const slaRestante = activeTramite?.diasRestantesSla ?? 0;
 
   return (
     <div className="flex flex-col" style={{ gap: '2rem' }}>
@@ -148,7 +151,7 @@ export function RevisionExpedientePage() {
         subtitle={activeTramite
           ? `${activeTramite.numeroExpediente} · ${activeTramite.nombreTramite}`
           : 'Seleccione un expediente para comenzar la revisión.'}
-        badge={activeTramite?.nombreEstado || 'En revisión'}
+        badge={activeTramite?.estadoActual || 'En revisión'}
         icon={<ClipboardCheck className="h-6 w-6" />}
         actions={
           <Button
@@ -179,7 +182,7 @@ export function RevisionExpedientePage() {
               >
                 {tramitesQuery.data.map((t) => (
                   <option key={t.idTramite} value={t.idTramite}>
-                    {t.numeroExpediente} · {t.nombreTramite} ({t.codigoEstado || 'REC'})
+                    {t.numeroExpediente} · {t.nombreTramite} ({t.estadoActual || 'Recibido'})
                   </option>
                 ))}
               </Select>
@@ -190,7 +193,7 @@ export function RevisionExpedientePage() {
                 <div className="rounded-xl border border-[#E1E8E4] bg-[#F7FAF8] p-4">
                   <p className="section-label">Contribuyente</p>
                   <p className="mt-1.5 truncate text-sm font-bold text-[#26352D]">
-                    {activeTramite.contribuyente || `ID #${activeTramite.idContribuyente}`}
+                    {activeTramite.solicitante || `ID #${activeTramite.idContribuyente}`}
                   </p>
                 </div>
                 <div className="rounded-xl border border-[#E1E8E4] bg-[#F7FAF8] p-4">
@@ -204,14 +207,14 @@ export function RevisionExpedientePage() {
                   <div className="mt-1.5 flex items-center gap-1.5">
                     <Badge
                       variant={
-                        activeTramite.codigoEstado === 'APR'
+                        codigoActual === 'APR'
                           ? 'success'
-                          : activeTramite.codigoEstado === 'RECH'
+                          : codigoActual === 'RECH'
                           ? 'danger'
                           : 'gold'
                       }
                     >
-                      {activeTramite.codigoEstado} — {activeTramite.nombreEstado}
+                      {codigoActual} — {activeTramite.estadoActual}
                     </Badge>
                   </div>
                 </div>
@@ -247,8 +250,8 @@ export function RevisionExpedientePage() {
                 </CardTitle>
                 <CardDescription>
                   Departamento: {activeTramite.nombreDepartamento} · Funcionario asignado:{' '}
-                  <strong>{activeTramite.funcionarioAsignado}</strong> · Solicitud:{' '}
-                  {formatDate(activeTramite.fechaSolicitud)}
+                  <strong>{activeTramite.funcionarioAnalista}</strong> · Radicación:{' '}
+                  {formatDate(activeTramite.fechaRadicacion)}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 pt-6 sm:pt-6">
@@ -270,6 +273,11 @@ export function RevisionExpedientePage() {
                           <Badge variant={req.esObligatorio ? 'gold' : 'outline'}>
                             {req.esObligatorio ? 'Obligatorio' : 'Opcional'}
                           </Badge>
+                          <Badge variant={req.presentado ? 'success' : 'warning'}>
+                            {req.presentado
+                              ? `Presentado (${req.cantidadArchivos})`
+                              : 'Pendiente'}
+                          </Badge>
                         </div>
                         <p className="mt-1 text-xs text-[#5A6B61]">{req.descripcion}</p>
                       </div>
@@ -290,6 +298,42 @@ export function RevisionExpedientePage() {
                     </div>
                   ))
                 )}
+
+                <div className="border-t border-[#E5EBE7] pt-4">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-[#607168]">
+                    Documentos del expediente ({archivosQuery.data?.length ?? 0})
+                  </p>
+                  {archivosQuery.isLoading ? (
+                    <p className="text-xs text-[#5A6B61]">Consultando documentos...</p>
+                  ) : !archivosQuery.data || archivosQuery.data.length === 0 ? (
+                    <p className="text-xs text-[#5A6B61]">El expediente aún no tiene documentos.</p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {archivosQuery.data.map((a) => (
+                        <li
+                          key={a.idArchivoAdjunto}
+                          className="flex items-center justify-between gap-3 rounded-lg border border-[#DCE3DE] bg-white px-3 py-2 text-xs"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-[#26352D]">{a.nombreOriginal}</p>
+                            <p className="text-[11px] text-[#5A6B61]">
+                              {a.nombreRequisito ?? 'Adjunto general'} · {formatBytes(a.pesoBytes)} ·{' '}
+                              {formatDate(a.fechaSubida)}
+                            </p>
+                          </div>
+                          <a
+                            href={`${BACKEND_ORIGIN}/${a.rutaAlmacenamiento}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="shrink-0 font-semibold text-[#164B35] hover:underline"
+                          >
+                            Abrir
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -307,12 +351,12 @@ export function RevisionExpedientePage() {
                   <div className="space-y-2.5">
                     {historialQuery.data.map((h) => (
                       <div
-                        key={h.idHistorialTramite}
+                        key={h.idHistorial}
                         className="flex items-start justify-between gap-3 rounded-lg border border-[#DCE3DE] p-3 text-xs"
                       >
                         <div>
                           <div className="flex items-center gap-2">
-                            <Badge variant={h.esEstadoFinal ? 'success' : 'gold'}>
+                            <Badge variant={esCodigoFinal(h.codigoEstado) ? 'success' : 'gold'}>
                               {h.codigoEstado} — {h.nombreEstado}
                             </Badge>
                             <span className="text-[#5A6B61]">{formatDate(h.fechaCambio)}</span>
@@ -339,12 +383,12 @@ export function RevisionExpedientePage() {
                   <Select
                     value={codigoEstadoNuevo}
                     onChange={(e) => setCodigoEstadoNuevo(e.target.value)}
-                    disabled={Boolean(activeTramite.esEstadoFinal)}
+                    disabled={cerrado}
                   >
                     {(estadosQuery.data ?? []).map((est) => (
-                      <option key={est.idEstadoTramite} value={est.codigoEstado}>
-                        {est.codigoEstado} — {est.nombreEstado}{' '}
-                        {est.esEstadoFinal ? '(Estado Final)' : ''}
+                      <option key={est.idEstado} value={est.codigo ?? ''}>
+                        {est.codigo} — {est.nombreEstado}{' '}
+                        {esCodigoFinal(est.codigo) ? '(Estado Final)' : ''}
                       </option>
                     ))}
                   </Select>
@@ -360,14 +404,14 @@ export function RevisionExpedientePage() {
                     placeholder="Detalle el resultado de la revisión documental o inspección..."
                     value={observacionesEstado}
                     onChange={(e) => setObservacionesEstado(e.target.value)}
-                    disabled={Boolean(activeTramite.esEstadoFinal)}
+                    disabled={cerrado}
                   />
                 </FormField>
 
                 <Button
                   type="button"
                   className="w-full"
-                  disabled={cambiarEstadoMut.isPending || Boolean(activeTramite.esEstadoFinal)}
+                  disabled={cambiarEstadoMut.isPending || cerrado}
                   onClick={() => cambiarEstadoMut.mutate()}
                 >
                   {cambiarEstadoMut.isPending ? (
@@ -390,11 +434,11 @@ export function RevisionExpedientePage() {
                 <CardDescription>Apruebe o rechace la solicitud y cierre formalmente el expediente.</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-1 flex-col gap-5 pt-6 sm:pt-6">
-                {activeTramite.esEstadoFinal ? (
+                {cerrado ? (
                   <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
                     Este expediente ya se encuentra cerrado con estado final{' '}
-                    <strong>{activeTramite.nombreEstado}</strong> (Fecha de cierre:{' '}
-                    {formatDate(activeTramite.fechaCierre)}).
+                    <strong>{activeTramite.estadoActual}</strong> (Fecha de cierre:{' '}
+                    {formatDate(activeTramite.fechaResolucionFinal)}).
                   </div>
                 ) : (
                   <>
@@ -405,13 +449,14 @@ export function RevisionExpedientePage() {
                           <div className="rounded-xl bg-white p-3 ring-1 ring-[#E9DFC4]">
                             <p className="section-label">Estado actual</p>
                             <p className="mt-1 text-sm font-semibold text-[#164B35]">
-                              {activeTramite.nombreEstado || 'En revisión'}
+                              {activeTramite.estadoActual || 'En revisión'}
                             </p>
                           </div>
                           <div className="rounded-xl bg-white p-3 ring-1 ring-[#E9DFC4]">
                             <p className="section-label">Requisitos</p>
                             <p className="mt-1 text-sm font-semibold text-[#164B35]">
-                              {requisitosQuery.data?.length ?? 0} configurados
+                              {requisitosQuery.data?.filter((r) => r.presentado).length ?? 0} de{' '}
+                              {requisitosQuery.data?.length ?? 0} presentados
                             </p>
                           </div>
                         </div>

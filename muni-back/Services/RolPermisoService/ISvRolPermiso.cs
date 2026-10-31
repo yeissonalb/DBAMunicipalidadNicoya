@@ -15,5 +15,9 @@ namespace Services.RolPermisoService
         Task<BaseResponse<List<VwUsuariosRolesPermiso>>> ObtenerMatrizSeguridadAsync();
         Task<BaseResponse<List<SpRolResultDto>>> ConsultarRolesAsync();
         Task<BaseResponse<List<SpPermisoResultDto>>> ConsultarPermisosAsync();
+        Task<BaseResponse<List<SpPermisoRolResultDto>>> ConsultarPermisosPorRolAsync(int idRol);
+        Task<BaseResponse<List<SpAsignacionRolResultDto>>> ConsultarAsignacionesAsync();
+        Task<BaseResponse<object>> RevocarRolUsuarioAsync(int idUsuario, int idRol);
+        Task<BaseResponse<object>> RevocarPermisoRolAsync(int idRol, int idPermiso);
     }
 }

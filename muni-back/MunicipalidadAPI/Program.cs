@@ -12,6 +12,9 @@ using Services.AuditoriaService;
 using Services.CatalogosGeneralesService;
 using Services.CatalogosInmuebleService;
 using Services.Common;
+using Services.DataWarehouseService;
+using Services.MonitoreoDbaService;
+using Services.PortalCiudadanoService;
 using Services.ContribuyenteService;
 using Services.FacturacionPagoService;
 using Services.genericResponse;
@@ -57,6 +60,9 @@ builder.Services.AddScoped<ISvReportes, SvReportes>();
 builder.Services.AddScoped<ISvAuditoria, SvAuditoria>();
 builder.Services.AddScoped<ISvRespaldosDba, SvRespaldosDba>();
 builder.Services.AddScoped<ISvCatalogosGenerales, SvCatalogosGenerales>();
+builder.Services.AddScoped<ISvPortalCiudadano, SvPortalCiudadano>();
+builder.Services.AddScoped<ISvDataWarehouse, SvDataWarehouse>();
+builder.Services.AddScoped<ISvMonitoreoDba, SvMonitoreoDba>();
 
 // ---------------------------------------------------------------------------
 // MVC + validación de DTOs con la misma forma BaseResponse<T>

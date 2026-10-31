@@ -26,7 +26,9 @@ import { FormField } from '@/components/forms/FormField';
 export function MatrizPermisosPage() {
   const queryClient = useQueryClient();
   const [selectedRolId, setSelectedRolId] = useState<number>(1);
+  // Cambios pendientes: ids a conceder y a revocar respecto del estado actual en la BD
   const [pendingPermissionIds, setPendingPermissionIds] = useState<number[]>([]);
+  const [pendingRevokeIds, setPendingRevokeIds] = useState<number[]>([]);
 
   const [openRolModal, setOpenRolModal] = useState(false);
   const [nuevoNombreRol, setNuevoNombreRol] = useState('');
@@ -50,16 +52,17 @@ export function MatrizPermisosPage() {
     queryFn: () => rolPermisoApi.matriz(),
   });
 
-  // Permisos ya asignados al rol seleccionado en la BD (según vw_usuarios_roles_permisos)
-  const existingPermIdsForRole = useMemo(() => {
-    const set = new Set<number>();
-    for (const row of matrizQuery.data ?? []) {
-      if (row.idRol === selectedRolId && row.idPermiso) {
-        set.add(row.idPermiso);
-      }
-    }
-    return set;
-  }, [matrizQuery.data, selectedRolId]);
+  // Permisos asignados al rol seleccionado (sp_consultar_permisos_por_rol).
+  // Se consulta directo porque vw_usuarios_roles_permisos omite roles sin usuarios.
+  const permisosRolQuery = useQuery({
+    queryKey: ['rolpermiso', 'permisos-rol', selectedRolId],
+    queryFn: () => rolPermisoApi.permisosPorRol(selectedRolId),
+  });
+
+  const existingPermIdsForRole = useMemo(
+    () => new Set((permisosRolQuery.data ?? []).map((p) => p.idPermiso)),
+    [permisosRolQuery.data]
+  );
 
   // Agrupar el catálogo de permisos por Módulo y Acción para construir la matriz (Wireframe 7, p. 117)
   const { modulesList, actionsList, permLookup } = useMemo(() => {
@@ -68,9 +71,11 @@ export function MatrizPermisosPage() {
     const lookup = new Map<string, number>();
 
     for (const p of permisosQuery.data ?? []) {
-      modules.add(p.modulo);
-      actions.add(p.accion.toUpperCase());
-      lookup.set(`${p.modulo}::${p.accion.toUpperCase()}`, p.idPermiso);
+      const modulo = p.modulo ?? '—';
+      const accion = (p.accion ?? '').toUpperCase();
+      modules.add(modulo);
+      actions.add(accion);
+      lookup.set(`${modulo}::${accion}`, p.idPermiso);
     }
 
     return {
@@ -81,31 +86,42 @@ export function MatrizPermisosPage() {
   }, [permisosQuery.data]);
 
   const togglePendingPerm = (idPermiso: number) => {
-    if (existingPermIdsForRole.has(idPermiso)) return;
-    setPendingPermissionIds((prev) =>
-      prev.includes(idPermiso) ? prev.filter((id) => id !== idPermiso) : [...prev, idPermiso]
-    );
+    const alternar = (prev: number[]) =>
+      prev.includes(idPermiso) ? prev.filter((id) => id !== idPermiso) : [...prev, idPermiso];
+    if (existingPermIdsForRole.has(idPermiso)) setPendingRevokeIds(alternar);
+    else setPendingPermissionIds(alternar);
   };
+
+  const totalPendientes = pendingPermissionIds.length + pendingRevokeIds.length;
 
   const guardarCambiosMut = useMutation({
     mutationFn: async () => {
-      if (pendingPermissionIds.length === 0) {
-        throw new Error('Seleccione al menos un permiso nuevo para conceder al rol.');
+      if (totalPendientes === 0) {
+        throw new Error('No hay cambios pendientes para este rol.');
       }
       for (const idPermiso of pendingPermissionIds) {
-        await rolPermisoApi.asignarPermiso({
-          idRol: selectedRolId,
-          idPermiso,
-        });
+        await rolPermisoApi.asignarPermiso({ idRol: selectedRolId, idPermiso });
       }
-      return pendingPermissionIds.length;
+      for (const idPermiso of pendingRevokeIds) {
+        await rolPermisoApi.revocarPermiso(selectedRolId, idPermiso);
+      }
+      return { concedidos: pendingPermissionIds.length, revocados: pendingRevokeIds.length };
     },
-    onSuccess: (count) => {
-      toast.success(`Se concedieron ${count} permiso(s) al rol #${selectedRolId} en SQL Server.`);
+    onSuccess: ({ concedidos, revocados }) => {
+      toast.success(
+        `Rol #${selectedRolId}: ${concedidos} permiso(s) concedido(s), ${revocados} revocado(s).`
+      );
       setPendingPermissionIds([]);
+      setPendingRevokeIds([]);
       queryClient.invalidateQueries({ queryKey: ['rolpermiso'] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => {
+      // Si falló a mitad, refrescar para mostrar lo que sí quedó aplicado
+      toast.error(err.message);
+      setPendingPermissionIds([]);
+      setPendingRevokeIds([]);
+      queryClient.invalidateQueries({ queryKey: ['rolpermiso'] });
+    },
   });
 
   const crearRolMut = useMutation({
@@ -161,7 +177,7 @@ export function MatrizPermisosPage() {
             </Button>
             <Button
               size="sm"
-              disabled={pendingPermissionIds.length === 0 || guardarCambiosMut.isPending}
+              disabled={totalPendientes === 0 || guardarCambiosMut.isPending}
               onClick={() => guardarCambiosMut.mutate()}
             >
               {guardarCambiosMut.isPending ? (
@@ -170,8 +186,7 @@ export function MatrizPermisosPage() {
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4" /> Guardar cambios (
-                  {pendingPermissionIds.length})
+                  <Save className="h-4 w-4" /> Guardar cambios ({totalPendientes})
                 </>
               )}
             </Button>
@@ -210,6 +225,7 @@ export function MatrizPermisosPage() {
                 onChange={(e) => {
                   setSelectedRolId(Number(e.target.value));
                   setPendingPermissionIds([]);
+                  setPendingRevokeIds([]);
                 }}
               >
                 {(rolesQuery.data ?? []).map((r) => (
@@ -232,10 +248,16 @@ export function MatrizPermisosPage() {
       </Card>
 
       {/* Matriz Módulo vs Acción (Wireframe 7, p. 117) */}
-      {permisosQuery.isLoading || matrizQuery.isLoading ? (
+      {permisosQuery.isLoading || permisosRolQuery.isLoading ? (
         <LoadingState message="Construyendo matriz de seguridad RBAC desde SQL Server..." />
-      ) : permisosQuery.isError ? (
-        <ErrorState error={permisosQuery.error} onRetry={() => permisosQuery.refetch()} />
+      ) : permisosQuery.isError || permisosRolQuery.isError ? (
+        <ErrorState
+          error={permisosQuery.error ?? permisosRolQuery.error}
+          onRetry={() => {
+            permisosQuery.refetch();
+            permisosRolQuery.refetch();
+          }}
+        />
       ) : (
         <Card className="overflow-hidden">
           <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
@@ -269,30 +291,46 @@ export function MatrizPermisosPage() {
                           );
                         }
                         const alreadyGranted = existingPermIdsForRole.has(permId);
-                        const isPending = pendingPermissionIds.includes(permId);
+                        const isPending = alreadyGranted
+                          ? pendingRevokeIds.includes(permId)
+                          : pendingPermissionIds.includes(permId);
+                        const marcado = alreadyGranted ? !isPending : isPending;
+                        const etiqueta = alreadyGranted
+                          ? isPending
+                            ? 'Por revocar'
+                            : 'Activo'
+                          : isPending
+                            ? 'Por conceder'
+                            : `Conceder (#${permId})`;
 
                         return (
                           <td key={act} className="px-4 py-3 text-center">
-                            {alreadyGranted ? (
-                              <span
-                                className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800"
-                                title="Permiso concedido"
-                              >
-                                <CheckCircle2 className="h-3.5 w-3.5" /> Activo
+                            <label
+                              className={`inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-full px-2.5 py-0.5 ${
+                                alreadyGranted && !isPending
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : alreadyGranted && isPending
+                                    ? 'bg-red-100 text-red-800'
+                                    : ''
+                              }`}
+                              title={alreadyGranted ? 'Desmarque para revocar' : 'Marque para conceder'}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={marcado}
+                                onChange={() => togglePendingPerm(permId)}
+                                className="h-4 w-4 rounded border-[#DCE3DE] text-[#164B35] focus:ring-[#164B35]"
+                              />
+                              <span className="text-[11px] font-semibold">
+                                {alreadyGranted && !isPending ? (
+                                  <span className="inline-flex items-center gap-1">
+                                    <CheckCircle2 className="h-3.5 w-3.5" /> {etiqueta}
+                                  </span>
+                                ) : (
+                                  etiqueta
+                                )}
                               </span>
-                            ) : (
-                              <label className="inline-flex cursor-pointer items-center justify-center gap-1.5">
-                                <input
-                                  type="checkbox"
-                                  checked={isPending}
-                                  onChange={() => togglePendingPerm(permId)}
-                                  className="h-4 w-4 rounded border-[#DCE3DE] text-[#164B35] focus:ring-[#164B35]"
-                                />
-                                <span className="text-[11px] text-[#5A6B61]">
-                                  {isPending ? 'Por guardar' : `Conceder (#${permId})`}
-                                </span>
-                              </label>
-                            )}
+                            </label>
                           </td>
                         );
                       })}
@@ -305,8 +343,8 @@ export function MatrizPermisosPage() {
             <div className="mt-4 flex items-center gap-2 text-xs text-[#5A6B61]">
               <Info className="h-4 w-4 text-[#164B35]" />
               <span>
-                Actualmente esta pantalla permite conceder permisos adicionales. La revocación de
-                permisos aún no está disponible desde la aplicación.
+                Marque una casilla para conceder el permiso o desmarque uno activo para revocarlo.
+                Los cambios se aplican en SQL Server al pulsar «Guardar cambios».
               </span>
             </div>
           </CardContent>

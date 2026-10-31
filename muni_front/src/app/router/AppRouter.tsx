@@ -6,6 +6,9 @@ import { MODULE_PERMISSIONS } from '@/features/auth/permissions';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { PortalCiudadanoPage } from '@/features/portal-ciudadano/PortalCiudadanoPage';
+import { PortalProtected, PortalRoot } from '@/features/portal-ciudadano/PortalAuth';
+import { PortalLoginPage } from '@/features/portal-ciudadano/PortalLoginPage';
+import { PortalHomePage } from '@/features/portal-ciudadano/PortalHomePage';
 import { ContribuyentesPage } from '@/features/contribuyentes/ContribuyentesPage';
 import { InmueblesPage } from '@/features/inmuebles/InmueblesPage';
 import { RadicacionTramitePage } from '@/features/tramites/RadicacionTramitePage';
@@ -20,6 +23,8 @@ import { UsuariosRolesPage } from '@/features/usuarios/UsuariosRolesPage';
 import { MatrizPermisosPage } from '@/features/roles-permisos/MatrizPermisosPage';
 import { DbaPoliticasPage } from '@/features/dba/DbaPoliticasPage';
 import { DbaRespaldosPage } from '@/features/dba/DbaRespaldosPage';
+import { DbaMonitoreoPage } from '@/features/dba/DbaMonitoreoPage';
+import { DataWarehousePage } from '@/features/reportes/DataWarehousePage';
 
 export function AppRouter() {
   return (
@@ -27,6 +32,20 @@ export function AppRouter() {
       <Routes>
         {/* Ruta pública: Inicio de sesión institucional (Wireframe 1) */}
         <Route path="/login" element={<LoginPage />} />
+
+        {/* Portal ciudadano (wireframe p. 113): sesión y token propios del contribuyente */}
+        <Route path="/portal" element={<PortalRoot />}>
+          <Route path="login" element={<PortalLoginPage />} />
+          <Route
+            index
+            element={
+              <PortalProtected>
+                <PortalHomePage />
+              </PortalProtected>
+            }
+          />
+          <Route path="*" element={<Navigate to="/portal" replace />} />
+        </Route>
 
         {/* Rutas protegidas bajo el layout institucional SIGEMUN */}
         <Route
@@ -138,6 +157,15 @@ export function AppRouter() {
           />
 
           <Route
+            path="/datawarehouse"
+            element={
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.DATA_WAREHOUSE}>
+                <DataWarehousePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/auditoria"
             element={
               <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.AUDITORIA}>
@@ -187,6 +215,15 @@ export function AppRouter() {
             element={
               <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.DBA_CONSOLA}>
                 <DbaRespaldosPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/dba/monitoreo"
+            element={
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.DBA_CONSOLA}>
+                <DbaMonitoreoPage />
               </ProtectedRoute>
             }
           />

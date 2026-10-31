@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -24,6 +24,13 @@ import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
 import { FormField } from '@/components/forms/FormField';
 import { formatCurrencyCRC, formatDate } from '@/lib/utils';
+
+type FacturaPendienteCaja = VwFacturasPendiente & {
+  idContribuyente: number | null;
+  contribuyente: string | null;
+  fechaDeVencimiento: string | null;
+  totalAbonado: number;
+};
 
 export function PagosMunicipalesPage() {
   const queryClient = useQueryClient();
@@ -57,24 +64,54 @@ export function PagosMunicipalesPage() {
     enabled: consultaClaveHacienda.trim().length >= 3,
   });
 
-  const facturasFiltradas = (facturasPendientesQuery.data ?? []).filter((f) => {
+  // vw_facturas_pendientes no incluye al titular: se toma de vw_estado_cuenta_contribuyente
+  // (misma factura, fila por propietario) para saber a nombre de quién se registra el pago.
+  const estadoCuentaQuery = useQuery({
+    queryKey: ['facturacion', 'estado-cuenta-titulares'],
+    queryFn: () => facturacionPagoApi.estadoCuentaGeneral(),
+  });
+
+  const facturasEnriquecidas: FacturaPendienteCaja[] = useMemo(() => {
+    const titulares = new Map<number, { idContribuyente: number; nombre: string | null; vence: string }>();
+    for (const r of estadoCuentaQuery.data ?? []) {
+      if (r.idFactura && !titulares.has(r.idFactura)) {
+        titulares.set(r.idFactura, {
+          idContribuyente: r.idContribuyente,
+          nombre: r.nombreORazonSocial,
+          vence: r.fechaDeVencimiento,
+        });
+      }
+    }
+    return (facturasPendientesQuery.data ?? []).map((f) => {
+      const t = titulares.get(f.idFactura);
+      return {
+        ...f,
+        idContribuyente: t?.idContribuyente ?? null,
+        contribuyente: t?.nombre ?? null,
+        fechaDeVencimiento: t?.vence ?? null,
+        totalAbonado: Math.max(0, (f.totalAPagar ?? 0) - (f.saldoPendiente ?? 0)),
+      };
+    });
+  }, [facturasPendientesQuery.data, estadoCuentaQuery.data]);
+
+  const facturasFiltradas = facturasEnriquecidas.filter((f) => {
     if (!busqueda.trim()) return true;
     const q = busqueda.trim().toLowerCase();
     return (
-      f.claveNumericaHacienda.toLowerCase().includes(q) ||
+      (f.claveNumericaHacienda ?? '').toLowerCase().includes(q) ||
       (f.contribuyente || '').toLowerCase().includes(q) ||
-      f.numeroFinca.toLowerCase().includes(q) ||
-      f.nombreTributo.toLowerCase().includes(q) ||
+      (f.numeroFinca ?? '').toLowerCase().includes(q) ||
+      (f.nombreTributo ?? '').toLowerCase().includes(q) ||
       String(f.idFactura) === q
     );
   });
 
-  const selectedFactura: VwFacturasPendiente | null =
+  const selectedFactura: FacturaPendienteCaja | null =
     facturasFiltradas.find((f) => f.idFactura === selectedFacturaId) ??
     facturasFiltradas[0] ??
     null;
 
-  const selectFacturaAndPrefill = (f: VwFacturasPendiente) => {
+  const selectFacturaAndPrefill = (f: FacturaPendienteCaja) => {
     setSelectedFacturaId(f.idFactura);
     setMontoPrincipalInput(String(f.saldoPendiente));
     setMontoInteresInput('0');
@@ -93,6 +130,8 @@ export function PagosMunicipalesPage() {
       if (!selectedFactura) throw new Error('Seleccione una factura pendiente.');
       if (montoTotalPagar <= 0) throw new Error('El monto a pagar debe ser mayor a cero.');
       if (!comprobante.trim()) throw new Error('Ingrese el número de comprobante o referencia.');
+      if (!selectedFactura.idContribuyente)
+        throw new Error('La factura no tiene un propietario registrado; asigne el derecho del inmueble antes de cobrar.');
 
       // 1) Registrar pago en caja (POST /api/facturacionpago/pago -> sp_registrar_pago_municipal)
       const pagoRes = await facturacionPagoApi.registrarPago({
@@ -237,7 +276,7 @@ export function PagosMunicipalesPage() {
                                   </Badge>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5">{formatCurrencyCRC(f.totalFactura)}</td>
+                              <td className="px-3 py-2.5">{formatCurrencyCRC(f.totalAPagar)}</td>
                               <td className="px-3 py-2.5 text-emerald-700">
                                 {formatCurrencyCRC(f.totalAbonado)}
                               </td>
@@ -314,7 +353,7 @@ export function PagosMunicipalesPage() {
                       {consultarFacturaPuntualQuery.data.map((fc) => (
                         <div key={fc.idFactura} className="flex justify-between">
                           <span>
-                            Factura #{fc.idFactura} · {fc.nombreTributo} ({fc.periodoDeuda})
+                            Factura #{fc.idFactura} · Finca {fc.numeroFinca} ({fc.periodoDeuda})
                           </span>
                           <span className="font-bold text-[#164B35]">
                             Saldo: {formatCurrencyCRC(fc.saldoPendiente)} ({fc.estadoFactura})
@@ -356,7 +395,7 @@ export function PagosMunicipalesPage() {
                               : 'border-[#DCE3DE] bg-white text-[#26352D] hover:bg-[#E8F0EC]'
                           }`}
                         >
-                          {getMedioIcon(mp.nombreMedioPago)}
+                          {getMedioIcon(mp.nombreMedioPago ?? '')}
                           <span className="truncate">{mp.nombreMedioPago}</span>
                         </button>
                       );

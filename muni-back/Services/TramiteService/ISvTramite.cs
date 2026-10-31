@@ -19,6 +19,8 @@ namespace Services.TramiteService
         /// <summary>Guarda el archivo en disco y registra sus metadatos con dbo.sp_adjuntar_archivo_tramite.</summary>
         Task<BaseResponse<ArchivoAdjuntadoDto>> AdjuntarArchivoAsync(int idTramite, int? idRequisito, ArchivoEntrada archivo, string webRootPath);
 
+        Task<BaseResponse<List<SpArchivoTramiteResultDto>>> ConsultarArchivosAsync(int idTramite);
+        Task<BaseResponse<List<SpRequisitoTramiteEstadoResultDto>>> ConsultarRequisitosEstadoAsync(int idTramite);
         Task<BaseResponse<object>> CambiarEstadoAsync(int idTramite, CambiarEstadoTramiteDto dto);
         Task<BaseResponse<List<SpEstadosTramiteResultDto>>> ConsultarEstadosAsync();
         Task<BaseResponse<List<SpHistorialTramiteResultDto>>> ConsultarHistorialAsync(int idTramite);

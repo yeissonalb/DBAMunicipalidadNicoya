@@ -52,5 +52,45 @@ namespace Services.Auth
 
             return Respuesta.Ok(usuario, "Autenticación exitosa.");
         }
+
+        public async Task<BaseResponse<CiudadanoTokenDto>> AutenticarCiudadanoAsync(LoginCiudadanoDto dto)
+        {
+            var filas = await _context.Database.QuerySpAsync<SpCiudadanoAutenticadoResultDto>(
+                "dbo.sp_autenticar_ciudadano",
+                Sp.VarChar("@identificacion", dto.Identificacion.Trim(), 20),
+                Sp.VarChar("@password_hash", PasswordHasher.Sha256(dto.Password), 255));
+
+            if (filas.Count == 0)
+            {
+                return new BaseResponse<CiudadanoTokenDto>
+                {
+                    Success = false,
+                    Message = "No fue posible autenticar al contribuyente."
+                };
+            }
+
+            var c = filas[0];
+            return Respuesta.Ok(new CiudadanoTokenDto
+            {
+                IdContribuyente = c.IdContribuyente,
+                Identificacion = c.IdentificacionOficial ?? dto.Identificacion.Trim(),
+                NombreORazonSocial = c.NombreORazonSocial,
+                TipoPersona = c.TipoPersona,
+                CorreoElectronico = c.CorreoElectronico,
+                Telefono = c.Telefono
+            }, "Bienvenido al portal ciudadano.");
+        }
+
+        public async Task<BaseResponse<int>> ActivarCuentaCiudadanaAsync(ActivarCuentaCiudadanaDto dto)
+        {
+            var id = await _context.Database.ExecSpOutputIdAsync(
+                "dbo.sp_activar_cuenta_ciudadana",
+                Sp.VarChar("@identificacion", dto.Identificacion.Trim(), 20),
+                Sp.VarChar("@correo_electronico", dto.CorreoElectronico.Trim(), 100),
+                Sp.VarChar("@password_hash", PasswordHasher.Sha256(dto.Password), 255),
+                Sp.OutInt("@nuevo_id_cuenta"));
+
+            return Respuesta.Ok(id, "Cuenta ciudadana activada. Ya puede iniciar sesión con su cédula y contraseña.");
+        }
     }
 }

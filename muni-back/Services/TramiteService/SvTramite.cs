@@ -90,7 +90,7 @@ namespace Services.TramiteService
         /// 2) Envía solo metadatos a la BD.
         /// 3) Si el SP falla (THROW 50XXX, FK, etc.), borra el archivo para no dejar huérfanos y relanza el error.
         /// </summary>
-        private static async Task<BaseResponse<ArchivoAdjuntadoDto>> GuardarYRegistrarAsync(
+        internal static async Task<BaseResponse<ArchivoAdjuntadoDto>> GuardarYRegistrarAsync(
             int idTramite, int? idRequisito, ArchivoEntrada archivo, string webRootPath,
             Func<string, string, double, Task<int>> registrarEnBd, string mensaje)
         {
@@ -139,6 +139,25 @@ namespace Services.TramiteService
             try { if (File.Exists(path)) File.Delete(path); }
             catch (IOException) { /* el error original de SQL es el relevante */ }
             catch (UnauthorizedAccessException) { }
+        }
+
+        // Script 15: documentos y requisitos de un expediente existente
+        public async Task<BaseResponse<List<SpArchivoTramiteResultDto>>> ConsultarArchivosAsync(int idTramite)
+        {
+            var data = await _context.Database.QuerySpAsync<SpArchivoTramiteResultDto>(
+                "dbo.sp_consultar_archivos_tramite",
+                Sp.Int("@id_tramite", idTramite));
+
+            return Respuesta.Ok(data, $"{data.Count} archivo(s) en el expediente.");
+        }
+
+        public async Task<BaseResponse<List<SpRequisitoTramiteEstadoResultDto>>> ConsultarRequisitosEstadoAsync(int idTramite)
+        {
+            var data = await _context.Database.QuerySpAsync<SpRequisitoTramiteEstadoResultDto>(
+                "dbo.sp_consultar_requisitos_tramite",
+                Sp.Int("@id_tramite", idTramite));
+
+            return Respuesta.Ok(data);
         }
 
         public async Task<BaseResponse<object>> CambiarEstadoAsync(int idTramite, CambiarEstadoTramiteDto dto)

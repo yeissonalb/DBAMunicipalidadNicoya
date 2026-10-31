@@ -15,6 +15,7 @@ import {
   Sliders,
   UserCheck,
   UserPlus,
+  X,
 } from 'lucide-react';
 import { catalogosGeneralesApi, rolPermisoApi, usuarioApi } from '@/services/api';
 import type { SpConsultarUsuarioResultDto } from '@/types/api';
@@ -26,7 +27,7 @@ import { Input, Select } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
 import { FormField } from '@/components/forms/FormField';
-import { formatDate } from '@/lib/utils';
+
 
 const crearUsuarioSchema = z.object({
   userName: z.string().trim().min(3, 'Mínimo 3 caracteres').max(50),
@@ -77,9 +78,10 @@ export function UsuariosRolesPage() {
     queryFn: () => rolPermisoApi.listarRoles(),
   });
 
-  const matrizQuery = useQuery({
-    queryKey: ['rolpermiso', 'matriz'],
-    queryFn: () => rolPermisoApi.matriz(),
+  // Asignaciones usuario-rol (sp_consultar_asignaciones_roles): incluye roles sin permisos
+  const asignacionesQuery = useQuery({
+    queryKey: ['rolpermiso', 'asignaciones'],
+    queryFn: () => rolPermisoApi.asignaciones(),
   });
 
   const permisosUsuarioQuery = useQuery({
@@ -88,19 +90,15 @@ export function UsuariosRolesPage() {
     enabled: Boolean(inspectUserTarget?.idUsuario),
   });
 
-  // Mapa de roles por usuario obtenido desde vw_usuarios_roles_permisos
+  // Mapa de roles por usuario
   const rolesPorUsuarioMap = useMemo(() => {
-    const map = new Map<number, Set<string>>();
-    for (const row of matrizQuery.data ?? []) {
-      if (!map.has(row.idUsuario)) {
-        map.set(row.idUsuario, new Set());
-      }
-      if (row.nombreRol) {
-        map.get(row.idUsuario)!.add(row.nombreRol);
-      }
+    const map = new Map<number, { idRol: number; nombreRol: string }[]>();
+    for (const row of asignacionesQuery.data ?? []) {
+      if (!map.has(row.idUsuario)) map.set(row.idUsuario, []);
+      map.get(row.idUsuario)!.push({ idRol: row.idRol, nombreRol: row.nombreRol ?? `Rol #${row.idRol}` });
     }
     return map;
-  }, [matrizQuery.data]);
+  }, [asignacionesQuery.data]);
 
   const createForm = useForm<CrearUsuarioForm>({
     resolver: zodResolver(crearUsuarioSchema),
@@ -162,6 +160,20 @@ export function UsuariosRolesPage() {
     },
     onError: (err: Error) => toast.error(err.message),
   });
+
+  const revocarRolMut = useMutation({
+    mutationFn: ({ idUsuario, idRol }: { idUsuario: number; idRol: number }) =>
+      rolPermisoApi.revocarRol(idUsuario, idRol),
+    onSuccess: (res) => {
+      toast.success(res.message || 'Rol revocado.');
+      queryClient.invalidateQueries({ queryKey: ['rolpermiso'] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const rolesDelObjetivo = assignRoleTarget
+    ? rolesPorUsuarioMap.get(assignRoleTarget.idUsuario) ?? []
+    : [];
 
   return (
     <div className="flex flex-col" style={{ gap: '2rem' }}>
@@ -286,15 +298,13 @@ export function UsuariosRolesPage() {
                 <th className="px-4 py-3">Nombre y Apellidos</th>
                 <th className="px-4 py-3">Departamento</th>
                 <th className="px-4 py-3">Rol(es) Asignados</th>
-                <th className="px-4 py-3">Creación</th>
                 <th className="px-4 py-3">Estado</th>
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#DCE3DE]">
               {usuariosQuery.data.map((u) => {
-                const rolesSet = rolesPorUsuarioMap.get(u.idUsuario);
-                const rolesList = rolesSet ? Array.from(rolesSet) : [];
+                const rolesList = rolesPorUsuarioMap.get(u.idUsuario) ?? [];
                 return (
                   <tr key={u.idUsuario} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
                     <td className="px-4 py-3 font-mono font-bold text-[#164B35]">
@@ -316,17 +326,14 @@ export function UsuariosRolesPage() {
                       {rolesList.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {rolesList.map((r) => (
-                            <Badge key={r} variant="gold">
-                              {r}
+                            <Badge key={r.idRol} variant="gold">
+                              {r.nombreRol}
                             </Badge>
                           ))}
                         </div>
                       ) : (
-                        <Badge variant="outline">Ver / Asignar</Badge>
+                        <Badge variant="outline">Sin roles</Badge>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-xs whitespace-nowrap">
-                      {formatDate(u.fechaCreacion)}
                     </td>
                     <td className="px-4 py-3">
                       <button
@@ -362,11 +369,15 @@ export function UsuariosRolesPage() {
                           onClick={() => {
                             setEditingUser(u);
                             editForm.reset({
-                              nombreUsuario: u.nombreUsuario,
-                              apellido1Usuario: u.apellido1Usuario,
-                              apellido2Usuario: u.apellido2Usuario,
-                              emailUsuario: u.emailUsuario,
-                              idDepartamento: u.idDepartamento,
+                              nombreUsuario: u.nombreUsuario ?? '',
+                              apellido1Usuario: u.apellido1Usuario ?? '',
+                              apellido2Usuario: u.apellido2Usuario ?? '',
+                              emailUsuario: u.emailUsuario ?? '',
+                              // sp_consultar_usuario devuelve el nombre del departamento, no su id
+                              idDepartamento:
+                                departamentosQuery.data?.find(
+                                  (d) => d.nombreDepartamento === u.nombreDepartamento
+                                )?.idDepartamento ?? 1,
                             });
                           }}
                         >
@@ -460,7 +471,7 @@ export function UsuariosRolesPage() {
             <Select {...createForm.register('idDepartamento')}>
               {(departamentosQuery.data ?? []).map((d) => (
                 <option key={d.idDepartamento} value={d.idDepartamento}>
-                  {d.nombreDepartamento} ({d.codigoDepartamento})
+                  {d.nombreDepartamento} ({d.codigoInterno})
                 </option>
               ))}
             </Select>
@@ -566,11 +577,44 @@ export function UsuariosRolesPage() {
       <Modal
         open={Boolean(assignRoleTarget)}
         onClose={() => setAssignRoleTarget(null)}
-        title={`Asignar Rol Institucional — ${assignRoleTarget?.userName ?? ''}`}
-        description="Ejecuta POST /api/rolpermiso/asignar-rol (dbo.sp_asignar_rol_usuario)"
+        title={`Roles institucionales — ${assignRoleTarget?.userName ?? ''}`}
+        description="Asigne un rol nuevo o revoque uno de los roles actuales del funcionario."
       >
         {assignRoleTarget && (
           <div className="space-y-4">
+            <div>
+              <p className="mb-2 text-sm font-semibold text-[#26352D]">Roles actuales</p>
+              {rolesDelObjetivo.length === 0 ? (
+                <p className="text-xs text-[#5A6B61]">El funcionario no tiene roles asignados.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {rolesDelObjetivo.map((r) => (
+                    <span
+                      key={r.idRol}
+                      className="inline-flex items-center gap-1 rounded-full border border-[#B6944A]/50 bg-[#FBF7EE] py-0.5 pl-2.5 pr-1 text-xs font-semibold text-[#735A26]"
+                    >
+                      {r.nombreRol}
+                      <button
+                        type="button"
+                        className="rounded-full p-0.5 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
+                        title={`Revocar ${r.nombreRol}`}
+                        aria-label={`Revocar rol ${r.nombreRol}`}
+                        disabled={revocarRolMut.isPending}
+                        onClick={() =>
+                          revocarRolMut.mutate({
+                            idUsuario: assignRoleTarget.idUsuario,
+                            idRol: r.idRol,
+                          })
+                        }
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <FormField label="Seleccionar Rol del Catálogo Oficial" required>
               <Select
                 value={selectedRolId}

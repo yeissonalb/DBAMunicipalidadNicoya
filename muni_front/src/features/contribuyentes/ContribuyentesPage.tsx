@@ -192,9 +192,9 @@ export function ContribuyentesPage() {
   const openEditModal = (row: VwPadronContribuyente) => {
     setEditingContribuyente(row);
     editForm.reset({
-      correoElectronico: row.correoElectronico,
-      telefono: row.telefono,
-      direccionNotificaciones: row.direccionNotificaciones,
+      correoElectronico: row.correoElectronico ?? '',
+      telefono: row.telefono ?? '',
+      direccionNotificaciones: row.direccionNotificaciones ?? '',
       estadoContribuyente: row.estadoContribuyente,
     });
   };
@@ -202,23 +202,13 @@ export function ContribuyentesPage() {
   // Combinar resultados cuando se usa búsqueda sp_consultar_contribuyente o vw_padron_contribuyentes
   const listaBase: VwPadronContribuyente[] =
     searchApplied.trim().length > 0
-      ? (buscarQuery.data ?? []).map((b) => ({
-          idContribuyente: b.idContribuyente,
-          tipoContribuyente: b.tipoPersona,
-          identificacion: b.identificacion,
-          nombreCompletoORazonSocial: b.nombreORazonSocial,
-          nombreFantasia: null,
-          correoElectronico: b.correoElectronico,
-          telefono: b.telefono,
-          direccionNotificaciones: b.direccionNotificaciones,
-          fechaRegistro: b.fechaRegistro,
-          estadoContribuyente: b.estadoContribuyente,
-        }))
+      ? // sp_consultar_contribuyente devuelve exactamente las columnas de vw_padron_contribuyentes
+        (buscarQuery.data ?? [])
       : padronQuery.data ?? [];
 
   const listaFiltrada = listaBase.filter((item) => {
     if (tipoFiltro === 'TODOS') return true;
-    const t = (item.tipoContribuyente || '').toUpperCase();
+    const t = (item.tipoPersona || '').toUpperCase();
     if (tipoFiltro === 'FISICO') return t.includes('FÍS') || t.includes('FIS');
     if (tipoFiltro === 'JURIDICO') return t.includes('JUR');
     return true;
@@ -370,7 +360,7 @@ export function ContribuyentesPage() {
                 </thead>
                 <tbody className="divide-y divide-[#DCE3DE]">
                   {listaFiltrada.map((c) => {
-                    const isJuridica = (c.tipoContribuyente || '').toUpperCase().includes('JUR');
+                    const isJuridica = (c.tipoPersona || '').toUpperCase().includes('JUR');
                     return (
                       <tr key={c.idContribuyente} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
                         <td className="px-5 py-4 font-mono font-bold text-[#164B35]">
@@ -378,15 +368,15 @@ export function ContribuyentesPage() {
                         </td>
                         <td className="px-4 py-3">
                           <Badge variant={isJuridica ? 'gold' : 'info'}>
-                            {c.tipoContribuyente}
+                            {c.tipoPersona}
                           </Badge>
                         </td>
                         <td className="px-4 py-3 font-mono font-semibold">
-                          {c.identificacion || '—'}
+                          {c.identificacionOficial || '—'}
                         </td>
                         <td className="px-4 py-3">
                           <p className="font-semibold text-[#26352D]">
-                            {c.nombreCompletoORazonSocial || '—'}
+                            {c.nombreORazonSocial || '—'}
                           </p>
                           {c.nombreFantasia && (
                             <p className="text-xs text-[#5A6B61]">
@@ -669,7 +659,7 @@ export function ContribuyentesPage() {
         onClose={() => setEditingContribuyente(null)}
         title={`Actualizar Contribuyente #${editingContribuyente?.idContribuyente ?? ''}`}
         description={
-          editingContribuyente?.nombreCompletoORazonSocial || editingContribuyente?.identificacion || ''
+          editingContribuyente?.nombreORazonSocial || editingContribuyente?.identificacionOficial || ''
         }
       >
         {editingContribuyente && (
@@ -734,7 +724,7 @@ export function ContribuyentesPage() {
         onClose={() => setRepLegalTarget(null)}
         title={`Registrar Representante Legal (CU-03)`}
         description={`Persona Jurídica #${repLegalTarget?.idContribuyente}: ${
-          repLegalTarget?.nombreCompletoORazonSocial ?? ''
+          repLegalTarget?.nombreORazonSocial ?? ''
         }`}
       >
         {repLegalTarget && (

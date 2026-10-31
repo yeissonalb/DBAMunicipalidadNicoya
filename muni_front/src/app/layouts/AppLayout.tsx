@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
+  Activity,
   Building2,
   ChevronLeft,
   ChevronRight,
@@ -21,6 +22,7 @@ import {
   Sliders,
   UserCheck,
   Users,
+  Warehouse,
   X,
 } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
@@ -131,6 +133,12 @@ const NAV_GROUPS: NavGroup[] = [
         allowedRoles: MODULE_PERMISSIONS.REPORTES,
       },
       {
+        label: 'Data Warehouse (BI)',
+        to: '/datawarehouse',
+        icon: <Warehouse className="h-4 w-4" />,
+        allowedRoles: MODULE_PERMISSIONS.DATA_WAREHOUSE,
+      },
+      {
         label: 'Auditoría Forense (Audit Log)',
         to: '/auditoria',
         icon: <ShieldCheck className="h-4 w-4" />,
@@ -170,6 +178,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: <Landmark className="h-4 w-4" />,
         allowedRoles: MODULE_PERMISSIONS.DBA_CONSOLA,
       },
+      {
+        label: 'Monitoreo y Mantenimiento',
+        to: '/dba/monitoreo',
+        icon: <Activity className="h-4 w-4" />,
+        allowedRoles: MODULE_PERMISSIONS.DBA_CONSOLA,
+      },
     ],
   },
 ];
@@ -191,6 +205,8 @@ const ROUTE_TITLES: Record<string, string> = {
   '/seguridad/matriz': 'Centro de Seguridad y Matriz de Permisos',
   '/dba/politicas': 'Consola Técnica DBA — Políticas de Respaldo',
   '/dba/respaldos': 'Consola Técnica DBA — Respaldos y Recuperación',
+  '/dba/monitoreo': 'Consola Técnica DBA — Monitoreo y Mantenimiento',
+  '/datawarehouse': 'Data Warehouse e Inteligencia de Negocio',
 };
 
 export function AppLayout() {

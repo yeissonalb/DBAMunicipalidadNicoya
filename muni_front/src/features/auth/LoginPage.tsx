@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   AlertCircle,
@@ -210,6 +210,12 @@ export function LoginPage() {
           <div className="mt-6 border-t border-[#DCE3DE] pt-4 text-center">
             <p className="text-[11px] text-[#5A6B61]">
               Acceso exclusivo para personal autorizado de la Municipalidad de Nicoya.
+            </p>
+            <p className="mt-2 text-xs text-[#5A6B61]">
+              ¿Es contribuyente?{' '}
+              <Link to="/portal/login" className="font-semibold text-[#164B35] hover:underline">
+                Ingrese al Portal Ciudadano
+              </Link>
             </p>
           </div>
         </div>

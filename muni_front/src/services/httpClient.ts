@@ -81,21 +81,60 @@ httpClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
+/**
+ * Convierte un error de axios en ApiClientError con el mensaje de BaseResponse.
+ * Lo comparten el cliente institucional y el del portal ciudadano.
+ */
+export function toApiClientError(error: AxiosError<BaseResponse<any>>): ApiClientError {
+  if (!error.response) {
+    return new ApiClientError(
+      `No se pudo establecer conexión con el servidor backend (${API_BASE_URL}). Verifique que muni-back esté en ejecución y CORS habilitado.`,
+      0
+    );
+  }
+
+  const { status, data } = error.response;
+
+  let message = data?.message || '';
+  let sqlErrorCode: number | undefined;
+  let validationErrors: Record<string, string[]> | undefined;
+
+  if (data?.data && typeof data.data === 'object') {
+    if ('sqlErrorCode' in data.data && typeof data.data.sqlErrorCode === 'number') {
+      sqlErrorCode = data.data.sqlErrorCode;
+    } else if (!Array.isArray(data.data)) {
+      // ModelState dictionary: Record<string, string[]>
+      const fieldMessages: string[] = [];
+      const map: Record<string, string[]> = {};
+      for (const [key, val] of Object.entries(data.data)) {
+        if (Array.isArray(val)) {
+          map[key] = val.map(String);
+          fieldMessages.push(`${key}: ${val.join(', ')}`);
+        }
+      }
+      if (fieldMessages.length > 0) {
+        validationErrors = map;
+        message = `${message ? message + ' ' : ''}(${fieldMessages.join(' | ')})`;
+      }
+    }
+  }
+
+  if (!message) {
+    if (status === 401) message = 'Sesión no válida o expirada. Inicie sesión nuevamente.';
+    else if (status === 403)
+      message = 'Acceso denegado (403). Su rol actual no posee permisos en el backend para este recurso.';
+    else if (status === 404) message = 'El recurso solicitado no fue encontrado (404).';
+    else if (status === 409) message = 'Conflicto de integridad: el registro ya existe en la base de datos (409).';
+    else message = `Error en la solicitud al servidor (HTTP ${status}).`;
+  }
+
+  return new ApiClientError(message, status, sqlErrorCode, validationErrors);
+}
+
 httpClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<BaseResponse<any>>) => {
-    if (!error.response) {
-      return Promise.reject(
-        new ApiClientError(
-          `No se pudo establecer conexión con el servidor backend (${API_BASE_URL}). Verifique que muni-back esté en ejecución y CORS habilitado.`,
-          0
-        )
-      );
-    }
-
-    const { status, data } = error.response;
-
-    if (status === 401) {
+    if (error.response?.status === 401) {
       // Si no es el intento de login mismo, limpiar sesión y notificar expiración
       const isLoginRequest = error.config?.url?.includes('/auth/login');
       if (!isLoginRequest) {
@@ -103,41 +142,7 @@ httpClient.interceptors.response.use(
         window.dispatchEvent(new CustomEvent('sigemun:unauthorized'));
       }
     }
-
-    let message = data?.message || '';
-    let sqlErrorCode: number | undefined;
-    let validationErrors: Record<string, string[]> | undefined;
-
-    if (data?.data && typeof data.data === 'object') {
-      if ('sqlErrorCode' in data.data && typeof data.data.sqlErrorCode === 'number') {
-        sqlErrorCode = data.data.sqlErrorCode;
-      } else if (!Array.isArray(data.data)) {
-        // ModelState dictionary: Record<string, string[]>
-        const fieldMessages: string[] = [];
-        const map: Record<string, string[]> = {};
-        for (const [key, val] of Object.entries(data.data)) {
-          if (Array.isArray(val)) {
-            map[key] = val.map(String);
-            fieldMessages.push(`${key}: ${val.join(', ')}`);
-          }
-        }
-        if (fieldMessages.length > 0) {
-          validationErrors = map;
-          message = `${message ? message + ' ' : ''}(${fieldMessages.join(' | ')})`;
-        }
-      }
-    }
-
-    if (!message) {
-      if (status === 401) message = 'Sesión no válida o expirada. Inicie sesión nuevamente.';
-      else if (status === 403)
-        message = 'Acceso denegado (403). Su rol actual no posee permisos en el backend para este recurso.';
-      else if (status === 404) message = 'El recurso solicitado no fue encontrado (404).';
-      else if (status === 409) message = 'Conflicto de integridad: el registro ya existe en la base de datos (409).';
-      else message = `Error en la solicitud al servidor (HTTP ${status}).`;
-    }
-
-    return Promise.reject(new ApiClientError(message, status, sqlErrorCode, validationErrors));
+    return Promise.reject(toApiClientError(error));
   }
 );
 

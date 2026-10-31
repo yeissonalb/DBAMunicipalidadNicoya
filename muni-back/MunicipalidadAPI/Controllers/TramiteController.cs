@@ -96,6 +96,14 @@ namespace MunicipalidadAPI.Controllers
         public async Task<IActionResult> CambiarEstado(int idTramite, [FromBody] CambiarEstadoTramiteDto dto)
             => Ok(await _svTramite.CambiarEstadoAsync(idTramite, dto));
 
+        /// <summary>sp_consultar_archivos_tramite: todos los documentos del expediente (script 15).</summary>
+        [HttpGet("{idTramite:int}/archivos")]
+        public async Task<IActionResult> Archivos(int idTramite) => Ok(await _svTramite.ConsultarArchivosAsync(idTramite));
+
+        /// <summary>sp_consultar_requisitos_tramite: requisitos del tipo de trámite y si ya se presentaron (script 15).</summary>
+        [HttpGet("{idTramite:int}/requisitos-estado")]
+        public async Task<IActionResult> RequisitosEstado(int idTramite) => Ok(await _svTramite.ConsultarRequisitosEstadoAsync(idTramite));
+
         /// <summary>sp_consultar_estados_tramite.</summary>
         [HttpGet("estados")]
         public async Task<IActionResult> Estados() => Ok(await _svTramite.ConsultarEstadosAsync());

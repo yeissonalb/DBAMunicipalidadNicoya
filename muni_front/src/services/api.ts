@@ -34,6 +34,26 @@ import type {
   RegistrarUsuarioDto,
   ResolucionTramiteDto,
   SimularRestauracionDto,
+  EjecutarMantenimientoDto,
+  SpArchivoTramiteResultDto,
+  SpAsignacionRolResultDto,
+  SpDbaFragmentacionResultDto,
+  SpDbaHistorialMantenimientoResultDto,
+  SpDbaMantenimientoResultDto,
+  SpDbaMonitorArchivoResultDto,
+  SpDbaMonitorResumenResultDto,
+  SpDbaMonitorSesionResultDto,
+  SpDwEficienciaTramitesResultDto,
+  SpDwEstadoResultDto,
+  SpDwHistorialCargaResultDto,
+  SpDwIndicadoresDepartamentoResultDto,
+  SpDwMorosidadResultDto,
+  SpDwRecaudacionPeriodoResultDto,
+  SpDwRecaudacionTributoResultDto,
+  SpDwRecaudacionUbicacionResultDto,
+  SpDwValidacionEtlResultDto,
+  SpPermisoRolResultDto,
+  SpRequisitoTramiteEstadoResultDto,
   SpConfiguracionRespaldoResultDto,
   SpConsultarAuditoriaResultDto,
   SpConsultarContribuyenteResultDto,
@@ -139,6 +159,15 @@ export const rolPermisoApi = {
     unwrapResponse<SpRolesPermisosUsuarioResultDto[]>(
       httpClient.get(`/rolpermiso/usuario/${idUsuario}`)
     ),
+  // Script 15
+  permisosPorRol: (idRol: number) =>
+    unwrapResponse<SpPermisoRolResultDto[]>(httpClient.get(`/rolpermiso/rol/${idRol}/permisos`)),
+  asignaciones: () =>
+    unwrapResponse<SpAsignacionRolResultDto[]>(httpClient.get('/rolpermiso/asignaciones')),
+  revocarRol: (idUsuario: number, idRol: number) =>
+    unwrapFullResponse<unknown>(httpClient.delete(`/rolpermiso/usuario/${idUsuario}/rol/${idRol}`)),
+  revocarPermiso: (idRol: number, idPermiso: number) =>
+    unwrapFullResponse<unknown>(httpClient.delete(`/rolpermiso/rol/${idRol}/permiso/${idPermiso}`)),
 };
 
 // ============================================================================
@@ -267,6 +296,13 @@ export const tramiteApi = {
   porContribuyente: (idContribuyente: number) =>
     unwrapResponse<SpTramitesPorContribuyenteResultDto[]>(
       httpClient.get(`/tramite/contribuyente/${idContribuyente}`)
+    ),
+  // Script 15
+  archivos: (idTramite: number) =>
+    unwrapResponse<SpArchivoTramiteResultDto[]>(httpClient.get(`/tramite/${idTramite}/archivos`)),
+  requisitosEstado: (idTramite: number) =>
+    unwrapResponse<SpRequisitoTramiteEstadoResultDto[]>(
+      httpClient.get(`/tramite/${idTramite}/requisitos-estado`)
     ),
 };
 
@@ -454,5 +490,57 @@ export const respaldosDbaApi = {
     unwrapFullResponse<unknown>(httpClient.post('/respaldosdba/verificar-integridad')),
   simularRestauracion: (dto: SimularRestauracionDto) =>
     unwrapFullResponse<unknown>(httpClient.post('/respaldosdba/simular-restauracion', dto)),
+};
+
+// ============================================================================
+// 14. DataWarehouseController (/api/datawarehouse) — script 15
+// ============================================================================
+export const dataWarehouseApi = {
+  estado: () => unwrapResponse<SpDwEstadoResultDto | null>(httpClient.get('/datawarehouse/estado')),
+  ejecutarEtl: () =>
+    unwrapFullResponse<SpDwValidacionEtlResultDto[]>(
+      httpClient.post('/datawarehouse/etl', undefined, { timeout: 15 * 60 * 1000 })
+    ),
+  historialCargas: () =>
+    unwrapResponse<SpDwHistorialCargaResultDto[]>(httpClient.get('/datawarehouse/historial-cargas')),
+  recaudacionPeriodo: () =>
+    unwrapResponse<SpDwRecaudacionPeriodoResultDto[]>(httpClient.get('/datawarehouse/recaudacion-periodo')),
+  recaudacionTributo: () =>
+    unwrapResponse<SpDwRecaudacionTributoResultDto[]>(httpClient.get('/datawarehouse/recaudacion-tributo')),
+  recaudacionUbicacion: () =>
+    unwrapResponse<SpDwRecaudacionUbicacionResultDto[]>(
+      httpClient.get('/datawarehouse/recaudacion-ubicacion')
+    ),
+  morosidad: () => unwrapResponse<SpDwMorosidadResultDto[]>(httpClient.get('/datawarehouse/morosidad')),
+  eficienciaTramites: () =>
+    unwrapResponse<SpDwEficienciaTramitesResultDto[]>(httpClient.get('/datawarehouse/eficiencia-tramites')),
+  indicadoresDepartamento: () =>
+    unwrapResponse<SpDwIndicadoresDepartamentoResultDto[]>(
+      httpClient.get('/datawarehouse/indicadores-departamento')
+    ),
+};
+
+// ============================================================================
+// 15. MonitoreoDbaController (/api/monitoreodba) — script 15
+// ============================================================================
+export const monitoreoDbaApi = {
+  resumen: () => unwrapResponse<SpDbaMonitorResumenResultDto | null>(httpClient.get('/monitoreodba/resumen')),
+  sesiones: (umbralSegundos = 5) =>
+    unwrapResponse<SpDbaMonitorSesionResultDto[]>(
+      httpClient.get('/monitoreodba/sesiones', { params: { umbralSegundos } })
+    ),
+  archivos: () => unwrapResponse<SpDbaMonitorArchivoResultDto[]>(httpClient.get('/monitoreodba/archivos')),
+  fragmentacion: () =>
+    unwrapResponse<SpDbaFragmentacionResultDto[]>(httpClient.get('/monitoreodba/fragmentacion')),
+  terminarSesion: (sessionId: number) =>
+    unwrapFullResponse<unknown>(httpClient.post(`/monitoreodba/sesiones/${sessionId}/terminar`)),
+  ejecutarMantenimiento: (dto: EjecutarMantenimientoDto) =>
+    unwrapFullResponse<SpDbaMantenimientoResultDto[]>(
+      httpClient.post('/monitoreodba/mantenimiento', dto, { timeout: 30 * 60 * 1000 })
+    ),
+  historialMantenimiento: () =>
+    unwrapResponse<SpDbaHistorialMantenimientoResultDto[]>(
+      httpClient.get('/monitoreodba/mantenimiento/historial')
+    ),
 };
 

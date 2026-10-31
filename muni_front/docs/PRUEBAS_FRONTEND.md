@@ -23,9 +23,9 @@ Siguiendo la regla estricta del proyecto (*"No afirmar que algo funciona sin hab
 
 | Módulo | Pantalla / Ruta | Compilación y Contratos DTO | Estado de Integración API (`http://localhost:5080/api`) |
 |---|---|---|---|
-| **Autenticación JWT** | `/login` | Verificado (`tsc -b` + `vite build`) | Conectado a `POST /api/auth/login` y `GET /api/auth/me`. Listo para prueba en vivo con `DB_Municipalidad_Nicoya`. |
+| **Autenticación JWT** | `/login` | Verificado (`tsc -b` + `vite build`) | Conectado a `POST /api/auth/login` y `GET /api/auth/me`. Listo para prueba en vivo con `MunicipalidadNicoya2026`. |
 | **Panel General** | `/dashboard` | Verificado (`tsc -b` + `vite build`) | Conectado a vistas y SPs según el rol del JWT activo. |
-| **Portal Ciudadano** | `/portal-ciudadano` | Verificado (`tsc -b` + `vite build`) | **Bloqueado en backend** (documentado en `PENDIENTES_BACKEND.md`; muestra banner explicativo sin usar endpoints administrativos). |
+| **Portal Ciudadano** | `/portal/login`, `/portal` | Verificado (`tsc -b` + `vite build`) | Activación y login con cédula, mis trámites, inmuebles, estado de cuenta, subir requisito y pago SINPE (script 15). |
 | **Contribuyentes** | `/contribuyentes` | Verificado (`tsc -b` + `vite build`) | Conectado a los 6 endpoints de `ContribuyenteController`. |
 | **Bienes Inmuebles** | `/inmuebles` | Verificado (`tsc -b` + `vite build`) | Conectado a los 6 endpoints de `InmuebleController` + 2 de `CatalogosInmuebleController`. |
 | **Radicación y Catálogo de Trámites** | `/tramites/radicar`, `/tramites/catalogo` | Verificado (`tsc -b` + `vite build`) | Conectado a `TipoTramiteController` (7 endpoints) y `TramiteController` (`POST /api/tramite`, `POST /adjuntar-archivo`, `POST /requisito-presentado`). |

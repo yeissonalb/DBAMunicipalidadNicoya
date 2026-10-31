@@ -76,5 +76,34 @@ namespace Services.RolPermisoService
 
         public async Task<BaseResponse<List<SpPermisoResultDto>>> ConsultarPermisosAsync()
             => Respuesta.Ok(await _context.Database.QuerySpAsync<SpPermisoResultDto>("dbo.sp_consultar_permisos"));
+
+        // Script 15: consultas completas y revocación
+        public async Task<BaseResponse<List<SpPermisoRolResultDto>>> ConsultarPermisosPorRolAsync(int idRol)
+            => Respuesta.Ok(await _context.Database.QuerySpAsync<SpPermisoRolResultDto>(
+                "dbo.sp_consultar_permisos_por_rol",
+                Sp.Int("@id_rol", idRol)));
+
+        public async Task<BaseResponse<List<SpAsignacionRolResultDto>>> ConsultarAsignacionesAsync()
+            => Respuesta.Ok(await _context.Database.QuerySpAsync<SpAsignacionRolResultDto>("dbo.sp_consultar_asignaciones_roles"));
+
+        public async Task<BaseResponse<object>> RevocarRolUsuarioAsync(int idUsuario, int idRol)
+        {
+            await _context.Database.ExecSpAsync(
+                "dbo.sp_revocar_rol_usuario",
+                Sp.Int("@id_usuario", idUsuario),
+                Sp.Int("@id_rol", idRol));
+
+            return Respuesta.Ok("Rol revocado al usuario.");
+        }
+
+        public async Task<BaseResponse<object>> RevocarPermisoRolAsync(int idRol, int idPermiso)
+        {
+            await _context.Database.ExecSpAsync(
+                "dbo.sp_revocar_permiso_rol",
+                Sp.Int("@id_rol", idRol),
+                Sp.Int("@id_permiso", idPermiso));
+
+            return Respuesta.Ok("Permiso revocado al rol.");
+        }
     }
 }

@@ -213,8 +213,8 @@ export function CatalogoTramitesPage() {
                               e.stopPropagation();
                               setEditingTipo(t);
                               tipoForm.reset({
-                                nombreTramite: t.nombreTramite,
-                                descripcionTipo: t.descripcionTipo,
+                                nombreTramite: t.nombreTramite ?? '',
+                                descripcionTipo: t.descripcionTipo ?? '',
                                 diasResolucionMax: t.diasResolucionMax,
                                 idDepartamento: t.idDepartamento,
                               });
@@ -339,7 +339,7 @@ export function CatalogoTramitesPage() {
             <Select {...tipoForm.register('idDepartamento')}>
               {(departamentosQuery.data ?? []).map((d) => (
                 <option key={d.idDepartamento} value={d.idDepartamento}>
-                  {d.nombreDepartamento} ({d.codigoDepartamento})
+                  {d.nombreDepartamento} ({d.codigoInterno})
                 </option>
               ))}
             </Select>

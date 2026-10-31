@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import {
+  Activity,
   CheckCircle2,
   Database,
   Edit3,
@@ -18,7 +19,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { respaldosDbaApi } from '@/services/api';
-import type { SpConfiguracionRespaldoResultDto } from '@/types/api';
+import type { SpConfiguracionRespaldoResultDto, VwEstadoRespaldo } from '@/types/api';
 import { PageHeader } from '@/components/common/PageHeader';
 import { ErrorState, LoadingState } from '@/components/common/StateFeedback';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -85,7 +86,7 @@ export function DbaPoliticasPage() {
     defaultValues: {
       nombreConfiguracion: 'Política Nocturna SQL Nicoya',
       horaEjecucion: '02:00:00',
-      origen: 'DB_Municipalidad_Nicoya',
+      origen: 'MunicipalidadNicoya2026',
       retencionDias: 30,
       cifrado: 'AES_256 + SHA-256 Checksum',
       rutaDestino: 'C:\\Backups\\MunicipalidadNicoya\\',
@@ -154,9 +155,24 @@ export function DbaPoliticasPage() {
   });
 
   const totalTamanoMb = (estadoRespaldosQuery.data ?? []).reduce(
-    (acc, r) => acc + (r.ultimoTamanoMb ?? 0),
+    (acc, r) => acc + (r.tamanoMb ?? 0),
     0
   );
+
+  // vw_estado_respaldos lista ejecuciones; se resume por nombre de política
+  const resumenPorPolitica = (() => {
+    const map = new Map<string, { ultima: VwEstadoRespaldo; total: number }>();
+    for (const ej of estadoRespaldosQuery.data ?? []) {
+      const k = ej.nombreConfiguracion ?? '';
+      const prev = map.get(k);
+      if (!prev) map.set(k, { ultima: ej, total: 1 });
+      else {
+        prev.total += 1;
+        if (ej.fechaInicio > prev.ultima.fechaInicio) prev.ultima = ej;
+      }
+    }
+    return map;
+  })();
 
   return (
     <div className="flex flex-col" style={{ gap: '2rem' }}>
@@ -192,7 +208,7 @@ export function DbaPoliticasPage() {
       />
 
       {/* Subnavegación Consola DBA (Wireframes 3, 4 y 5) */}
-      <nav className="grid gap-3 rounded-2xl border border-[#DCE3DE] bg-white p-3 shadow-card sm:grid-cols-3" aria-label="Consola DBA">
+      <nav className="grid gap-3 rounded-2xl border border-[#DCE3DE] bg-white p-3 shadow-card sm:grid-cols-2 xl:grid-cols-4" aria-label="Consola DBA">
         <Button variant="default" className="h-auto justify-start px-4 py-3" asChild>
           <Link to="/dba/politicas">
             <Database className="h-4 w-4" /> Políticas de respaldo
@@ -201,6 +217,11 @@ export function DbaPoliticasPage() {
         <Button variant="outline" className="h-auto justify-start px-4 py-3" asChild>
           <Link to="/dba/respaldos">
             <Landmark className="h-4 w-4" /> Respaldos y recuperación
+          </Link>
+        </Button>
+        <Button variant="outline" className="h-auto justify-start px-4 py-3" asChild>
+          <Link to="/dba/monitoreo">
+            <Activity className="h-4 w-4" /> Monitoreo y mantenimiento
           </Link>
         </Button>
         <Button variant="outline" className="h-auto justify-start px-4 py-3" asChild>
@@ -309,9 +330,7 @@ export function DbaPoliticasPage() {
                 </thead>
                 <tbody className="divide-y divide-[#DCE3DE]">
                   {(configuracionesQuery.data ?? []).map((cfg) => {
-                    const monitor = estadoRespaldosQuery.data?.find(
-                      (m) => m.idRespaldosConfig === cfg.idRespaldosConfig
-                    );
+                    const monitor = resumenPorPolitica.get(cfg.nombreConfiguracion ?? '');
                     return (
                       <tr key={cfg.idRespaldosConfig} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
                         <td className="px-3.5 py-3 font-mono font-bold text-[#164B35]">
@@ -322,9 +341,9 @@ export function DbaPoliticasPage() {
                           <p className="font-mono text-[11px] text-[#5A6B61]">BD: {cfg.origen}</p>
                         </td>
                         <td className="px-3.5 py-3">
-                          <Badge variant="gold">{cfg.codigoTipoDeRespaldo}</Badge>
+                          <Badge variant="gold">{cfg.nombreTipoRespaldo}</Badge>
                           <p className="mt-0.5 font-semibold text-[#164B35]">
-                            {cfg.codigoFrecuencia}
+                            {cfg.nombreFrecuencia}
                           </p>
                         </td>
                         <td className="px-3.5 py-3 font-mono font-semibold">{cfg.horaEjecucion}</td>
@@ -336,12 +355,12 @@ export function DbaPoliticasPage() {
                           {cfg.rutaDestino}
                         </td>
                         <td className="px-3.5 py-3">
-                          {monitor?.ultimaEjecucion ? (
+                          {monitor ? (
                             <div>
-                              <p>{formatDateTime(monitor.ultimaEjecucion)}</p>
+                              <p>{formatDateTime(monitor.ultima.fechaInicio)}</p>
                               <p className="text-[11px] text-[#5A6B61]">
-                                {formatNumber(monitor.ultimoTamanoMb, 2)} MB ·{' '}
-                                {monitor.totalEjecuciones ?? 0} ejec.
+                                {monitor.ultima.estadoEjecucion} ·{' '}
+                                {formatNumber(monitor.ultima.tamanoMb, 2)} MB · {monitor.total} ejec.
                               </p>
                             </div>
                           ) : (
@@ -360,10 +379,10 @@ export function DbaPoliticasPage() {
                             onClick={() => {
                               setEditingPolicy(cfg);
                               editForm.reset({
-                                nombreConfiguracion: cfg.nombreConfiguracion,
+                                nombreConfiguracion: cfg.nombreConfiguracion ?? '',
                                 horaEjecucion: cfg.horaEjecucion,
                                 retencionDias: cfg.retencionDias,
-                                rutaDestino: cfg.rutaDestino,
+                                rutaDestino: cfg.rutaDestino ?? '',
                                 activo: cfg.activo,
                               });
                             }}
@@ -410,7 +429,7 @@ export function DbaPoliticasPage() {
             <Select {...createForm.register('idTipoDeRespaldo')}>
               {(tiposRespaldoQuery.data ?? []).map((t) => (
                 <option key={t.idTipoDeRespaldo} value={t.idTipoDeRespaldo}>
-                  {t.codigoTipoDeRespaldo}
+                  {t.nombreTipoRespaldo}
                 </option>
               ))}
             </Select>
@@ -424,7 +443,7 @@ export function DbaPoliticasPage() {
             <Select {...createForm.register('idFrecuencia')}>
               {(frecuenciasQuery.data ?? []).map((f) => (
                 <option key={f.idFrecuencia} value={f.idFrecuencia}>
-                  {f.codigoFrecuencia}
+                  {f.nombreFrecuencia}
                 </option>
               ))}
             </Select>

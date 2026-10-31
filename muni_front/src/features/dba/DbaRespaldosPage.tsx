@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
+  Activity,
   AlertTriangle,
   CheckCircle2,
   Database,
@@ -146,6 +147,11 @@ export function DbaRespaldosPage() {
           </Link>
         </Button>
         <Button variant="outline" size="sm" asChild>
+          <Link to="/dba/monitoreo">
+            <Activity className="h-4 w-4" /> Monitoreo y Mantenimiento
+          </Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
           <Link to="/auditoria">
             <ShieldCheck className="h-4 w-4" /> Historial y Auditoría Técnica
           </Link>
@@ -158,7 +164,7 @@ export function DbaRespaldosPage() {
           <CardHeader className="pb-2">
             <CardDescription>DATABASE ENGINE</CardDescription>
             <CardTitle className="text-lg font-extrabold text-[#164B35]">
-              Microsoft SQL Server · DB_Municipalidad_Nicoya
+              Microsoft SQL Server · MunicipalidadNicoya2026
             </CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-[#5A6B61]">
@@ -172,7 +178,7 @@ export function DbaRespaldosPage() {
             <CardDescription>ÚLTIMO RESPALDO REGISTRADO</CardDescription>
             <CardTitle className="text-lg font-extrabold text-[#26352D]">
               {ultimoRespaldo
-                ? `${ultimoRespaldo.codigoTipoDeRespaldo} · ${formatNumber(
+                ? `${ultimoRespaldo.nombreTipoRespaldo} · ${formatNumber(
                     ultimoRespaldo.tamanoMb,
                     2
                   )} MB`
@@ -181,7 +187,7 @@ export function DbaRespaldosPage() {
           </CardHeader>
           <CardContent className="text-xs text-[#5A6B61]">
             {ultimoRespaldo
-              ? `Fecha: ${formatDateTime(ultimoRespaldo.fechaInicio)} (${ultimoRespaldo.estadoRespaldo})`
+              ? `Fecha: ${formatDateTime(ultimoRespaldo.fechaInicio)} (${ultimoRespaldo.estadoEjecucion ?? '—'})`
               : 'Ejecute un respaldo inmediato para poblar el historial.'}
           </CardContent>
         </Card>
@@ -190,12 +196,7 @@ export function DbaRespaldosPage() {
           <CardHeader className="pb-2">
             <CardDescription>EJECUCIONES ACUMULADAS EN POLÍTICAS</CardDescription>
             <CardTitle className="text-2xl font-extrabold text-emerald-800">
-              {formatNumber(
-                (estadoQuery.data ?? []).reduce(
-                  (acc, e) => acc + (e.totalEjecuciones ?? 0),
-                  0
-                )
-              )}
+              {formatNumber((estadoQuery.data ?? []).length)}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-[#5A6B61]">
@@ -258,16 +259,16 @@ export function DbaRespaldosPage() {
                         <th className="px-3 py-2.5">Tipo / Política</th>
                         <th className="px-3 py-2.5">Ruta Archivo (.bak)</th>
                         <th className="px-3 py-2.5">Tamaño</th>
-                        <th className="px-3 py-2.5">Hash SHA-256</th>
+                        <th className="px-3 py-2.5">Duración</th>
                         <th className="px-3 py-2.5">Estado</th>
                         <th className="px-3 py-2.5 text-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#DCE3DE]">
                       {historialQuery.data.map((h) => (
-                        <tr key={h.idRespaldoHistorial} className="hover:bg-[#E8F0EC]/40">
+                        <tr key={h.idRespaldos} className="hover:bg-[#E8F0EC]/40">
                           <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">
-                            #{h.idRespaldoHistorial}
+                            #{h.idRespaldos}
                           </td>
                           <td className="px-3 py-2.5 whitespace-nowrap">
                             <p>{formatDateTime(h.fechaInicio)}</p>
@@ -276,31 +277,32 @@ export function DbaRespaldosPage() {
                             </p>
                           </td>
                           <td className="px-3 py-2.5">
-                            <Badge variant="gold">{h.codigoTipoDeRespaldo}</Badge>
+                            <Badge variant="gold">{h.nombreTipoRespaldo}</Badge>
                             <p className="mt-0.5 text-[11px] font-medium">
                               {h.nombreConfiguracion}
                             </p>
                           </td>
-                          <td className="px-3 py-2.5 font-mono text-[11px] max-w-[200px] truncate" title={h.rutaArchivo}>
+                          <td className="px-3 py-2.5 font-mono text-[11px] max-w-[200px] truncate" title={h.rutaArchivo ?? undefined}>
                             {h.rutaArchivo}
                           </td>
                           <td className="px-3 py-2.5 font-semibold whitespace-nowrap">
                             {formatNumber(h.tamanoMb, 2)} MB
                           </td>
-                          <td className="px-3 py-2.5 font-mono text-[10px] text-[#5A6B61] max-w-[120px] truncate" title={h.hashVerificacion}>
-                            {h.hashVerificacion}
+                          <td
+                            className="px-3 py-2.5 whitespace-nowrap text-[#5A6B61]"
+                            title={h.detallesError ?? undefined}
+                          >
+                            {h.duracionSegundos != null ? `${h.duracionSegundos} s` : '—'}
                           </td>
                           <td className="px-3 py-2.5">
                             <Badge
                               variant={
-                                h.estadoRespaldo.toUpperCase().includes('COMP') ||
-                                h.estadoRespaldo.toUpperCase().includes('EXIT') ||
-                                h.estadoRespaldo.toUpperCase().includes('OK')
+                                /COMP|EXIT|OK/.test((h.estadoEjecucion ?? '').toUpperCase())
                                   ? 'success'
                                   : 'warning'
                               }
                             >
-                              {h.estadoRespaldo}
+                              {h.estadoEjecucion}
                             </Badge>
                           </td>
                           <td className="px-3 py-2.5 text-right whitespace-nowrap">
@@ -317,7 +319,8 @@ export function DbaRespaldosPage() {
                               <Button
                                 variant="secondary"
                                 size="sm"
-                                onClick={() => setRutaBackupFull(h.rutaArchivo)}
+                                onClick={() => setRutaBackupFull(h.rutaArchivo ?? '')}
+                                disabled={!h.rutaArchivo}
                                 title="Cargar ruta en el panel de restauración"
                               >
                                 <RotateCcw className="h-3.5 w-3.5" /> Restaurar
@@ -336,13 +339,12 @@ export function DbaRespaldosPage() {
           <div className="flex items-start gap-2.5 rounded-xl border border-[#DCE3DE] bg-white p-4 text-xs text-[#5A6B61]">
             <Info className="h-4 w-4 shrink-0 text-[#164B35] mt-0.5" />
             <div>
-              <strong>Nota sobre Scripts Administrativos Adicionales (CU-DBA-06):</strong> Los
-              scripts <code className="font-mono">07_monitoreo_rendimiento_salud_bd.sql</code> (DMVs
-              de sesiones y bloqueos) y{' '}
-              <code className="font-mono">10_mantenimiento_indices_estadisticas.sql</code> son
-              scripts T-SQL directos del repositorio y no están expuestos como endpoints en{' '}
-              <code className="font-mono">RespaldosDbaController</code> (documentado en{' '}
-              <code className="font-mono">PENDIENTES_BACKEND.md</code>).
+              El monitoreo de sesiones, bloqueos, archivos y fragmentación de índices, así como el
+              mantenimiento (CU-DBA-04 / CU-DBA-06), está en{' '}
+              <Link to="/dba/monitoreo" className="font-semibold text-[#164B35] hover:underline">
+                Monitoreo y mantenimiento
+              </Link>
+              .
             </div>
           </div>
         </div>
@@ -372,7 +374,7 @@ export function DbaRespaldosPage() {
               </div>
 
               <FormField label="Base de Datos Objetivo">
-                <Input value="DB_Municipalidad_Nicoya" disabled className="bg-[#F5F7F4]" />
+                <Input value="MunicipalidadNicoya2026" disabled className="bg-[#F5F7F4]" />
               </FormField>
 
               <FormField

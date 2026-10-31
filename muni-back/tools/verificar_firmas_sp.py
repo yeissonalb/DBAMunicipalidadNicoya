@@ -102,12 +102,44 @@ for m in re.finditer(r"CREATE\s+TABLE\s+(?:dbo\.)?(\w+)\s*\((.*?)\)\s*ON\s", sql
     tables[m.group(1).lower()] = cols
 
 def select_cols(body, aliases):
-    ms = [m for m in re.finditer(r"SELECT\s+(?:TOP\s+\d+\s+)?(.*?)\s+FROM\s+(.*?)(?:\bWHERE\b|\bGROUP\b|\bORDER\b|;|$)", body, re.S | re.I)
-          if not m.group(1).lstrip().startswith("@") and not re.match(r"\s*1\s*$", m.group(1))]
-    m = ms[-1] if ms else None
-    sel, frm = m.group(1), m.group(2)
+    """Columnas del último SELECT de nivel de sentencia (ignora subconsultas entre paréntesis
+    y asignaciones a variables). Si el SP solo delega con EXEC dbo.sp_x, usa las de ese SP."""
+    cands = []
+    for m in re.finditer(r"\bSELECT\b", body, re.I):
+        prev = body[:m.start()].rstrip()
+        if prev.endswith("("):
+            continue
+        # recorrer la lista de selección hasta FROM / WHERE / ; de nivel 0
+        i, depth, n = m.end(), 0, len(body)
+        while i < n:
+            ch = body[i]
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                if depth == 0:
+                    break
+                depth -= 1
+            elif depth == 0:
+                if re.match(r"\bFROM\b|\bWHERE\b|;|\bORDER\b|\bGROUP\b", body[i:i + 6], re.I) and re.match(r"\W", body[i - 1]):
+                    break
+            i += 1
+        sel = re.sub(r"^\s*(?:TOP\s+\d+\s+)?", "", body[m.end():i], flags=re.I)
+        if re.match(r"\s*@\w+\s*[+]?=", sel) or re.match(r"\s*1\s*$", sel):
+            continue
+        rest = body[i:]
+        frm = ""
+        fm = re.match(r"\s*FROM\s+(.*?)(?:\bWHERE\b|\bGROUP\b|\bORDER\b|;|'|$)", rest, re.S | re.I)
+        if fm:
+            frm = fm.group(1)
+        cands.append((sel, frm))
+    if not cands:
+        d = re.search(r"EXEC\s+dbo\.(sp_\w+)", body, re.I)
+        if d and d.group(1).lower() in bodies:
+            return select_cols(bodies[d.group(1).lower()], {})
+        raise ValueError("sin SELECT")
+    sel, frm = cands[-1]
     amap = {}
-    for t in re.finditer(r"(?:dbo\.)?(\w+)\s+(?:AS\s+)?(\w+)\s*(?:INNER|LEFT|RIGHT|CROSS|ON|$)", frm + " ", re.I):
+    for t in re.finditer(r"(?:dbo\.)?(\w+)\s+(?:AS\s+)?(\w+)\s*(?:INNER|LEFT|RIGHT|CROSS|OUTER|ON|$)", frm + " ", re.I):
         amap[t.group(2).lower()] = t.group(1).lower()
     first = re.match(r"\s*(?:dbo\.)?(\w+)(?:\s+(\w+))?", frm)
     cols = []
@@ -139,7 +171,10 @@ for cls, (sp, cols) in spec["sp"].items():
     body = bodies.get(sp.lower())
     if body is None:
         errors.append(f"{cls}: SP {sp} no existe"); continue
-    real = select_cols(body, {})
+    try:
+        real = select_cols(body, {})
+    except Exception as ex:
+        errors.append(f"{cls} ({sp}): no se pudo leer el recordset ({ex})"); continue
     missing = [c for c in cols if c.lower() not in [r.lower() for r in real]]
     if missing:
         errors.append(f"{cls} ({sp}): columnas inexistentes en el recordset: {missing} | SQL={real}")

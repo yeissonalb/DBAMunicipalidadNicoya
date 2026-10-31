@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -89,6 +89,62 @@ export function TributosDeudasPage() {
     queryFn: () => facturacionPagoApi.estadoCuentaContribuyente(selectedContribuyenteId),
     enabled: selectedContribuyenteId > 0,
   });
+
+  // vw_estado_cuenta_contribuyente trae una fila por deuda (y por copropietario):
+  // se agrupa por contribuyente solo para presentar el consolidado.
+  const resumenPorContribuyente = useMemo(() => {
+    const mapa = new Map<
+      number,
+      {
+        idContribuyente: number;
+        contribuyente: string;
+        identificacion: string;
+        fincas: Set<string>;
+        deudas: Set<number>;
+        deudasPendientesOVencidas: number;
+        totalDeudasRegistradas: number;
+        montoTotalDeudas: number;
+        montoPendienteDeuda: number;
+        totalFacturado: number;
+        totalPagadoHistorico: number;
+        cantidadInmuebles: number;
+      }
+    >();
+    for (const r of estadoCuentaGeneralQuery.data ?? []) {
+      let c = mapa.get(r.idContribuyente);
+      if (!c) {
+        c = {
+          idContribuyente: r.idContribuyente,
+          contribuyente: r.nombreORazonSocial ?? '—',
+          identificacion: r.identificacionOficial ?? '',
+          fincas: new Set(),
+          deudas: new Set(),
+          deudasPendientesOVencidas: 0,
+          totalDeudasRegistradas: 0,
+          montoTotalDeudas: 0,
+          montoPendienteDeuda: 0,
+          totalFacturado: 0,
+          totalPagadoHistorico: 0,
+          cantidadInmuebles: 0,
+        };
+        mapa.set(r.idContribuyente, c);
+      }
+      if (r.numeroFinca) c.fincas.add(r.numeroFinca);
+      if (c.deudas.has(r.idDeudaMunicipal)) continue;
+      c.deudas.add(r.idDeudaMunicipal);
+      c.totalDeudasRegistradas += 1;
+      if (r.codigoEstadoDeuda === 'PEND' || r.codigoEstadoDeuda === 'VENC') c.deudasPendientesOVencidas += 1;
+      c.montoTotalDeudas += r.totalDeuda ?? 0;
+      if (r.idFactura) {
+        c.totalFacturado += r.totalAPagar ?? 0;
+        c.totalPagadoHistorico += Math.max(0, (r.totalAPagar ?? 0) - (r.saldoPendiente ?? 0));
+        c.montoPendienteDeuda += r.saldoPendiente ?? 0;
+      } else if (r.codigoEstadoDeuda !== 'PAG') {
+        c.montoPendienteDeuda += r.totalDeuda ?? 0;
+      }
+    }
+    return Array.from(mapa.values()).map((c) => ({ ...c, cantidadInmuebles: c.fincas.size }));
+  }, [estadoCuentaGeneralQuery.data]);
 
   const deudaForm = useForm<RegistrarDeudaForm>({
     resolver: zodResolver(registrarDeudaSchema),
@@ -211,12 +267,18 @@ export function TributosDeudasPage() {
             </CardHeader>
             <CardContent className="mt-auto space-y-1.5 text-xs text-[#5A6B61]">
               <p>
-                <strong>Fórmula:</strong> {t.formulaCalculo}
+                <strong>Base de cálculo:</strong> {t.baseCalculo}
               </p>
-              <p>
-                <strong>Tasa Base:</strong> {formatNumber(t.tasaBase, 4)}
-              </p>
-              <p className="text-[11px] text-[#164B35]">{t.nombreDepartamento}</p>
+              {t.tarifa !== null && (
+                <p>
+                  <strong>Tarifa:</strong> {formatNumber(t.tarifa, 4)}
+                </p>
+              )}
+              {t.montoFijo !== null && (
+                <p>
+                  <strong>Monto fijo:</strong> {formatCurrencyCRC(t.montoFijo)}
+                </p>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -256,7 +318,7 @@ export function TributosDeudasPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#DCE3DE]">
-                  {(estadoCuentaGeneralQuery.data ?? []).map((c) => {
+                  {resumenPorContribuyente.map((c) => {
                     const isSelected = c.idContribuyente === selectedContribuyenteId;
                     return (
                       <tr
@@ -275,14 +337,14 @@ export function TributosDeudasPage() {
                             {c.identificacion}
                           </p>
                         </td>
-                        <td className="px-3 py-2.5">{c.cantidadInmuebles ?? 0}</td>
+                        <td className="px-3 py-2.5">{c.cantidadInmuebles}</td>
                         <td className="px-3 py-2.5">
                           <Badge
                             variant={
-                              (c.deudasPendientesOVencidas ?? 0) > 0 ? 'warning' : 'success'
+                              c.deudasPendientesOVencidas > 0 ? 'warning' : 'success'
                             }
                           >
-                            {c.deudasPendientesOVencidas ?? 0} de {c.totalDeudasRegistradas ?? 0}
+                            {c.deudasPendientesOVencidas} de {c.totalDeudasRegistradas}
                           </Badge>
                         </td>
                         <td className="px-3 py-2.5 font-medium">
@@ -322,7 +384,7 @@ export function TributosDeudasPage() {
             >
               {(padronQuery.data ?? []).map((p) => (
                 <option key={p.idContribuyente} value={p.idContribuyente}>
-                  #{p.idContribuyente} — {p.nombreCompletoORazonSocial}
+                  #{p.idContribuyente} — {p.nombreORazonSocial}
                 </option>
               ))}
             </Select>
@@ -371,9 +433,10 @@ export function TributosDeudasPage() {
                       <td className="px-3 py-2.5 font-mono">{d.numeroFinca}</td>
                       <td className="px-3 py-2.5">
                         <p>{formatDate(d.fechaDeVencimiento)}</p>
-                        {(d.diasMora ?? 0) > 0 && (
-                          <span className="font-bold text-red-600">{d.diasMora} días mora</span>
-                        )}
+                        {d.codigoEstadoDeuda !== 'PAG' &&
+                          new Date(d.fechaDeVencimiento).getTime() < Date.now() && (
+                            <span className="font-bold text-red-600">Vencida</span>
+                          )}
                       </td>
                       <td className="px-3 py-2.5">{formatCurrencyCRC(d.montoPrincipal)}</td>
                       <td className="px-3 py-2.5 text-amber-800">
@@ -387,7 +450,7 @@ export function TributosDeudasPage() {
                       </td>
                       <td className="px-3 py-2.5">
                         <Select
-                          value={d.codigoEstadoDeuda}
+                          value={d.codigoEstadoDeuda ?? ''}
                           onChange={(e) =>
                             cambiarEstadoDeudaMut.mutate({
                               idDeuda: d.idDeudaMunicipal,
