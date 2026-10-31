@@ -82,35 +82,29 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row bg-[#F5F7F4]">
+    <div className="flex min-h-screen flex-col lg:flex-row bg-sigemun-bg">
       {/* Left Institutional Panel — Identidad Nicoya */}
-      <div className="relative flex min-h-[34rem] flex-col justify-between overflow-hidden bg-[#123F2D] p-8 text-white lg:min-h-screen lg:w-5/12 lg:p-12 xl:w-1/2">
+      <div className="relative flex min-h-[34rem] flex-col justify-between overflow-hidden bg-sigemun-navy p-8 text-white lg:min-h-screen lg:w-5/12 lg:p-12 xl:w-1/2">
         <img
           src="/images/IglesiaNicoya.png"
           alt="Iglesia colonial de San Blas de Nicoya"
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0A2A1E]/95 via-[#123F2D]/85 to-[#164B35]/45" />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#071F16]/95 via-[#123F2D]/25 to-[#071F16]/35" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-sigemun-navy/95 via-sigemun-navy/85 to-sigemun-primary/45" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-sigemun-navy/95 via-sigemun-navy/25 to-sigemun-navy/35" />
         <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10" />
 
         <div className="relative z-10">
-          <div className="flex items-center gap-3">
+          <div className="inline-flex rounded-2xl border border-white/30 bg-white/95 p-3 shadow-xl backdrop-blur">
             <img
-              src="/images/logo2.png"
-              alt="Identidad visual de la Municipalidad de Nicoya"
-              className="h-14 w-14 shrink-0 rounded-2xl object-contain shadow-lg ring-1 ring-white/25"
+              src="/images/logo1.png"
+              alt="SIGEMUN — Sistema de Gestión Municipal de Nicoya"
+              className="h-24 w-auto object-contain sm:h-28"
             />
-            <div>
-              <span className="text-xl font-extrabold tracking-wider text-white">SIGEMUN</span>
-              <p className="text-xs font-medium text-[#D4B872]">
-                Municipalidad de Nicoya · Guanacaste, Costa Rica
-              </p>
-            </div>
           </div>
 
           <div className="mt-12 max-w-lg">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#B6944A]/40 bg-[#B6944A]/15 px-3 py-1 text-xs font-semibold text-[#D4B872]">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-sigemun-medium/40 bg-sigemun-medium/15 px-3 py-1 text-xs font-semibold text-sigemun-sky">
               <ShieldCheck className="h-3.5 w-3.5" /> Plataforma Integrada de Gestión Municipal
             </span>
             <h1 className="mt-4 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
@@ -127,13 +121,13 @@ export function LoginPage() {
 
       {/* Right Authentication Form Panel */}
       <div className="flex flex-1 items-center justify-center p-6 sm:p-12">
-        <div className="w-full max-w-md rounded-2xl border border-[#DCE3DE] bg-white p-8 shadow-elevated">
+        <div className="w-full max-w-md rounded-2xl border border-sigemun-border bg-white p-8 shadow-elevated">
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[#E8F0EC] text-[#164B35]">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-sigemun-sky-muted text-sigemun-primary">
               <KeyRound className="h-6 w-6" />
             </div>
-            <h2 className="text-xl font-bold text-[#26352D]">Inicio de Sesión Institucional</h2>
-            <p className="mt-1 text-xs text-[#5A6B61]">
+            <h2 className="text-xl font-bold text-sigemun-text">Inicio de Sesión Institucional</h2>
+            <p className="mt-1 text-xs text-sigemun-muted">
               Ingrese las credenciales asignadas a su cuenta institucional.
             </p>
           </div>
@@ -156,7 +150,7 @@ export function LoginPage() {
               error={errors.username?.message}
             >
               <div className="relative">
-                <User className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#5A6B61]" />
+                <User className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-sigemun-muted" />
                 <Input
                   id="username"
                   type="text"
@@ -175,7 +169,7 @@ export function LoginPage() {
               error={errors.password?.message}
             >
               <div className="relative">
-                <Lock className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#5A6B61]" />
+                <Lock className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-sigemun-muted" />
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -187,7 +181,7 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((s) => !s)}
-                  className="absolute right-3 top-2.5 text-[#5A6B61] hover:text-[#164B35]"
+                  className="absolute right-3 top-2.5 text-sigemun-muted hover:text-sigemun-primary"
                   aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                   aria-pressed={showPassword}
                 >
@@ -207,13 +201,13 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 border-t border-[#DCE3DE] pt-4 text-center">
-            <p className="text-[11px] text-[#5A6B61]">
+          <div className="mt-6 border-t border-sigemun-border pt-4 text-center">
+            <p className="text-[11px] text-sigemun-muted">
               Acceso exclusivo para personal autorizado de la Municipalidad de Nicoya.
             </p>
-            <p className="mt-2 text-xs text-[#5A6B61]">
+            <p className="mt-2 text-xs text-sigemun-muted">
               ¿Es contribuyente?{' '}
-              <Link to="/portal/login" className="font-semibold text-[#164B35] hover:underline">
+              <Link to="/portal/login" className="font-semibold text-sigemun-primary hover:underline">
                 Ingrese al Portal Ciudadano
               </Link>
             </p>

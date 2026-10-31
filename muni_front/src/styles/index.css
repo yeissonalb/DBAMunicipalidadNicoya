@@ -6,15 +6,19 @@
 
 @layer base {
   :root {
-    --sigemun-green: #164B35;
-    --sigemun-green-dark: #0B2D20;
-    --sigemun-gold: #B6944A;
-    --sigemun-bg: #F4F7F5;
+    --sigemun-navy: #102A43;
+    --sigemun-primary: #1E5A9C;
+    --sigemun-medium: #3E8FD6;
+    --sigemun-sky: #BFE3FA;
+    --sigemun-sky-muted: #E3F2FC;
+    --sigemun-bg: #F1F8FE;
+    --sigemun-surface: #F8FBFE;
     --sigemun-card: #FFFFFF;
-    --sigemun-text: #23342B;
-    --sigemun-muted: #607168;
-    --sigemun-border: #DBE4DF;
-    --sigemun-focus: #287A58;
+    --sigemun-text: #243746;
+    --sigemun-muted: #526B7A;
+    --sigemun-border: #D9E6F2;
+    --sigemun-border-strong: #B7CCE0;
+    --sigemun-focus: #3E8FD6;
   }
 
   * { border-color: var(--sigemun-border); }
@@ -31,14 +35,14 @@
     text-rendering: optimizeLegibility;
   }
 
-  :focus-visible { outline: 3px solid rgb(40 122 88 / 0.28); outline-offset: 2px; }
-  ::selection { background: #DCEBE3; color: #0B2D20; }
+  :focus-visible { outline: 3px solid rgb(62 143 214 / 0.34); outline-offset: 2px; }
+  ::selection { background: var(--sigemun-sky); color: var(--sigemun-navy); }
 }
 
 @layer components {
   .surface-panel { @apply rounded-2xl border bg-white shadow-card; }
-  .section-label { @apply text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[#607168]; }
-  .metric-value { @apply text-2xl font-extrabold tracking-tight text-[#164B35] sm:text-3xl; }
+  .section-label { @apply text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-sigemun-muted; }
+  .metric-value { @apply text-2xl font-extrabold tracking-tight text-sigemun-primary sm:text-3xl; }
 }
 
 /* Custom scrollbar institutional styling */
@@ -48,16 +52,16 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #F5F7F4;
+  background: var(--sigemun-bg);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #C4D0C9;
+  background: var(--sigemun-border-strong);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #164B35;
+  background: var(--sigemun-primary);
 }
 
 /* El área navegable del sidebar necesita un scrollbar integrado en la superficie oscura. */
@@ -82,7 +86,7 @@
 }
 
 .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgb(226 201 130 / 0.58);
+  background: rgb(191 227 250 / 0.62);
   background-clip: padding-box;
 }
 

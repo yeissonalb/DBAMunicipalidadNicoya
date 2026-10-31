@@ -2,8 +2,11 @@ import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
+  AlertTriangle,
   Building2,
   CheckCircle2,
+  ChevronRight,
+  CircleDollarSign,
   Clock,
   CreditCard,
   ExternalLink,
@@ -13,6 +16,7 @@ import {
   LogOut,
   Receipt,
   Upload,
+  WalletCards,
 } from 'lucide-react';
 import { usePortalAuth } from './PortalAuth';
 import { portalApi } from '@/services/portalApi';
@@ -52,27 +56,27 @@ export function PortalHomePage() {
   const [pestana, setPestana] = useState<Pestana>('tramites');
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#F5F7F4]">
-      <header className="bg-[#123F2D] text-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
+    <div className="flex min-h-screen flex-col bg-sigemun-bg">
+      <header className="border-b border-white/10 bg-sigemun-navy text-white shadow-lg">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-6">
           <div className="flex items-center gap-3">
-            <img src="/images/logo2.png" alt="" className="h-10 w-10 rounded-xl object-contain ring-1 ring-white/25" />
+            <img src="/images/logo2.png" alt="" className="h-12 w-12 rounded-2xl object-contain shadow-md ring-1 ring-white/25" />
             <div>
-              <p className="text-base font-extrabold tracking-wide">Portal Ciudadano</p>
-              <p className="text-[11px] text-[#D4B872]">Municipalidad de Nicoya</p>
+              <p className="text-lg font-extrabold tracking-wide">Portal Ciudadano</p>
+              <p className="text-xs text-sigemun-sky">Municipalidad de Nicoya · Guanacaste</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-2 pl-4">
             <div className="text-right">
               <p className="text-sm font-semibold">{ciudadano?.nombreORazonSocial}</p>
-              <p className="font-mono text-[11px] text-white/70">Cédula {ciudadano?.identificacion}</p>
+              <p className="font-mono text-[11px] text-white/65">Cédula {ciudadano?.identificacion}</p>
             </div>
-            <Button variant="outline" size="sm" onClick={logout} className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">
+            <Button variant="outline" size="sm" onClick={logout} className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white">
               <LogOut className="h-4 w-4" /> Salir
             </Button>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 sm:px-6" aria-label="Secciones del portal">
+        <nav className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 pb-4 sm:px-6" aria-label="Secciones del portal">
           {(
             [
               ['tramites', 'Mis trámites', <FileText key="i" className="h-4 w-4" />],
@@ -84,8 +88,10 @@ export function PortalHomePage() {
               key={id}
               type="button"
               onClick={() => setPestana(id)}
-              className={`inline-flex items-center gap-2 whitespace-nowrap rounded-t-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
-                pestana === id ? 'bg-[#F5F7F4] text-[#164B35]' : 'text-white/80 hover:bg-white/10 hover:text-white'
+              className={`inline-flex items-center gap-2 whitespace-nowrap rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all ${
+                pestana === id
+                  ? 'border-white bg-white text-sigemun-primary shadow-md'
+                  : 'border-white/10 bg-white/[0.04] text-white/80 hover:border-white/20 hover:bg-white/10 hover:text-white'
               }`}
             >
               {icon} {label}
@@ -94,13 +100,13 @@ export function PortalHomePage() {
         </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:py-10">
         {pestana === 'tramites' && <MisTramites />}
         {pestana === 'inmuebles' && <MisInmuebles />}
         {pestana === 'cuenta' && ciudadano && <EstadoCuenta ciudadano={ciudadano} />}
       </main>
 
-      <footer className="border-t border-[#DCE3DE] bg-white py-4 text-center text-[11px] text-[#5A6B61]">
+      <footer className="border-t border-sigemun-border bg-white py-4 text-center text-[11px] text-sigemun-muted">
         Municipalidad de Nicoya · Guanacaste, Costa Rica
       </footer>
     </div>
@@ -184,64 +190,86 @@ function MisTramites() {
   const historialOrdenado = [...(historialQuery.data ?? [])].sort((a, b) => b.fechaCambio.localeCompare(a.fechaCambio));
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+    <div className="grid items-start gap-6 lg:grid-cols-[300px_minmax(0,1fr)] xl:gap-8">
       <input ref={inputRef} type="file" accept={ACEPTADOS} className="hidden" onChange={onArchivo} />
 
       {/* Lista */}
-      <div className="space-y-2">
-        {tramites.map((t) => (
+      <aside className="overflow-hidden rounded-2xl border border-sigemun-border bg-white shadow-card lg:sticky lg:top-6">
+        <div className="border-b border-sigemun-border bg-gradient-to-r from-sigemun-bg to-white p-5">
+          <p className="text-base font-bold text-sigemun-text">Mis expedientes</p>
+          <p className="mt-1 text-xs text-sigemun-muted">{tramites.length} trámite(s) asociado(s) a su cuenta</p>
+        </div>
+        <div className="space-y-2 p-3">
+          {tramites.map((t) => (
           <button
             key={t.idTramite}
             type="button"
             onClick={() => setIdSel(t.idTramite)}
-            className={`w-full rounded-xl border p-3.5 text-left transition-colors ${
+            className={`group w-full rounded-xl border p-4 text-left transition-all ${
               t.idTramite === activo?.idTramite
-                ? 'border-[#164B35] bg-[#E8F0EC]'
-                : 'border-[#DCE3DE] bg-white hover:bg-[#FAFCFB]'
+                ? 'border-sigemun-primary bg-sigemun-sky-muted shadow-[inset_3px_0_0_var(--sigemun-primary)]'
+                : 'border-transparent bg-sigemun-bg hover:border-sigemun-border hover:bg-white'
             }`}
           >
-            <p className="font-mono text-xs font-bold text-[#164B35]">{t.numeroExpediente}</p>
-            <p className="mt-0.5 text-sm font-semibold text-[#26352D]">{t.nombreTramite}</p>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-mono text-xs font-bold text-sigemun-primary">{t.numeroExpediente}</p>
+                <p className="mt-1 text-sm font-semibold leading-snug text-sigemun-text">{t.nombreTramite}</p>
+              </div>
+              <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-sigemun-muted transition-transform group-hover:translate-x-0.5" />
+            </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              <Badge variant={t.fechaResolucionFinal ? 'success' : 'gold'}>{t.estadoActual}</Badge>
+              <Badge variant={t.fechaResolucionFinal ? 'success' : 'accent'}>{t.estadoActual}</Badge>
               {t.fueraPlazo && !t.fechaResolucionFinal && <Badge variant="danger">Fuera de plazo</Badge>}
             </div>
           </button>
-        ))}
-      </div>
+          ))}
+        </div>
+      </aside>
 
       {/* Detalle */}
       {activo && (
         <div className="space-y-5">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{activo.nombreTramite}</CardTitle>
-              <CardDescription>
+          <Card className="overflow-hidden">
+            <CardHeader className="border-b border-sigemun-border bg-gradient-to-r from-white via-white to-sigemun-bg">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <CardTitle className="text-xl">{activo.nombreTramite}</CardTitle>
+                  <CardDescription className="mt-2 leading-relaxed">
                 Expediente <span className="font-mono font-semibold">{activo.numeroExpediente}</span> ·{' '}
                 {activo.nombreDepartamento} · radicado el {formatDate(activo.fechaRadicacion)}
                 {activo.numeroFinca ? ` · finca ${activo.numeroFinca}` : ''}
-              </CardDescription>
+                  </CardDescription>
+                </div>
+                <Badge variant={cerrado ? 'success' : 'accent'}>{activo.estadoActual}</Badge>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent className="space-y-6 pt-5 sm:pt-6">
               {/* Progreso */}
-              <ol className="grid grid-cols-4 gap-2" aria-label="Progreso del trámite">
+              <ol className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Progreso del trámite">
                 {ETAPAS.map((nombre, i) => {
                   const hecho = i < etapa || (cerrado && i === 3);
                   const actual = i === etapa && !cerrado;
                   return (
-                    <li key={nombre} className="flex flex-col items-center text-center">
+                    <li key={nombre} className={`flex min-h-24 flex-col items-center justify-center rounded-xl border p-3 text-center ${
+                      hecho
+                        ? 'border-emerald-200 bg-emerald-50/70'
+                        : actual
+                          ? 'border-sigemun-sky bg-sigemun-bg'
+                          : 'border-sigemun-border bg-sigemun-surface'
+                    }`}>
                       <span
                         className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
                           hecho
-                            ? 'bg-[#164B35] text-white'
+                            ? 'bg-sigemun-primary text-white'
                             : actual
-                              ? 'bg-[#B6944A] text-white ring-4 ring-[#B6944A]/20'
-                              : 'bg-[#E8F0EC] text-[#5A6B61]'
+                              ? 'bg-sigemun-medium text-white ring-4 ring-sigemun-medium/20'
+                              : 'bg-sigemun-sky-muted text-sigemun-muted'
                         }`}
                       >
                         {hecho ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
                       </span>
-                      <span className={`mt-1.5 text-[11px] font-semibold ${actual ? 'text-[#967736]' : 'text-[#26352D]'}`}>
+                      <span className={`mt-1.5 text-[11px] font-semibold ${actual ? 'text-sigemun-primary' : 'text-sigemun-text'}`}>
                         {nombre}
                       </span>
                     </li>
@@ -273,8 +301,8 @@ function MisTramites() {
 
           <div className="grid gap-5 xl:grid-cols-2">
             {/* Requisitos */}
-            <Card>
-              <CardHeader>
+            <Card className="overflow-hidden">
+              <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
                 <CardTitle className="text-base">Requisitos</CardTitle>
                 <CardDescription>PDF, imagen u Office · máximo 10 MB.</CardDescription>
               </CardHeader>
@@ -284,18 +312,18 @@ function MisTramites() {
                 ) : requisitosQuery.isError ? (
                   <ErrorState error={requisitosQuery.error} onRetry={() => requisitosQuery.refetch()} />
                 ) : (requisitosQuery.data ?? []).length === 0 ? (
-                  <p className="text-xs text-[#5A6B61]">Este trámite no tiene requisitos definidos.</p>
+                  <p className="text-xs text-sigemun-muted">Este trámite no tiene requisitos definidos.</p>
                 ) : (
                   (requisitosQuery.data ?? []).map((r) => {
                     const subiendo = subirMut.isPending && requisitoDestino === r.idRequisito;
                     return (
-                      <div key={r.idRequisito} className="flex items-start justify-between gap-3 rounded-lg border border-[#DCE3DE] p-3">
+                      <div key={r.idRequisito} className="flex flex-col items-start justify-between gap-3 rounded-xl border border-sigemun-border bg-white p-4 transition-colors hover:bg-sigemun-surface sm:flex-row">
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-[#26352D]">
+                          <p className="text-sm font-semibold text-sigemun-text">
                             {r.nombreRequisito}
                             {r.esObligatorio && <span className="ml-1 text-red-600">*</span>}
                           </p>
-                          {r.descripcion && <p className="text-[11px] text-[#5A6B61]">{r.descripcion}</p>}
+                          {r.descripcion && <p className="text-[11px] text-sigemun-muted">{r.descripcion}</p>}
                           <div className="mt-1">
                             {r.presentado ? (
                               <Badge variant="success">
@@ -323,29 +351,29 @@ function MisTramites() {
                   })
                 )}
                 {cerrado && (
-                  <p className="text-[11px] text-[#5A6B61]">El trámite ya fue resuelto; no admite más documentos.</p>
+                  <p className="text-[11px] text-sigemun-muted">El trámite ya fue resuelto; no admite más documentos.</p>
                 )}
               </CardContent>
             </Card>
 
             {/* Historial */}
-            <Card>
-              <CardHeader>
+            <Card className="overflow-hidden">
+              <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
                 <CardTitle className="text-base">Historial</CardTitle>
               </CardHeader>
               <CardContent>
                 {historialQuery.isLoading ? (
                   <LoadingState message="Consultando historial..." />
                 ) : historialOrdenado.length === 0 ? (
-                  <p className="text-xs text-[#5A6B61]">Sin movimientos registrados.</p>
+                  <p className="text-xs text-sigemun-muted">Sin movimientos registrados.</p>
                 ) : (
-                  <ol className="relative space-y-4 border-l border-[#DCE3DE] pl-4">
+                  <ol className="relative space-y-4 border-l border-sigemun-border pl-4">
                     {historialOrdenado.map((h) => (
                       <li key={h.idHistorial} className="relative text-xs">
-                        <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-[#164B35]" />
-                        <p className="font-semibold text-[#26352D]">{h.nombreEstado}</p>
-                        <p className="text-[10px] text-[#5A6B61]">{formatDateTime(h.fechaCambio)}</p>
-                        {h.observaciones && <p className="mt-0.5 text-[#5A6B61]">{h.observaciones}</p>}
+                        <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-sigemun-primary" />
+                        <p className="font-semibold text-sigemun-text">{h.nombreEstado}</p>
+                        <p className="text-[10px] text-sigemun-muted">{formatDateTime(h.fechaCambio)}</p>
+                        {h.observaciones && <p className="mt-0.5 text-sigemun-muted">{h.observaciones}</p>}
                       </li>
                     ))}
                   </ol>
@@ -355,19 +383,19 @@ function MisTramites() {
           </div>
 
           {/* Documentos */}
-          <Card>
-            <CardHeader>
+          <Card className="overflow-hidden">
+            <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
               <CardTitle className="text-base">Documentos del expediente</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {(archivosQuery.data ?? []).length === 0 ? (
-                <p className="text-xs text-[#5A6B61]">Aún no hay documentos.</p>
+                <p className="text-xs text-sigemun-muted">Aún no hay documentos.</p>
               ) : (
                 (archivosQuery.data ?? []).map((a) => (
-                  <div key={a.idArchivoAdjunto} className="flex items-center justify-between rounded-lg border border-[#DCE3DE] p-2.5 text-xs">
+                  <div key={a.idArchivoAdjunto} className="flex items-center justify-between rounded-lg border border-sigemun-border p-2.5 text-xs">
                     <div className="min-w-0 pr-2">
                       <p className="truncate font-semibold">{a.nombreOriginal}</p>
-                      <p className="text-[10px] text-[#5A6B61]">
+                      <p className="text-[10px] text-sigemun-muted">
                         {a.nombreRequisito ?? 'Adjunto general'} · {formatBytes(a.pesoBytes)} · {formatDate(a.fechaSubida)}
                       </p>
                     </div>
@@ -375,7 +403,7 @@ function MisTramites() {
                       href={`${BACKEND_ORIGIN}/${a.rutaAlmacenamiento}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[#164B35] hover:underline"
+                      className="text-sigemun-primary hover:underline"
                       title="Abrir documento"
                     >
                       <ExternalLink className="h-4 w-4" />
@@ -393,9 +421,9 @@ function MisTramites() {
 
 function Dato({ titulo, valor }: { titulo: string; valor: string }) {
   return (
-    <div className="rounded-lg bg-[#F4F7F5] p-3">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-[#607168]">{titulo}</p>
-      <p className="mt-0.5 text-sm font-semibold text-[#26352D]">{valor}</p>
+    <div className="rounded-xl border border-sigemun-border bg-sigemun-bg p-4">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-sigemun-muted">{titulo}</p>
+      <p className="mt-0.5 text-sm font-semibold text-sigemun-text">{valor}</p>
     </div>
   );
 }
@@ -411,24 +439,42 @@ function MisInmuebles() {
   if ((q.data ?? []).length === 0)
     return <EmptyState title="No tiene inmuebles registrados a su nombre" />;
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="mx-auto grid w-full max-w-3xl gap-5">
       {(q.data ?? []).map((i) => (
-        <Card key={i.idInmueble}>
-          <CardHeader className="pb-2">
-            <CardTitle className="font-mono text-base text-[#164B35]">Finca {i.numeroFinca}</CardTitle>
-            <CardDescription>
-              {i.nombreDistrito} · {i.usoSuelo}
-            </CardDescription>
+        <Card key={i.idInmueble} className="overflow-hidden shadow-elevated">
+          <CardHeader className="border-b border-sigemun-border bg-gradient-to-r from-sigemun-bg via-white to-white">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sigemun-primary text-sigemun-sky shadow-sm">
+                <Building2 className="h-6 w-6" />
+              </div>
+              <div className="min-w-0">
+                <CardDescription className="text-[10px] font-bold uppercase tracking-[0.12em] text-sigemun-muted">
+                  Propiedad registrada
+                </CardDescription>
+                <CardTitle className="mt-1 font-mono text-lg text-sigemun-primary">
+                  Finca {i.numeroFinca}
+                </CardTitle>
+                <p className="mt-1 text-sm text-sigemun-muted">
+                  {i.nombreDistrito} · {i.usoSuelo}
+                </p>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2 text-xs">
-            <Dato titulo="Participación" valor={`${formatNumber(i.porcentajeParticipacion, 2)}%`} />
-            <Dato titulo="Valor fiscal (su parte)" valor={formatCurrencyCRC(i.valorFiscalProporcional ?? i.valorFiscal)} />
-            <Dato titulo="Terreno" valor={`${formatNumber(i.areaTerrenoM2, 2)} m²`} />
-            <Dato titulo="Construcción" valor={`${formatNumber(i.areaConstruccionM2, 2)} m²`} />
-            <p className="col-span-2 text-[11px] text-[#5A6B61]">
-              {i.direccionExacta}
-              {i.planoCatastrado ? ` · Plano ${i.planoCatastrado}` : ''}
-            </p>
+          <CardContent className="space-y-4 pt-5 sm:pt-6">
+            <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
+              <Dato titulo="Participación" valor={`${formatNumber(i.porcentajeParticipacion, 2)}%`} />
+              <Dato titulo="Valor fiscal (su parte)" valor={formatCurrencyCRC(i.valorFiscalProporcional ?? i.valorFiscal)} />
+              <Dato titulo="Área de terreno" valor={`${formatNumber(i.areaTerrenoM2, 2)} m²`} />
+              <Dato titulo="Área de construcción" valor={`${formatNumber(i.areaConstruccionM2, 2)} m²`} />
+            </div>
+            <div className="flex flex-col gap-1 rounded-xl border border-sigemun-border bg-sigemun-surface px-4 py-3 text-xs text-sigemun-muted sm:flex-row sm:items-center sm:justify-between">
+              <span>{i.direccionExacta}</span>
+              {i.planoCatastrado && (
+                <span className="shrink-0 rounded-full bg-sigemun-sky-muted px-3 py-1 font-mono font-semibold text-sigemun-primary">
+                  Plano {i.planoCatastrado}
+                </span>
+              )}
+            </div>
           </CardContent>
         </Card>
       ))}
@@ -482,39 +528,61 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="border-l-4 border-l-red-600">
-          <CardHeader className="pb-2">
-            <CardDescription>Saldo pendiente en facturas</CardDescription>
-            <CardTitle className="text-2xl font-extrabold text-red-700">{formatCurrencyCRC(totalAdeudado)}</CardTitle>
+        <Card className="overflow-hidden border-red-100 bg-gradient-to-br from-white to-red-50/60">
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <div>
+              <CardDescription className="font-semibold text-sigemun-muted">Saldo pendiente</CardDescription>
+              <CardTitle className="mt-2 text-2xl font-extrabold text-red-700">{formatCurrencyCRC(totalAdeudado)}</CardTitle>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 text-red-700">
+              <CircleDollarSign className="h-6 w-6" />
+            </div>
           </CardHeader>
         </Card>
-        <Card className="border-l-4 border-l-[#B6944A]">
-          <CardHeader className="pb-2">
-            <CardDescription>Obligaciones pendientes</CardDescription>
-            <CardTitle className="text-2xl font-extrabold text-[#967736]">{pendientes.length}</CardTitle>
+        <Card className="overflow-hidden border-amber-100 bg-gradient-to-br from-white to-amber-50/70">
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <div>
+              <CardDescription className="font-semibold text-sigemun-muted">Obligaciones pendientes</CardDescription>
+              <CardTitle className="mt-2 text-2xl font-extrabold text-sigemun-primary">{pendientes.length}</CardTitle>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-sigemun-primary">
+              <WalletCards className="h-6 w-6" />
+            </div>
           </CardHeader>
         </Card>
-        <Card className="border-l-4 border-l-[#164B35]">
-          <CardHeader className="pb-2">
-            <CardDescription>Vencidas</CardDescription>
-            <CardTitle className="text-2xl font-extrabold text-[#164B35]">{vencidas}</CardTitle>
+        <Card className="overflow-hidden border-emerald-100 bg-gradient-to-br from-white to-emerald-50/60">
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <div>
+              <CardDescription className="font-semibold text-sigemun-muted">Obligaciones vencidas</CardDescription>
+              <CardTitle className="mt-2 text-2xl font-extrabold text-sigemun-primary">{vencidas}</CardTitle>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-sigemun-primary">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
           </CardHeader>
         </Card>
       </div>
 
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
-          <CardTitle className="text-base">Facturas</CardTitle>
-          <CardDescription>Pague en línea con SINPE Móvil o descargue el comprobante.</CardDescription>
+        <CardHeader className="border-b border-sigemun-border bg-gradient-to-r from-sigemun-bg to-white">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sigemun-primary text-sigemun-sky">
+              <Receipt className="h-5 w-5" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Facturas municipales</CardTitle>
+              <CardDescription className="mt-1">Consulte sus facturas, pague con SINPE Móvil o descargue el comprobante.</CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0 sm:p-0">
           {(facturasQuery.data ?? []).length === 0 ? (
-            <p className="p-4 text-xs text-[#5A6B61]">No tiene facturas emitidas.</p>
+            <p className="p-4 text-xs text-sigemun-muted">No tiene facturas emitidas.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                  <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                     <th className="px-3 py-2.5">Factura</th>
                     <th className="px-3 py-2.5">Emisión</th>
                     <th className="px-3 py-2.5">Periodo / Finca</th>
@@ -524,14 +592,14 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
                     <th className="px-3 py-2.5 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DCE3DE]">
+                <tbody className="divide-y divide-sigemun-border">
                   {(facturasQuery.data ?? []).map((f) => (
-                    <tr key={f.idFactura} className="even:bg-[#FAFCFB]">
-                      <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">#{f.idFactura}</td>
+                    <tr key={f.idFactura} className="transition-colors even:bg-sigemun-surface hover:bg-sigemun-bg">
+                      <td className="px-3 py-2.5 font-mono font-bold text-sigemun-primary">#{f.idFactura}</td>
                       <td className="px-3 py-2.5">{formatDate(f.fechaEmision)}</td>
                       <td className="px-3 py-2.5">
                         <p>{f.periodoDeuda ?? '—'}</p>
-                        <p className="font-mono text-[11px] text-[#5A6B61]">{f.numeroFinca ?? ''}</p>
+                        <p className="font-mono text-[11px] text-sigemun-muted">{f.numeroFinca ?? ''}</p>
                       </td>
                       <td className="px-3 py-2.5">{formatCurrencyCRC(f.totalAPagar)}</td>
                       <td className="px-3 py-2.5 font-semibold">{formatCurrencyCRC(f.saldoPendiente)}</td>
@@ -577,17 +645,25 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
       </Card>
 
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
-          <CardTitle className="text-base">Detalle de obligaciones</CardTitle>
+        <CardHeader className="border-b border-sigemun-border bg-gradient-to-r from-sigemun-bg to-white">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sigemun-sky-muted text-sigemun-primary">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Detalle de obligaciones</CardTitle>
+              <CardDescription className="mt-1">Desglose de tributos, periodos, vencimientos y montos registrados.</CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0 sm:p-0">
           {deudas.length === 0 ? (
-            <p className="p-4 text-xs text-[#5A6B61]">Está al día: no registra obligaciones.</p>
+            <p className="p-4 text-xs text-sigemun-muted">Está al día: no registra obligaciones.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                  <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                     <th className="px-3 py-2.5">Tributo / Periodo</th>
                     <th className="px-3 py-2.5">Finca</th>
                     <th className="px-3 py-2.5">Vencimiento</th>
@@ -597,16 +673,16 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
                     <th className="px-3 py-2.5">Estado</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DCE3DE]">
+                <tbody className="divide-y divide-sigemun-border">
                   {deudas.map((d) => {
                     const vencida =
                       new Date(d.fechaDeVencimiento).getTime() < Date.now() &&
                       !['PAG', 'ANU'].includes((d.codigoEstadoDeuda ?? '').toUpperCase());
                     return (
-                      <tr key={d.idDeudaMunicipal} className="even:bg-[#FAFCFB]">
+                      <tr key={d.idDeudaMunicipal} className="transition-colors even:bg-sigemun-surface hover:bg-sigemun-bg">
                         <td className="px-3 py-2.5">
                           <p className="font-semibold">{d.nombreTributo}</p>
-                          <p className="text-[11px] text-[#5A6B61]">{d.periodoDeuda}</p>
+                          <p className="text-[11px] text-sigemun-muted">{d.periodoDeuda}</p>
                         </td>
                         <td className="px-3 py-2.5 font-mono text-xs">{d.numeroFinca ?? '—'}</td>
                         <td className="px-3 py-2.5">
@@ -636,49 +712,73 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
       <Modal
         open={Boolean(facturaPago)}
         onClose={() => !pagoMut.isPending && setFacturaPago(null)}
-        title={`Pagar factura #${facturaPago?.idFactura ?? ''} con SINPE Móvil`}
-        description="Realice la transferencia desde su banco y registre aquí el número de comprobante."
+        title="Pago en línea con SINPE Móvil"
+        description={`Factura #${facturaPago?.idFactura ?? ''} · Registro seguro de transferencia`}
+        maxWidth="max-w-xl"
       >
         {facturaPago && (
           <form
-            className="space-y-4"
+            className="space-y-5"
             onSubmit={(e) => {
               e.preventDefault();
               if (montoValido && comprobante.trim()) pagoMut.mutate();
             }}
           >
-            <div className="rounded-lg bg-[#F4F7F5] p-3 text-xs text-[#26352D]">
-              <p>
-                Saldo pendiente: <strong>{formatCurrencyCRC(facturaPago.saldoPendiente)}</strong>
-              </p>
-              <p className="mt-1 text-[#5A6B61]">
-                SINPE Móvil institucional de la Municipalidad de Nicoya. Puede abonar un monto parcial.
+            <div className="flex flex-col gap-4 rounded-2xl border border-sigemun-border bg-gradient-to-br from-sigemun-bg to-white p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sigemun-primary text-sigemun-sky shadow-sm">
+                  <CreditCard className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-sigemun-muted">Saldo pendiente de la factura</p>
+                  <p className="mt-0.5 text-2xl font-extrabold text-sigemun-primary">
+                    {formatCurrencyCRC(facturaPago.saldoPendiente)}
+                  </p>
+                </div>
+              </div>
+              <Badge variant="accent">Abono parcial permitido</Badge>
+            </div>
+
+            <div className="rounded-xl border border-sigemun-border p-4 sm:p-5">
+              <div className="space-y-4">
+                <FormField label="Número de comprobante SINPE" required>
+                  <Input
+                    maxLength={50}
+                    value={comprobante}
+                    onChange={(e) => setComprobante(e.target.value)}
+                    placeholder="Ej. 2026103100123456"
+                    className="h-11"
+                  />
+                </FormField>
+                <FormField
+                  label="Monto transferido (₡)"
+                  required
+                  error={
+                    monto !== '' && !montoValido
+                      ? 'El monto debe ser mayor que cero y no superar el saldo pendiente.'
+                      : undefined
+                  }
+                >
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={monto}
+                    onChange={(e) => setMonto(e.target.value)}
+                    className="h-11 text-base font-semibold"
+                  />
+                </FormField>
+              </div>
+              <p className="mt-4 rounded-lg bg-sigemun-bg px-3 py-2.5 text-[11px] leading-relaxed text-sigemun-muted">
+                Realice primero la transferencia al SINPE Móvil institucional y luego registre aquí el comprobante emitido por su banco.
               </p>
             </div>
-            <FormField label="Número de comprobante SINPE" required>
-              <Input
-                maxLength={50}
-                value={comprobante}
-                onChange={(e) => setComprobante(e.target.value)}
-                placeholder="Ej. 2026103100123456"
-              />
-            </FormField>
-            <FormField
-              label="Monto transferido (₡)"
-              required
-              error={
-                monto !== '' && !montoValido
-                  ? 'El monto debe ser mayor que cero y no superar el saldo pendiente.'
-                  : undefined
-              }
-            >
-              <Input type="number" min={0} step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} />
-            </FormField>
-            <div className="flex justify-end gap-2">
+
+            <div className="flex flex-col-reverse gap-2 border-t border-sigemun-border pt-4 sm:flex-row sm:justify-end">
               <Button type="button" variant="outline" disabled={pagoMut.isPending} onClick={() => setFacturaPago(null)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={!montoValido || !comprobante.trim() || pagoMut.isPending}>
+              <Button type="submit" className="sm:min-w-40" disabled={!montoValido || !comprobante.trim() || pagoMut.isPending}>
                 {pagoMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
                 Registrar pago
               </Button>
@@ -719,11 +819,11 @@ function abrirComprobante(
   w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
 <title>Comprobante factura ${f.idFactura}</title>
 <style>
-body{font-family:Segoe UI,Arial,sans-serif;color:#26352D;margin:32px}
-h1{font-size:20px;margin:0;color:#164B35}.sub{color:#5A6B61;font-size:12px}
+body{font-family:Segoe UI,Arial,sans-serif;color:#243746;margin:32px}
+h1{font-size:20px;margin:0;color:#1E5A9C}.sub{color:#526B7A;font-size:12px}
 table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px}
-th,td{border-bottom:1px solid #DCE3DE;padding:8px;text-align:left}th{background:#F4F7F5;font-size:11px;text-transform:uppercase}
-.n{text-align:right}.tot td{font-weight:700}.box{border:1px solid #DCE3DE;border-radius:8px;padding:12px;margin-top:16px;font-size:13px}
+th,td{border-bottom:1px solid #D9E6F2;padding:8px;text-align:left}th{background:#F1F8FE;font-size:11px;text-transform:uppercase}
+.n{text-align:right}.tot td{font-weight:700}.box{border:1px solid #D9E6F2;border-radius:8px;padding:12px;margin-top:16px;font-size:13px}
 @media print{button{display:none}}
 </style></head><body>
 <h1>Municipalidad de Nicoya</h1><div class="sub">Comprobante de factura · emitido desde el Portal Ciudadano el ${escapar(

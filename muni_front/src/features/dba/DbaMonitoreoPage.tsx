@@ -29,7 +29,7 @@ import { formatDateTime, formatNumber } from '@/lib/utils';
 type Pestana = 'sesiones' | 'archivos' | 'indices' | 'mantenimiento';
 
 const TH =
-  'border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]';
+  'border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted';
 
 /** CU-DBA-04 (monitoreo con DMVs) y CU-DBA-06 (mantenimiento de índices y estadísticas). */
 export function DbaMonitoreoPage() {
@@ -112,7 +112,7 @@ export function DbaMonitoreoPage() {
       />
 
       <nav
-        className="grid gap-3 rounded-2xl border border-[#DCE3DE] bg-white p-3 shadow-card sm:grid-cols-3"
+        className="grid gap-3 rounded-2xl border border-sigemun-border bg-white p-3 shadow-card sm:grid-cols-3"
         aria-label="Consola DBA"
       >
         <Button variant="outline" className="h-auto justify-start px-4 py-3" asChild>
@@ -170,19 +170,19 @@ export function DbaMonitoreoPage() {
             />
           </div>
           <Card>
-            <CardContent className="grid gap-2 pt-5 text-xs text-[#5A6B61] sm:grid-cols-2 sm:pt-5 xl:grid-cols-4">
+            <CardContent className="grid gap-2 pt-5 text-xs text-sigemun-muted sm:grid-cols-2 sm:pt-5 xl:grid-cols-4">
               <p>
-                <strong className="text-[#26352D]">Servidor:</strong> {r.servidor}
+                <strong className="text-sigemun-text">Servidor:</strong> {r.servidor}
               </p>
               <p>
-                <strong className="text-[#26352D]">Motor:</strong> {r.edicion} {r.versionMotor}
+                <strong className="text-sigemun-text">Motor:</strong> {r.edicion} {r.versionMotor}
               </p>
               <p>
-                <strong className="text-[#26352D]">Activo desde:</strong>{' '}
+                <strong className="text-sigemun-text">Activo desde:</strong>{' '}
                 {formatDateTime(r.inicioServicio)} ({formatNumber((r.minutosActivo ?? 0) / 60, 1)} h)
               </p>
               <p>
-                <strong className="text-[#26352D]">Último FULL / DIFF:</strong>{' '}
+                <strong className="text-sigemun-text">Último FULL / DIFF:</strong>{' '}
                 {r.ultimoBackupFull ? formatDateTime(r.ultimoBackupFull) : 'nunca'} /{' '}
                 {r.ultimoBackupDiferencial ? formatDateTime(r.ultimoBackupDiferencial) : 'nunca'}
               </p>
@@ -192,7 +192,7 @@ export function DbaMonitoreoPage() {
       ) : null}
 
       <nav
-        className="grid gap-2 rounded-2xl border border-[#DCE3DE] bg-white p-3 shadow-card sm:grid-cols-4"
+        className="grid gap-2 rounded-2xl border border-sigemun-border bg-white p-3 shadow-card sm:grid-cols-4"
         aria-label="Secciones de monitoreo"
       >
         {(
@@ -217,7 +217,7 @@ export function DbaMonitoreoPage() {
       {/* SESIONES */}
       {pestana === 'sesiones' && (
         <Card className="overflow-hidden">
-          <CardHeader className="flex flex-col gap-3 border-b border-[#DCE3DE] bg-[#FAFCFB] sm:flex-row sm:items-center sm:justify-between">
+          <CardHeader className="flex flex-col gap-3 border-b border-sigemun-border bg-sigemun-surface sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="text-base">Sesiones de usuario</CardTitle>
               <CardDescription>
@@ -255,7 +255,7 @@ export function DbaMonitoreoPage() {
                       <th className="px-3 py-2.5 text-right">Acción</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#DCE3DE]">
+                  <tbody className="divide-y divide-sigemun-border">
                     {(sesionesQuery.data ?? []).map((s) => (
                       <tr
                         key={s.sessionId}
@@ -264,10 +264,10 @@ export function DbaMonitoreoPage() {
                             ? 'bg-red-50'
                             : s.esBloqueante
                               ? 'bg-amber-50'
-                              : 'even:bg-[#FAFCFB]'
+                              : 'even:bg-sigemun-surface'
                         }
                       >
-                        <td className="px-3 py-2 font-mono font-bold text-[#164B35]">
+                        <td className="px-3 py-2 font-mono font-bold text-sigemun-primary">
                           {s.sessionId}
                           {s.esSesionActual && (
                             <Badge variant="info" className="ml-1">
@@ -277,7 +277,7 @@ export function DbaMonitoreoPage() {
                         </td>
                         <td className="px-3 py-2">
                           <p className="font-semibold">{s.loginName}</p>
-                          <p className="text-[10px] text-[#5A6B61]">
+                          <p className="text-[10px] text-sigemun-muted">
                             {s.hostName} {s.direccionIp ? `· ${s.direccionIp}` : ''}
                           </p>
                         </td>
@@ -286,7 +286,7 @@ export function DbaMonitoreoPage() {
                         </td>
                         <td className="px-3 py-2">
                           <p>{s.estado}</p>
-                          <p className="text-[10px] text-[#5A6B61]">{s.tipoEspera || s.comando || ''}</p>
+                          <p className="text-[10px] text-sigemun-muted">{s.tipoEspera || s.comando || ''}</p>
                         </td>
                         <td className="px-3 py-2">
                           {s.bloqueadaPor ? (
@@ -305,7 +305,7 @@ export function DbaMonitoreoPage() {
                           ) : (
                             '—'
                           )}
-                          <p className="text-[10px] text-[#5A6B61]">
+                          <p className="text-[10px] text-sigemun-muted">
                             CPU {formatNumber(s.cpuMs)} ms · {formatNumber(s.lecturasLogicas)} lect.
                           </p>
                         </td>
@@ -339,7 +339,7 @@ export function DbaMonitoreoPage() {
       {/* ARCHIVOS */}
       {pestana === 'archivos' && (
         <Card className="overflow-hidden">
-          <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+          <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
             <CardTitle className="text-base">Archivos de datos y log</CardTitle>
             <CardDescription>Tamaño, uso y espacio libre del volumen donde reside cada archivo.</CardDescription>
           </CardHeader>
@@ -362,15 +362,15 @@ export function DbaMonitoreoPage() {
                       <th className="px-3 py-2.5">Volumen libre</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#DCE3DE]">
+                  <tbody className="divide-y divide-sigemun-border">
                     {(archivosQuery.data ?? []).map((a, i) => (
-                      <tr key={`${a.baseDatos}-${a.archivoLogico}-${i}`} className="even:bg-[#FAFCFB]">
+                      <tr key={`${a.baseDatos}-${a.archivoLogico}-${i}`} className="even:bg-sigemun-surface">
                         <td className="px-3 py-2">
                           <p className="font-semibold">{a.archivoLogico}</p>
-                          <p className="text-[10px] text-[#5A6B61]">{a.baseDatos}</p>
+                          <p className="text-[10px] text-sigemun-muted">{a.baseDatos}</p>
                         </td>
                         <td className="px-3 py-2">
-                          <Badge variant={a.tipo === 'LOG' ? 'gold' : 'outline'}>{a.tipo}</Badge>
+                          <Badge variant={a.tipo === 'LOG' ? 'accent' : 'outline'}>{a.tipo}</Badge>
                         </td>
                         <td className="max-w-[280px] truncate px-3 py-2 font-mono text-[10px]" title={a.rutaFisica ?? undefined}>
                           {a.rutaFisica}
@@ -400,7 +400,7 @@ export function DbaMonitoreoPage() {
       {/* ÍNDICES */}
       {(pestana === 'indices' || pestana === 'mantenimiento') && (
         <Card className="overflow-hidden">
-          <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+          <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
             <CardTitle className="text-base">Fragmentación de índices</CardTitle>
             <CardDescription>
               Índices con más de 5% de fragmentación. ≥30% se recomienda REBUILD; 5–30% REORGANIZE.
@@ -412,7 +412,7 @@ export function DbaMonitoreoPage() {
             ) : fragmentacionQuery.isError ? (
               <ErrorState error={fragmentacionQuery.error} onRetry={() => fragmentacionQuery.refetch()} />
             ) : (fragmentacionQuery.data ?? []).length === 0 ? (
-              <p className="p-4 text-xs text-[#5A6B61]">No hay índices fragmentados. 👍</p>
+              <p className="p-4 text-xs text-sigemun-muted">No hay índices fragmentados. 👍</p>
             ) : (
               <div className="max-h-96 overflow-auto">
                 <table className="w-full min-w-[760px] text-left text-xs">
@@ -426,9 +426,9 @@ export function DbaMonitoreoPage() {
                       <th className="px-3 py-2.5">Recomendación</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#DCE3DE]">
+                  <tbody className="divide-y divide-sigemun-border">
                     {(fragmentacionQuery.data ?? []).map((f, i) => (
-                      <tr key={`${f.tabla}-${f.indice}-${i}`} className="even:bg-[#FAFCFB]">
+                      <tr key={`${f.tabla}-${f.indice}-${i}`} className="even:bg-sigemun-surface">
                         <td className="px-3 py-2 font-semibold">{f.tabla}</td>
                         <td className="px-3 py-2 font-mono text-[11px]">{f.indice}</td>
                         <td className="px-3 py-2">{f.tipoIndice}</td>
@@ -474,7 +474,7 @@ export function DbaMonitoreoPage() {
                       type="checkbox"
                       checked={opciones[k]}
                       onChange={(e) => setOpciones((o) => ({ ...o, [k]: e.target.checked }))}
-                      className="h-4 w-4 rounded border-[#DCE3DE] text-[#164B35]"
+                      className="h-4 w-4 rounded border-sigemun-border text-sigemun-primary"
                     />
                     {label}
                   </label>
@@ -499,7 +499,7 @@ export function DbaMonitoreoPage() {
               </Button>
 
               {resultadoMant && (
-                <div className="overflow-x-auto rounded-lg border border-[#DCE3DE]">
+                <div className="overflow-x-auto rounded-lg border border-sigemun-border">
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className={TH}>
@@ -510,7 +510,7 @@ export function DbaMonitoreoPage() {
                         <th className="px-3 py-2">Detalle</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#DCE3DE]">
+                    <tbody className="divide-y divide-sigemun-border">
                       {resultadoMant.map((t) => (
                         <tr key={t.orden}>
                           <td className="px-3 py-2">{t.orden}</td>
@@ -533,7 +533,7 @@ export function DbaMonitoreoPage() {
                           <td className="px-3 py-2">
                             {t.duracionSegundos != null ? `${t.duracionSegundos} s` : '—'}
                           </td>
-                          <td className="px-3 py-2 text-[#5A6B61]">{t.detalle}</td>
+                          <td className="px-3 py-2 text-sigemun-muted">{t.detalle}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -544,7 +544,7 @@ export function DbaMonitoreoPage() {
           </Card>
 
           <Card className="overflow-hidden">
-            <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+            <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
               <CardTitle className="text-base">Historial de mantenimiento</CardTitle>
               <CardDescription>
                 Últimos comandos registrados en MaintenanceDB.dbo.CommandLog (vacío si no está instalado).
@@ -556,7 +556,7 @@ export function DbaMonitoreoPage() {
               ) : historialMantQuery.isError ? (
                 <ErrorState error={historialMantQuery.error} onRetry={() => historialMantQuery.refetch()} />
               ) : (historialMantQuery.data ?? []).length === 0 ? (
-                <p className="p-4 text-xs text-[#5A6B61]">Sin registros de mantenimiento.</p>
+                <p className="p-4 text-xs text-sigemun-muted">Sin registros de mantenimiento.</p>
               ) : (
                 <div className="max-h-96 overflow-auto">
                   <table className="w-full min-w-[900px] text-left text-xs">
@@ -569,16 +569,16 @@ export function DbaMonitoreoPage() {
                         <th className="px-3 py-2.5">Resultado</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#DCE3DE]">
+                    <tbody className="divide-y divide-sigemun-border">
                       {(historialMantQuery.data ?? []).map((h, i) => (
-                        <tr key={h.id ?? i} className="even:bg-[#FAFCFB]">
+                        <tr key={h.id ?? i} className="even:bg-sigemun-surface">
                           <td className="px-3 py-2 whitespace-nowrap">{formatDateTime(h.inicio)}</td>
                           <td className="px-3 py-2">
                             <Badge variant="outline">{h.tipoComando}</Badge>
                           </td>
                           <td className="px-3 py-2" title={h.comando ?? undefined}>
                             <p className="font-semibold">{h.objeto || h.baseDatos}</p>
-                            <p className="font-mono text-[10px] text-[#5A6B61]">{h.indice}</p>
+                            <p className="font-mono text-[10px] text-sigemun-muted">{h.indice}</p>
                           </td>
                           <td className="px-3 py-2">
                             {h.duracionSegundos != null ? `${h.duracionSegundos} s` : '—'}
@@ -649,16 +649,16 @@ function Kpi({
   alerta?: boolean;
 }) {
   return (
-    <Card className={`border-l-4 ${alerta ? 'border-l-red-600' : 'border-l-[#164B35]'}`}>
+    <Card className={`border-l-4 ${alerta ? 'border-l-red-600' : 'border-l-sigemun-primary'}`}>
       <CardHeader className="pb-2">
         <CardDescription className="flex items-center gap-1.5">
           {icon} {titulo}
         </CardDescription>
-        <CardTitle className={`text-2xl font-extrabold ${alerta ? 'text-red-700' : 'text-[#164B35]'}`}>
+        <CardTitle className={`text-2xl font-extrabold ${alerta ? 'text-red-700' : 'text-sigemun-primary'}`}>
           {valor}
         </CardTitle>
       </CardHeader>
-      <CardContent className="text-xs text-[#5A6B61]">{detalle}</CardContent>
+      <CardContent className="text-xs text-sigemun-muted">{detalle}</CardContent>
     </Card>
   );
 }

@@ -253,19 +253,19 @@ export function TributosDeudasPage() {
       <section>
         <div className="mb-4">
           <p className="section-label">Catálogo tributario</p>
-          <h2 className="mt-1 text-lg font-bold text-[#26352D]">Tributos municipales</h2>
+          <h2 className="mt-1 text-lg font-bold text-sigemun-text">Tributos municipales</h2>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {(tiposTributoQuery.data ?? []).map((t) => (
-          <Card key={t.idTipoTributo} className="flex h-full flex-col overflow-hidden border-[#C9D9D0] hover:shadow-elevated">
+          <Card key={t.idTipoTributo} className="flex h-full flex-col overflow-hidden border-sigemun-border hover:shadow-elevated">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <Badge variant="gold">{t.codigoTributo}</Badge>
-                <span className="text-[11px] font-semibold text-[#5A6B61]">{t.periodicidad}</span>
+                <Badge variant="accent">{t.codigoTributo}</Badge>
+                <span className="text-[11px] font-semibold text-sigemun-muted">{t.periodicidad}</span>
               </div>
               <CardTitle className="mt-3 min-h-10 text-sm leading-snug">{t.nombreTributo}</CardTitle>
             </CardHeader>
-            <CardContent className="mt-auto space-y-1.5 text-xs text-[#5A6B61]">
+            <CardContent className="mt-auto space-y-1.5 text-xs text-sigemun-muted">
               <p>
                 <strong>Base de cálculo:</strong> {t.baseCalculo}
               </p>
@@ -287,7 +287,7 @@ export function TributosDeudasPage() {
 
       {/* Estado de Cuenta Consolidado General (vw_estado_cuenta_contribuyente) */}
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+        <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
           <CardTitle>Estado de cuenta consolidado</CardTitle>
           <CardDescription>
             Haga clic en un contribuyente para inspeccionar el desglose de sus deudas, intereses y
@@ -306,7 +306,7 @@ export function TributosDeudasPage() {
             <div className="overflow-x-auto" role="region" aria-label="Estado de cuenta consolidado" tabIndex={0}>
               <table className="w-full min-w-[1100px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                  <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                     <th className="px-3 py-2.5">ID</th>
                     <th className="px-3 py-2.5">Contribuyente</th>
                     <th className="px-3 py-2.5">Fincas</th>
@@ -317,7 +317,7 @@ export function TributosDeudasPage() {
                     <th className="px-3 py-2.5">Total Pagado</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DCE3DE]">
+                <tbody className="divide-y divide-sigemun-border">
                   {resumenPorContribuyente.map((c) => {
                     const isSelected = c.idContribuyente === selectedContribuyenteId;
                     return (
@@ -325,15 +325,15 @@ export function TributosDeudasPage() {
                         key={c.idContribuyente}
                         onClick={() => setSelectedContribuyenteId(c.idContribuyente)}
                         className={`cursor-pointer transition-colors ${
-                          isSelected ? 'bg-[#E8F0EC] shadow-[inset_4px_0_0_#164B35]' : 'even:bg-[#FAFCFB] hover:bg-[#F5F7F4]'
+                          isSelected ? 'bg-sigemun-sky-muted shadow-[inset_4px_0_0_var(--sigemun-primary)]' : 'even:bg-sigemun-surface hover:bg-sigemun-bg'
                         }`}
                       >
-                        <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">
+                        <td className="px-3 py-2.5 font-mono font-bold text-sigemun-primary">
                           #{c.idContribuyente}
                         </td>
                         <td className="px-3 py-2.5">
-                          <p className="font-semibold text-[#26352D]">{c.contribuyente}</p>
-                          <p className="font-mono text-[11px] text-[#5A6B61]">
+                          <p className="font-semibold text-sigemun-text">{c.contribuyente}</p>
+                          <p className="font-mono text-[11px] text-sigemun-muted">
                             {c.identificacion}
                           </p>
                         </td>
@@ -368,8 +368,8 @@ export function TributosDeudasPage() {
       </Card>
 
       {/* Deudas del Contribuyente Seleccionado + Recálculo BD */}
-      <Card className="overflow-hidden border-[#D7C28E]">
-        <CardHeader className="flex flex-col gap-4 border-b border-[#E9DFC4] bg-[#FBF7EE] sm:flex-row sm:items-center sm:justify-between">
+      <Card className="overflow-hidden border-sigemun-sky">
+        <CardHeader className="flex flex-col gap-4 border-b border-sigemun-border bg-sigemun-bg sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle>
               Deudas Municipales del Contribuyente #{selectedContribuyenteId}
@@ -404,10 +404,10 @@ export function TributosDeudasPage() {
           ) : !deudasContribuyenteQuery.data || deudasContribuyenteQuery.data.length === 0 ? (
             <EmptyState title="Este contribuyente no registra deudas municipales" />
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-[#DCE3DE]" role="region" aria-label="Deudas del contribuyente" tabIndex={0}>
+            <div className="overflow-x-auto rounded-xl border border-sigemun-border" role="region" aria-label="Deudas del contribuyente" tabIndex={0}>
               <table className="w-full min-w-[1250px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                  <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                     <th className="px-3 py-2.5">Deuda ID</th>
                     <th className="px-3 py-2.5">Tributo / Periodo</th>
                     <th className="px-3 py-2.5">Finca</th>
@@ -420,15 +420,15 @@ export function TributosDeudasPage() {
                     <th className="px-3 py-2.5 text-right">Acciones BD</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DCE3DE]">
+                <tbody className="divide-y divide-sigemun-border">
                   {deudasContribuyenteQuery.data.map((d) => (
-                    <tr key={d.idDeudaMunicipal} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
-                      <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">
+                    <tr key={d.idDeudaMunicipal} className="even:bg-sigemun-surface transition-colors hover:bg-sigemun-sky-muted/55">
+                      <td className="px-3 py-2.5 font-mono font-bold text-sigemun-primary">
                         #{d.idDeudaMunicipal}
                       </td>
                       <td className="px-3 py-2.5">
-                        <p className="font-semibold text-[#26352D]">{d.nombreTributo}</p>
-                        <p className="text-[#5A6B61]">{d.periodoDeuda}</p>
+                        <p className="font-semibold text-sigemun-text">{d.nombreTributo}</p>
+                        <p className="text-sigemun-muted">{d.periodoDeuda}</p>
                       </td>
                       <td className="px-3 py-2.5 font-mono">{d.numeroFinca}</td>
                       <td className="px-3 py-2.5">
@@ -445,7 +445,7 @@ export function TributosDeudasPage() {
                       <td className="px-3 py-2.5 text-red-700">
                         {formatCurrencyCRC(d.montoMultas)}
                       </td>
-                      <td className="px-3 py-2.5 font-bold text-[#164B35]">
+                      <td className="px-3 py-2.5 font-bold text-sigemun-primary">
                         {formatCurrencyCRC(d.montoTotal)}
                       </td>
                       <td className="px-3 py-2.5">
@@ -477,7 +477,7 @@ export function TributosDeudasPage() {
                             <Calculator className="h-3.5 w-3.5" /> Recalcular
                           </Button>
                           <Button
-                            variant="gold"
+                            variant="accent"
                             size="sm"
                             onClick={() => {
                               setFacturarDeudaTarget(d);
@@ -499,8 +499,8 @@ export function TributosDeudasPage() {
 
           {/* Resumen Estado de Cuenta Individual (sp_consultar_estado_cuenta) */}
           {estadoCuentaIndividualQuery.data && estadoCuentaIndividualQuery.data.length > 0 && (
-            <div className="mt-4 rounded-lg border border-[#DCE3DE] bg-[#F5F7F4] p-3 text-xs text-[#5A6B61]">
-              <Search className="mr-1.5 inline h-3.5 w-3.5 text-[#164B35]" />
+            <div className="mt-4 rounded-lg border border-sigemun-border bg-sigemun-bg p-3 text-xs text-sigemun-muted">
+              <Search className="mr-1.5 inline h-3.5 w-3.5 text-sigemun-primary" />
               {estadoCuentaIndividualQuery.data.length} registro(s) relacionados entre deudas y
               facturas para este contribuyente.
             </div>
@@ -613,7 +613,7 @@ export function TributosDeudasPage() {
       >
         {facturarDeudaTarget && (
           <div className="space-y-4">
-            <div className="rounded-lg bg-[#F5F7F4] p-3 text-xs space-y-1">
+            <div className="rounded-lg bg-sigemun-bg p-3 text-xs space-y-1">
               <p>
                 <strong>Tributo:</strong> {facturarDeudaTarget.nombreTributo} (
                 {facturarDeudaTarget.periodoDeuda})
@@ -623,7 +623,7 @@ export function TributosDeudasPage() {
               </p>
               <p>
                 <strong>Monto total:</strong>{' '}
-                <span className="font-bold text-[#164B35]">
+                <span className="font-bold text-sigemun-primary">
                   {formatCurrencyCRC(facturarDeudaTarget.montoTotal)}
                 </span>
               </p>

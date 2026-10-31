@@ -34,7 +34,7 @@ import { Input, Select } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { exportToCsv, formatCurrencyCRC, formatDate, formatDateTime, formatNumber } from '@/lib/utils';
 
-const CHART_COLORS = ['#164B35', '#B6944A', '#2E7D5B', '#D4B872', '#0F3626', '#967736', '#4C9A77'];
+const CHART_COLORS = ['#1E5A9C', '#3E8FD6', '#1E5A9C', '#BFE3FA', '#102A43', '#1E5A9C', '#3E8FD6'];
 
 export function ReportesAnalisisPage() {
   const queryClient = useQueryClient();
@@ -227,7 +227,7 @@ export function ReportesAnalisisPage() {
       />
 
       {/* Pestañas de Reportes */}
-      <nav className="grid gap-3 rounded-2xl border border-[#DCE3DE] bg-white p-3 shadow-card sm:grid-cols-2 xl:grid-cols-4" aria-label="Tipos de reporte">
+      <nav className="grid gap-3 rounded-2xl border border-sigemun-border bg-white p-3 shadow-card sm:grid-cols-2 xl:grid-cols-4" aria-label="Tipos de reporte">
         <Button
           variant={activeTab === 'tributario' ? 'default' : 'outline'}
           className="h-auto justify-start px-4 py-3"
@@ -264,7 +264,7 @@ export function ReportesAnalisisPage() {
         <div className="flex flex-col" style={{ gap: '2rem' }}>
           {/* Barra de Periodo Fiscal y Píldoras de Distritos de Nicoya (Wireframe p. 120) */}
           <Card className="overflow-hidden">
-            <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+            <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
               <CardTitle className="text-base">Filtros del análisis</CardTitle>
               <CardDescription>Seleccione el periodo y los distritos incluidos en los indicadores.</CardDescription>
             </CardHeader>
@@ -272,7 +272,7 @@ export function ReportesAnalisisPage() {
               <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
                 <div className="flex flex-wrap items-end gap-3">
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                    <label className="mb-2 block text-sm font-semibold text-sigemun-text">
                       Fecha de inicio
                     </label>
                     <Input
@@ -283,7 +283,7 @@ export function ReportesAnalisisPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                    <label className="mb-2 block text-sm font-semibold text-sigemun-text">
                       Fecha de finalización
                     </label>
                     <Input
@@ -313,8 +313,8 @@ export function ReportesAnalisisPage() {
                     onClick={() => setDistritoSeleccionado('TODOS')}
                     className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
                       distritoSeleccionado === 'TODOS'
-                        ? 'bg-[#164B35] text-white'
-                        : 'bg-[#E8F0EC] text-[#164B35] hover:bg-[#D5E4DC]'
+                        ? 'bg-sigemun-primary text-white'
+                        : 'bg-sigemun-sky-muted text-sigemun-primary hover:bg-sigemun-border'
                     }`}
                   >
                     Todos los Distritos
@@ -326,8 +326,8 @@ export function ReportesAnalisisPage() {
                       onClick={() => setDistritoSeleccionado(nom)}
                       className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
                         distritoSeleccionado === nom
-                          ? 'bg-[#B6944A] text-white'
-                          : 'bg-[#F5F7F4] text-[#26352D] hover:bg-[#E8F0EC]'
+                          ? 'bg-sigemun-medium text-white'
+                          : 'bg-sigemun-bg text-sigemun-text hover:bg-sigemun-sky-muted'
                       }`}
                     >
                       {nom}
@@ -340,26 +340,26 @@ export function ReportesAnalisisPage() {
 
           {/* 3 Tarjetas KPI del Wireframe p. 120 */}
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-            <Card className="h-full border-l-4 border-l-[#164B35]">
+            <Card className="h-full border-l-4 border-l-sigemun-primary">
               <CardHeader className="pb-2">
                 <CardDescription>Total Recaudación Cantonal</CardDescription>
-                <CardTitle className="text-2xl font-extrabold text-[#164B35]">
+                <CardTitle className="text-2xl font-extrabold text-sigemun-primary">
                   {formatCurrencyCRC(totalRecaudacionCantonal)}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-xs text-[#5A6B61]">
+              <CardContent className="text-xs text-sigemun-muted">
                 Pagos aplicados en el periodo seleccionado.
               </CardContent>
             </Card>
 
-            <Card className="h-full border-l-4 border-l-[#B6944A]">
+            <Card className="h-full border-l-4 border-l-sigemun-medium">
               <CardHeader className="pb-2">
                 <CardDescription>Índice de Cumplimiento Tributario</CardDescription>
-                <CardTitle className="text-2xl font-extrabold text-[#967736]">
+                <CardTitle className="text-2xl font-extrabold text-sigemun-primary">
                   {formatNumber(indiceCumplimiento, 1)}%
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-xs text-[#5A6B61]">
+              <CardContent className="text-xs text-sigemun-muted">
                 Recaudado frente a recaudado + saldo vencido pendiente.
               </CardContent>
             </Card>
@@ -371,7 +371,7 @@ export function ReportesAnalisisPage() {
                   {formatCurrencyCRC(totalCarteraMorosa)}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-xs text-[#5A6B61]">
+              <CardContent className="text-xs text-sigemun-muted">
                 Obligaciones vencidas:{' '}
                 <strong>{morosidadVistaQuery.data?.length ?? 0}</strong> registro(s)
               </CardContent>
@@ -395,7 +395,7 @@ export function ReportesAnalisisPage() {
                   <div className="h-72 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={distritosChartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#DCE3DE" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#D9E6F2" />
                         <XAxis dataKey="nombreDistrito" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} />
                         <Tooltip
@@ -405,13 +405,13 @@ export function ReportesAnalisisPage() {
                         <Bar
                           dataKey="totalRecaudado"
                           name="Total Recaudado (₡)"
-                          fill="#164B35"
+                          fill="#1E5A9C"
                           radius={[6, 6, 0, 0]}
                         />
                         <Bar
                           dataKey="saldoMoroso"
                           name="Saldo moroso (₡)"
-                          fill="#B6944A"
+                          fill="#3E8FD6"
                           radius={[6, 6, 0, 0]}
                         />
                       </BarChart>
@@ -460,7 +460,7 @@ export function ReportesAnalisisPage() {
 
           {/* Tabla Resumen de Recaudación por Tributo */}
           <Card className="overflow-hidden">
-            <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+            <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
               <CardTitle className="text-base">
                 Desglose Detallado de Recaudación por Tributo Municipal
               </CardTitle>
@@ -469,7 +469,7 @@ export function ReportesAnalisisPage() {
               <div className="overflow-x-auto" role="region" aria-label="Recaudación por tributo" tabIndex={0}>
                 <table className="w-full min-w-[760px] text-left text-sm">
                   <thead>
-                    <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                    <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                       <th className="px-3 py-2.5">Código</th>
                       <th className="px-3 py-2.5">Nombre del Tributo</th>
                       <th className="px-3 py-2.5">Principal Recaudado</th>
@@ -477,10 +477,10 @@ export function ReportesAnalisisPage() {
                       <th className="px-3 py-2.5">Total General Recaudado</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#DCE3DE]">
+                  <tbody className="divide-y divide-sigemun-border">
                     {tributosChartData.map((t) => (
-                      <tr key={t.codigoTributo} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
-                        <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">
+                      <tr key={t.codigoTributo} className="even:bg-sigemun-surface transition-colors hover:bg-sigemun-sky-muted/55">
+                        <td className="px-3 py-2.5 font-mono font-bold text-sigemun-primary">
                           {t.codigoTributo}
                         </td>
                         <td className="px-3 py-2.5 font-semibold">{t.nombreTributo}</td>
@@ -488,7 +488,7 @@ export function ReportesAnalisisPage() {
                         <td className="px-3 py-2.5 text-amber-800">
                           {formatCurrencyCRC(t.intereses)}
                         </td>
-                        <td className="px-3 py-2.5 font-bold text-[#164B35]">
+                        <td className="px-3 py-2.5 font-bold text-sigemun-primary">
                           {formatCurrencyCRC(t.totalRecaudado)}
                         </td>
                       </tr>
@@ -504,7 +504,7 @@ export function ReportesAnalisisPage() {
       {/* TAB 2: CARTERA MOROSA (vw_morosidad_contribuyentes y sp_reporte_contribuyentes_morosos) */}
       {activeTab === 'morosidad' && (
         <Card className="overflow-hidden">
-          <CardHeader className="flex flex-col gap-4 border-b border-[#DCE3DE] bg-[#FAFCFB] sm:flex-row sm:items-center sm:justify-between">
+          <CardHeader className="flex flex-col gap-4 border-b border-sigemun-border bg-sigemun-surface sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle>Cartera morosa de contribuyentes</CardTitle>
               <CardDescription>
@@ -537,7 +537,7 @@ export function ReportesAnalisisPage() {
               <div className="overflow-x-auto" role="region" aria-label="Cartera morosa" tabIndex={0}>
                 <table className="w-full min-w-[1100px] text-left text-sm">
                   <thead>
-                    <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                    <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                       <th className="px-3 py-2.5">Deuda ID</th>
                       <th className="px-3 py-2.5">Contribuyente</th>
                       <th className="px-3 py-2.5">Finca / Distrito</th>
@@ -549,25 +549,25 @@ export function ReportesAnalisisPage() {
                       <th className="px-3 py-2.5">Total Deuda</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#DCE3DE]">
+                  <tbody className="divide-y divide-sigemun-border">
                     {(morosidadVistaQuery.data ?? []).map((m) => (
-                      <tr key={m.idDeudaMunicipal} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
-                        <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">
+                      <tr key={m.idDeudaMunicipal} className="even:bg-sigemun-surface transition-colors hover:bg-sigemun-sky-muted/55">
+                        <td className="px-3 py-2.5 font-mono font-bold text-sigemun-primary">
                           #{m.idDeudaMunicipal}
                         </td>
                         <td className="px-3 py-2.5">
-                          <p className="font-semibold text-[#26352D]">{m.nombreORazonSocial}</p>
-                          <p className="font-mono text-[11px] text-[#5A6B61]">
+                          <p className="font-semibold text-sigemun-text">{m.nombreORazonSocial}</p>
+                          <p className="font-mono text-[11px] text-sigemun-muted">
                             {m.identificacionOficial}
                           </p>
                         </td>
                         <td className="px-3 py-2.5">
                           <p className="font-mono font-semibold">{m.numeroFinca}</p>
-                          <p className="text-[#5A6B61]">{m.nombreDistrito}</p>
+                          <p className="text-sigemun-muted">{m.nombreDistrito}</p>
                         </td>
                         <td className="px-3 py-2.5">
                           <p className="font-medium">{m.nombreTributo}</p>
-                          <p className="text-[#5A6B61]">{m.periodoDeuda}</p>
+                          <p className="text-sigemun-muted">{m.periodoDeuda}</p>
                         </td>
                         <td className="px-3 py-2.5">{formatDate(m.fechaDeVencimiento)}</td>
                         <td className="px-3 py-2.5">
@@ -603,7 +603,7 @@ export function ReportesAnalisisPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
+                      <tr className="border-b border-sigemun-border bg-sigemun-bg font-bold uppercase text-sigemun-muted">
                         <th className="px-3 py-2">Departamento</th>
                         <th className="px-3 py-2">Recibidos</th>
                         <th className="px-3 py-2">En trámite</th>
@@ -611,11 +611,11 @@ export function ReportesAnalisisPage() {
                         <th className="px-3 py-2">% Resolución</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#DCE3DE]">
+                    <tbody className="divide-y divide-sigemun-border">
                       {(solicitudesDeptoQuery.data ?? []).map((d) => (
                         <tr key={d.codigoInterno ?? d.nombreDepartamento}>
                           <td className="px-3 py-2 font-semibold">{d.nombreDepartamento}</td>
-                          <td className="px-3 py-2 font-bold text-[#164B35]">
+                          <td className="px-3 py-2 font-bold text-sigemun-primary">
                             {d.totalSolicitudesRecibidas ?? 0}
                           </td>
                           <td className="px-3 py-2 text-amber-700">{d.totalEnTramite ?? 0}</td>
@@ -642,7 +642,7 @@ export function ReportesAnalisisPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
+                      <tr className="border-b border-sigemun-border bg-sigemun-bg font-bold uppercase text-sigemun-muted">
                         <th className="px-3 py-2">Trámite</th>
                         <th className="px-3 py-2">SLA</th>
                         <th className="px-3 py-2">Volumen</th>
@@ -651,7 +651,7 @@ export function ReportesAnalisisPage() {
                         <th className="px-3 py-2">% Éxito</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#DCE3DE]">
+                    <tbody className="divide-y divide-sigemun-border">
                       {(eficienciaTramitesQuery.data ?? []).map((e) => (
                         <tr key={e.nombreTramite}>
                           <td className="px-3 py-2 font-semibold">{e.nombreTramite}</td>
@@ -700,14 +700,14 @@ export function ReportesAnalisisPage() {
             <CardContent>
               {!historialContribuyenteQuery.data ||
               historialContribuyenteQuery.data.length === 0 ? (
-                <p className="text-xs text-[#5A6B61]">
+                <p className="text-xs text-sigemun-muted">
                   Sin trámites registrados para el contribuyente #{idContribuyenteHistorial}.
                 </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
+                      <tr className="border-b border-sigemun-border bg-sigemun-bg font-bold uppercase text-sigemun-muted">
                         <th className="px-3 py-2">Expediente</th>
                         <th className="px-3 py-2">Trámite</th>
                         <th className="px-3 py-2">Radicación</th>
@@ -717,10 +717,10 @@ export function ReportesAnalisisPage() {
                         <th className="px-3 py-2">Observaciones</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#DCE3DE]">
+                    <tbody className="divide-y divide-sigemun-border">
                       {historialContribuyenteQuery.data.map((h, idx) => (
                         <tr key={`${h.numeroExpediente}-${idx}`}>
-                          <td className="px-3 py-2 font-mono font-bold text-[#164B35]">
+                          <td className="px-3 py-2 font-mono font-bold text-sigemun-primary">
                             {h.numeroExpediente}
                           </td>
                           <td className="px-3 py-2">{h.nombreTramite}</td>
@@ -730,9 +730,9 @@ export function ReportesAnalisisPage() {
                           </td>
                           <td className="px-3 py-2">{formatDateTime(h.fechaCambio)}</td>
                           <td className="px-3 py-2">
-                            <Badge variant="gold">{h.nombreEstado}</Badge>
+                            <Badge variant="accent">{h.nombreEstado}</Badge>
                           </td>
-                          <td className="px-3 py-2 text-[#5A6B61]">{h.observaciones || '—'}</td>
+                          <td className="px-3 py-2 text-sigemun-muted">{h.observaciones || '—'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -760,7 +760,7 @@ export function ReportesAnalisisPage() {
           <CardContent className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <div className="w-full sm:w-64">
-                <label className="mb-1 block text-xs font-semibold text-[#26352D]">
+                <label className="mb-1 block text-xs font-semibold text-sigemun-text">
                   Tipo de Reporte (<code className="font-mono">tipoReporte</code>)
                 </label>
                 <Select
@@ -774,11 +774,11 @@ export function ReportesAnalisisPage() {
                 </Select>
               </div>
               <div className="flex-1">
-                <label className="mb-1 block text-xs font-semibold text-[#26352D]">
+                <label className="mb-1 block text-xs font-semibold text-sigemun-text">
                   Filtro de Texto Opcional (<code className="font-mono">filtroTexto</code>)
                 </label>
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#5A6B61]" />
+                  <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-sigemun-muted" />
                   <Input
                     placeholder="Filtrar registros en el procedimiento almacenado..."
                     value={filtroTextoGestion}
@@ -807,10 +807,10 @@ export function ReportesAnalisisPage() {
               gestionMunicipalQuery.data.registros.length === 0 ? (
               <EmptyState title="Sin registros para el filtro seleccionado" />
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-[#DCE3DE] max-h-96">
+              <div className="overflow-x-auto rounded-lg border border-sigemun-border max-h-96">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="sticky top-0 border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
+                    <tr className="sticky top-0 border-b border-sigemun-border bg-sigemun-bg font-bold uppercase text-sigemun-muted">
                       {Object.keys(gestionMunicipalQuery.data.registros[0]).map((col) => (
                         <th key={col} className="px-3 py-2.5">
                           {col}
@@ -818,9 +818,9 @@ export function ReportesAnalisisPage() {
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#DCE3DE]">
+                  <tbody className="divide-y divide-sigemun-border">
                     {gestionMunicipalQuery.data.registros.map((row, idx) => (
-                      <tr key={idx} className="hover:bg-[#E8F0EC]/40">
+                      <tr key={idx} className="hover:bg-sigemun-sky-muted/40">
                         {Object.entries(row).map(([k, v]) => (
                           <td key={k} className="px-3 py-2 whitespace-nowrap">
                             {v === null || v === undefined ? '—' : String(v)}

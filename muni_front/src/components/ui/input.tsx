@@ -9,7 +9,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <input
         type={type}
         className={cn(
-          'flex h-11 w-full rounded-xl border border-[#C8D5CE] bg-white px-3.5 py-2 text-sm text-[#26352D] shadow-sm placeholder:text-[#718078] hover:border-[#9FB5A9] focus-visible:border-[#287A58] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#287A58]/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60',
+          'flex h-11 w-full rounded-xl border border-sigemun-border bg-white px-3.5 py-2 text-sm text-sigemun-text shadow-sm placeholder:text-sigemun-muted hover:border-sigemun-border-strong focus-visible:border-sigemun-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sigemun-medium/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60',
           className
         )}
         ref={ref}
@@ -27,7 +27,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(({ className, ..
     <select
       ref={ref}
       className={cn(
-        'flex h-11 w-full rounded-xl border border-[#C8D5CE] bg-white px-3.5 py-2 text-sm text-[#26352D] shadow-sm hover:border-[#9FB5A9] focus-visible:border-[#287A58] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#287A58]/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60',
+        'flex h-11 w-full rounded-xl border border-sigemun-border bg-white px-3.5 py-2 text-sm text-sigemun-text shadow-sm hover:border-sigemun-border-strong focus-visible:border-sigemun-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sigemun-medium/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60',
         className
       )}
       {...props}
@@ -44,7 +44,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       <textarea
         ref={ref}
         className={cn(
-          'flex min-h-[104px] w-full resize-y rounded-xl border border-[#C8D5CE] bg-white px-3.5 py-3 text-sm text-[#26352D] shadow-sm placeholder:text-[#718078] hover:border-[#9FB5A9] focus-visible:border-[#287A58] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#287A58]/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60',
+          'flex min-h-[104px] w-full resize-y rounded-xl border border-sigemun-border bg-white px-3.5 py-3 text-sm text-sigemun-text shadow-sm placeholder:text-sigemun-muted hover:border-sigemun-border-strong focus-visible:border-sigemun-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sigemun-medium/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60',
           className
         )}
         {...props}

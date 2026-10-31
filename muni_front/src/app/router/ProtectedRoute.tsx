@@ -20,20 +20,20 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   if (allowedRoles && allowedRoles.length > 0 && !hasRole(allowedRoles)) {
     const fallbackRoute = getDefaultRouteForRoles(user.roles);
     return (
-      <div className="mx-auto my-12 max-w-xl rounded-xl border border-[#DCE3DE] bg-white p-8 text-center shadow-card">
+      <div className="mx-auto my-12 max-w-xl rounded-xl border border-sigemun-border bg-white p-8 text-center shadow-card">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-800">
           <ShieldAlert className="h-7 w-7" />
         </div>
-        <h2 className="mt-4 text-lg font-bold text-[#26352D]">
+        <h2 className="mt-4 text-lg font-bold text-sigemun-text">
           Acceso Restringido por Rol Institucional
         </h2>
-        <p className="mt-2 text-sm text-[#5A6B61]">
-          Su cuenta actual (<span className="font-semibold text-[#164B35]">{user.userName}</span>) posee
-          el rol <span className="font-semibold text-[#26352D]">{user.roles.join(', ')}</span>.
+        <p className="mt-2 text-sm text-sigemun-muted">
+          Su cuenta actual (<span className="font-semibold text-sigemun-primary">{user.userName}</span>) posee
+          el rol <span className="font-semibold text-sigemun-text">{user.roles.join(', ')}</span>.
         </p>
-        <p className="mt-2 text-xs text-[#5A6B61]">
+        <p className="mt-2 text-xs text-sigemun-muted">
           Este módulo requiere alguno de los siguientes roles autorizados en el backend:{' '}
-          <span className="font-medium text-[#26352D]">{allowedRoles.join(' o ')}</span>.
+          <span className="font-medium text-sigemun-text">{allowedRoles.join(' o ')}</span>.
         </p>
         <div className="mt-6 flex justify-center gap-3">
           <Button asChild variant="default">

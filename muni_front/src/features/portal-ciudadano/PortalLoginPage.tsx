@@ -87,7 +87,7 @@ export function PortalLoginPage() {
 
   const campoPassword = (registro: UseFormRegisterReturn, id: string, auto: string) => (
     <div className="relative">
-      <Lock className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#5A6B61]" />
+      <Lock className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-sigemun-muted" />
       <Input
         id={id}
         type={verPassword ? 'text' : 'password'}
@@ -99,7 +99,7 @@ export function PortalLoginPage() {
       <button
         type="button"
         onClick={() => setVerPassword((s) => !s)}
-        className="absolute right-3 top-2.5 text-[#5A6B61] hover:text-[#164B35]"
+        className="absolute right-3 top-2.5 text-sigemun-muted hover:text-sigemun-primary"
         aria-label={verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
       >
         {verPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -108,20 +108,20 @@ export function PortalLoginPage() {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#F5F7F4]">
-      <header className="bg-[#123F2D] text-white">
+    <div className="flex min-h-screen flex-col bg-sigemun-bg">
+      <header className="bg-sigemun-navy text-white">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4 sm:px-6">
           <img src="/images/logo2.png" alt="" className="h-10 w-10 rounded-xl object-contain ring-1 ring-white/25" />
           <div>
             <p className="text-base font-extrabold tracking-wide">Portal Ciudadano</p>
-            <p className="text-[11px] text-[#D4B872]">Municipalidad de Nicoya · Guanacaste</p>
+            <p className="text-[11px] text-sigemun-sky">Municipalidad de Nicoya · Guanacaste</p>
           </div>
         </div>
       </header>
 
-      <main className="flex flex-1 items-start justify-center px-4 py-10 sm:px-6">
-        <div className="w-full max-w-md rounded-2xl border border-[#DCE3DE] bg-white p-7 shadow-elevated">
-          <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-[#F4F7F5] p-1 text-sm font-semibold">
+      <main className="flex flex-1 items-center justify-center px-4 py-8 sm:px-6 sm:py-10">
+        <div className="w-full max-w-md rounded-2xl border border-sigemun-border bg-white p-7 shadow-elevated">
+          <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-sigemun-bg p-1 text-sm font-semibold">
             {(['login', 'activar'] as const).map((m) => (
               <button
                 key={m}
@@ -131,7 +131,7 @@ export function PortalLoginPage() {
                   setError(null);
                 }}
                 className={`rounded-lg px-3 py-2 transition-colors ${
-                  modo === m ? 'bg-white text-[#164B35] shadow-sm' : 'text-[#5A6B61] hover:text-[#164B35]'
+                  modo === m ? 'bg-white text-sigemun-primary shadow-sm' : 'text-sigemun-muted hover:text-sigemun-primary'
                 }`}
               >
                 {m === 'login' ? 'Iniciar sesión' : 'Activar mi cuenta'}
@@ -162,7 +162,7 @@ export function PortalLoginPage() {
                 error={loginForm.formState.errors.identificacion?.message}
               >
                 <div className="relative">
-                  <IdCard className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#5A6B61]" />
+                  <IdCard className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-sigemun-muted" />
                   <Input
                     id="p-ident"
                     autoComplete="username"
@@ -183,9 +183,9 @@ export function PortalLoginPage() {
               <Button type="submit" className="h-11 w-full" disabled={enviando}>
                 {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ingresar'}
               </Button>
-              <p className="text-center text-xs text-[#5A6B61]">
+              <p className="text-center text-xs text-sigemun-muted">
                 ¿Primera vez?{' '}
-                <button type="button" className="font-semibold text-[#164B35] hover:underline" onClick={() => setModo('activar')}>
+                <button type="button" className="font-semibold text-sigemun-primary hover:underline" onClick={() => setModo('activar')}>
                   Active su cuenta
                 </button>{' '}
                 con la cédula y el correo registrados en la Municipalidad.
@@ -193,7 +193,7 @@ export function PortalLoginPage() {
             </form>
           ) : (
             <form onSubmit={activarForm.handleSubmit(onActivar)} className="space-y-4" noValidate>
-              <p className="text-xs text-[#5A6B61]">
+              <p className="text-xs text-sigemun-muted">
                 Verificaremos que su cédula y correo coincidan con el padrón municipal. Si su correo
                 cambió, actualícelo primero en la plataforma de servicio al cliente.
               </p>
@@ -204,7 +204,7 @@ export function PortalLoginPage() {
                 error={activarForm.formState.errors.identificacion?.message}
               >
                 <div className="relative">
-                  <IdCard className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#5A6B61]" />
+                  <IdCard className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-sigemun-muted" />
                   <Input id="a-ident" className="pl-9" placeholder="Ej. 5-0321-0456" {...activarForm.register('identificacion')} />
                 </div>
               </FormField>
@@ -215,7 +215,7 @@ export function PortalLoginPage() {
                 error={activarForm.formState.errors.correoElectronico?.message}
               >
                 <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#5A6B61]" />
+                  <Mail className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-sigemun-muted" />
                   <Input id="a-mail" type="email" className="pl-9" {...activarForm.register('correoElectronico')} />
                 </div>
               </FormField>
@@ -247,9 +247,9 @@ export function PortalLoginPage() {
             </form>
           )}
 
-          <div className="mt-6 border-t border-[#DCE3DE] pt-4 text-center text-[11px] text-[#5A6B61]">
+          <div className="mt-6 border-t border-sigemun-border pt-4 text-center text-[11px] text-sigemun-muted">
             ¿Es funcionario municipal?{' '}
-            <Link to="/login" className="font-semibold text-[#164B35] hover:underline">
+            <Link to="/login" className="font-semibold text-sigemun-primary hover:underline">
               Acceso institucional
             </Link>
           </div>

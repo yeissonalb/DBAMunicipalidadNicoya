@@ -171,15 +171,15 @@ export function DashboardPage() {
       {/* KPI Summary Cards Dynamically Loaded from Authorized Endpoints */}
       <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${kpiGridColumns}`}>
         {canTramites && (
-          <Card className="border-l-4 border-l-[#164B35]">
+          <Card className="border-l-4 border-l-sigemun-primary">
             <CardHeader className="pb-2">
               <CardDescription>Expedientes municipales</CardDescription>
-              <CardTitle className="text-2xl font-extrabold text-[#164B35]">
+              <CardTitle className="text-2xl font-extrabold text-sigemun-primary">
                 {tramitesQuery.isLoading ? '...' : formatNumber(totalTramites)}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-[#5A6B61]">
+              <p className="text-xs text-sigemun-muted">
                 En gestión activa: <strong>{formatNumber(tramitesEnCurso)}</strong> expediente(s)
               </p>
             </CardContent>
@@ -187,15 +187,15 @@ export function DashboardPage() {
         )}
 
         {canInmuebles && (
-          <Card className="border-l-4 border-l-[#B6944A]">
+          <Card className="border-l-4 border-l-sigemun-medium">
             <CardHeader className="pb-2">
               <CardDescription>Fincas registradas</CardDescription>
-              <CardTitle className="text-2xl font-extrabold text-[#26352D]">
+              <CardTitle className="text-2xl font-extrabold text-sigemun-text">
                 {inmueblesQuery.isLoading ? '...' : formatNumber(totalInmueblesUnicos)}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-[#5A6B61]">
+              <p className="text-xs text-sigemun-muted">
                 Derechos catastrales: <strong>{formatNumber(inmueblesQuery.data?.length ?? 0)}</strong>
               </p>
             </CardContent>
@@ -211,7 +211,7 @@ export function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-[#5A6B61]">
+              <p className="text-xs text-sigemun-muted">
                 Saldo pendiente por cobrar:{' '}
                 <strong className="text-amber-700">{formatCurrencyCRC(totalPendienteDeuda)}</strong>
               </p>
@@ -230,7 +230,7 @@ export function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-[#5A6B61]">
+              <p className="text-xs text-sigemun-muted">
                 Distritos monitoreados:{' '}
                 <strong>{formatNumber(recaudacionDistritoQuery.data?.length ?? 0)}</strong>
               </p>
@@ -239,15 +239,15 @@ export function DashboardPage() {
         )}
 
         {canAdmin && (
-          <Card className="border-l-4 border-l-[#164B35]">
+          <Card className="border-l-4 border-l-sigemun-primary">
             <CardHeader className="pb-2">
               <CardDescription>Funcionarios del sistema</CardDescription>
-              <CardTitle className="text-2xl font-extrabold text-[#164B35]">
+              <CardTitle className="text-2xl font-extrabold text-sigemun-primary">
                 {usuariosQuery.isLoading ? '...' : formatNumber(usuariosQuery.data?.length ?? 0)}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-[#5A6B61]">
+              <p className="text-xs text-sigemun-muted">
                 Activos:{' '}
                 <strong>
                   {formatNumber(usuariosQuery.data?.filter((u) => u.activo).length ?? 0)}
@@ -258,17 +258,17 @@ export function DashboardPage() {
         )}
 
         {canDba && (
-          <Card className="border-l-4 border-l-[#B6944A]">
+          <Card className="border-l-4 border-l-sigemun-medium">
             <CardHeader className="pb-2">
               <CardDescription>Políticas de respaldo</CardDescription>
-              <CardTitle className="text-2xl font-extrabold text-[#26352D]">
+              <CardTitle className="text-2xl font-extrabold text-sigemun-text">
                 {respaldosEstadoQuery.isLoading
                   ? '...'
                   : formatNumber(respaldosEstadoQuery.data?.length ?? 0)}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-[#5A6B61]">
+              <p className="text-xs text-sigemun-muted">
                 Políticas activas:{' '}
                 <strong>
                   {formatNumber(
@@ -413,9 +413,9 @@ export function DashboardPage() {
       {/* Recent Audit Events if Authorized */}
       {canAuditoria && auditoriaRecienteQuery.data && auditoriaRecienteQuery.data.length > 0 && (
         <Card className="overflow-hidden">
-          <CardHeader className="flex flex-col gap-4 border-b border-[#DCE3DE] bg-gradient-to-r from-[#F2F7F4] to-white sm:flex-row sm:items-center sm:justify-between">
+          <CardHeader className="flex flex-col gap-4 border-b border-sigemun-border bg-gradient-to-r from-sigemun-bg to-white sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#164B35] text-[#E2C982] shadow-sm">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sigemun-primary text-sigemun-sky shadow-sm">
                 <ShieldCheck className="h-5 w-5" />
               </div>
               <div>
@@ -435,7 +435,7 @@ export function DashboardPage() {
             <div className="overflow-x-auto" role="region" aria-label="Actividad reciente de auditoría" tabIndex={0}>
               <table className="w-full min-w-[820px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#FAFCFB] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                  <tr className="border-b border-sigemun-border bg-sigemun-surface text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                     <th scope="col" className="px-6 py-3.5">Fecha y hora</th>
                     <th scope="col" className="px-4 py-3.5">Usuario</th>
                     <th scope="col" className="px-4 py-3.5">Acción</th>
@@ -444,34 +444,34 @@ export function DashboardPage() {
                     <th scope="col" className="px-6 py-3.5">Origen</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DCE3DE]">
+                <tbody className="divide-y divide-sigemun-border">
                   {auditoriaRecienteQuery.data.slice(0, 6).map((ev) => (
-                    <tr key={ev.idAuditoria} className="group transition-colors hover:bg-[#F2F7F4]">
-                      <td className="whitespace-nowrap px-6 py-4 font-medium text-[#26352D]">
+                    <tr key={ev.idAuditoria} className="group transition-colors hover:bg-sigemun-bg">
+                      <td className="whitespace-nowrap px-6 py-4 font-medium text-sigemun-text">
                         {ev.fechaHora ? formatDateTime(ev.fechaHora) : 'Fecha no disponible'}
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2.5">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E8F0EC] text-xs font-bold text-[#164B35]">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sigemun-sky-muted text-xs font-bold text-sigemun-primary">
                             {(ev.usuarioEjecutor || 'S').slice(0, 2).toUpperCase()}
                           </span>
-                          <span className="font-semibold text-[#164B35]">{ev.usuarioEjecutor || 'Sistema'}</span>
+                          <span className="font-semibold text-sigemun-primary">{ev.usuarioEjecutor || 'Sistema'}</span>
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <Badge variant={ev.operacionDml ? 'gold' : 'outline'}>
+                        <Badge variant={ev.operacionDml ? 'accent' : 'outline'}>
                           {ev.operacionDml || 'Sin clasificar'}
                         </Badge>
                       </td>
-                      <td className="px-4 py-4 font-medium text-[#26352D]">
+                      <td className="px-4 py-4 font-medium text-sigemun-text">
                         {(ev.tablaAfectada || 'Sin entidad').replace(/_/g, ' ')}
                       </td>
                       <td className="px-4 py-4">
-                        <span className="inline-flex rounded-lg bg-[#F2F5F3] px-2.5 py-1 font-mono text-xs font-semibold text-[#42534A]">
+                        <span className="inline-flex rounded-lg bg-sigemun-bg px-2.5 py-1 font-mono text-xs font-semibold text-sigemun-muted">
                           #{ev.idRegistroAfectado ?? '—'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-[#607168]">
+                      <td className="px-6 py-4 text-sigemun-muted">
                         <span className="inline-flex items-center gap-2 whitespace-nowrap">
                           <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
                           {ev.direccionIp === '<local machine>'
@@ -506,21 +506,21 @@ function QuickModuleCard({
   return (
     <Link
       to={to}
-      className="group flex flex-col justify-between rounded-xl border border-[#DCE3DE] bg-[#F5F7F4]/60 p-4 transition-all hover:border-[#164B35] hover:bg-white hover:shadow-md"
+      className="group flex flex-col justify-between rounded-xl border border-sigemun-border bg-sigemun-bg/60 p-4 transition-all hover:border-sigemun-primary hover:bg-white hover:shadow-md"
     >
       <div>
         <div className="flex items-center justify-between">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#164B35] text-[#B6944A]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sigemun-primary text-sigemun-medium">
             {icon}
           </div>
           <Badge variant="success">Disponible</Badge>
         </div>
-        <h3 className="mt-3 text-sm font-bold text-[#26352D] group-hover:text-[#164B35]">
+        <h3 className="mt-3 text-sm font-bold text-sigemun-text group-hover:text-sigemun-primary">
           {title}
         </h3>
-        <p className="mt-1 text-xs leading-relaxed text-[#5A6B61]">{description}</p>
+        <p className="mt-1 text-xs leading-relaxed text-sigemun-muted">{description}</p>
       </div>
-      <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-[#164B35]">
+      <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-sigemun-primary">
         <span>Abrir módulo</span>
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
       </div>

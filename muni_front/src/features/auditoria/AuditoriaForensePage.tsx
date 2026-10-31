@@ -189,8 +189,8 @@ export function AuditoriaForensePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Bitácora y Auditoría Forense del Sistema (Audit LOG & Security Center)"
-        subtitle="Trazabilidad de transacciones, direcciones IP y comparativa forense de valores anteriores vs nuevos (Wireframe #5, p. 115)"
+        title="Bitácora y Auditoría Forense"
+        subtitle="Supervise la actividad del sistema, identifique el origen de cada operación y compare los cambios registrados."
         badge="CU-AU-01 y CU-AU-02"
         icon={<ShieldCheck className="h-6 w-6" />}
         actions={
@@ -220,28 +220,34 @@ export function AuditoriaForensePage() {
               size="sm"
               onClick={() => setOpenTipoAccionModal(true)}
             >
-              <Plus className="h-4 w-4" /> Tipo Acción
+              <Plus className="h-4 w-4" /> Tipo de acción
             </Button>
             <Button size="sm" onClick={() => setOpenEventoModal(true)}>
-              <Plus className="h-4 w-4" /> Registrar Auditoría
+              <Plus className="h-4 w-4" /> Registrar evento
             </Button>
           </>
         }
       />
 
       {/* Panel de Filtros Avanzados (Wireframe 5, p. 115) */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Filter className="h-4 w-4 text-[#164B35]" /> Filtros de Auditoría Forense (
-            <code className="font-mono">GET /api/auditoria/filtrar</code> y{' '}
-            <code className="font-mono">/registro</code>)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-sigemun-border bg-gradient-to-r from-sigemun-bg to-white pb-5">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sigemun-sky-muted text-sigemun-primary">
+              <Filter className="h-5 w-5" />
+            </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[#26352D]">
+              <CardTitle className="text-base">Consulta avanzada de eventos</CardTitle>
+              <CardDescription className="mt-1 leading-relaxed">
+                Combine fechas, usuario, entidad, acción o dirección IP para localizar movimientos específicos.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5 pt-5 sm:pt-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-sigemun-text">
                 Fecha Inicio
               </label>
               <Input
@@ -251,7 +257,7 @@ export function AuditoriaForensePage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[#26352D]">Fecha Fin</label>
+              <label className="mb-1 block text-xs font-semibold text-sigemun-text">Fecha Fin</label>
               <Input
                 type="date"
                 value={fechaFin}
@@ -259,7 +265,7 @@ export function AuditoriaForensePage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[#26352D]">
+              <label className="mb-1 block text-xs font-semibold text-sigemun-text">
                 Tabla Afectada
               </label>
               <Input
@@ -269,7 +275,7 @@ export function AuditoriaForensePage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[#26352D]">
+              <label className="mb-1 block text-xs font-semibold text-sigemun-text">
                 ID Usuario
               </label>
               <Input
@@ -281,7 +287,7 @@ export function AuditoriaForensePage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[#26352D]">
+              <label className="mb-1 block text-xs font-semibold text-sigemun-text">
                 Tipo de Acción
               </label>
               <Select
@@ -296,7 +302,7 @@ export function AuditoriaForensePage() {
               </Select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[#26352D]">
+              <label className="mb-1 block text-xs font-semibold text-sigemun-text">
                 Dirección IP
               </label>
               <Input
@@ -307,23 +313,23 @@ export function AuditoriaForensePage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#DCE3DE] pt-3">
+          <div className="flex flex-col gap-4 rounded-xl border border-sigemun-border bg-sigemun-surface p-4 lg:flex-row lg:items-end lg:justify-between">
             {/* Historial puntual de un registro */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold text-[#164B35]">
-                Historial puntual de registro:
+              <span className="w-full text-xs font-semibold text-sigemun-primary lg:w-auto">
+                Consultar historial de un registro
               </span>
               <Input
                 placeholder="Tabla (ej. Factura)"
                 value={registroTabla}
                 onChange={(e) => setRegistroTabla(e.target.value)}
-                className="h-8 w-36 text-xs"
+                className="h-10 w-full text-xs sm:w-44"
               />
               <Input
                 placeholder="ID Registro (ej. 1)"
                 value={registroId}
                 onChange={(e) => setRegistroId(e.target.value)}
-                className="h-8 w-32 text-xs"
+                className="h-10 w-full text-xs sm:w-40"
               />
               <Button
                 variant="secondary"
@@ -334,11 +340,11 @@ export function AuditoriaForensePage() {
                   setUseServerFilter(false);
                 }}
               >
-                <Search className="h-3.5 w-3.5" /> Consultar Registro
+                <Search className="h-3.5 w-3.5" /> Consultar registro
               </Button>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Button
                 variant="outline"
                 size="sm"
@@ -353,7 +359,7 @@ export function AuditoriaForensePage() {
                   setConsultarRegistroActivo(false);
                 }}
               >
-                Restablecer Vista Detallada
+                Restablecer
               </Button>
               <Button
                 size="sm"
@@ -362,7 +368,7 @@ export function AuditoriaForensePage() {
                   setUseServerFilter(true);
                 }}
               >
-                <Filter className="h-3.5 w-3.5" /> Filtrar Auditoría (SP)
+                <Filter className="h-3.5 w-3.5" /> Aplicar filtros
               </Button>
             </div>
           </div>
@@ -377,124 +383,143 @@ export function AuditoriaForensePage() {
       ) : filteredRows.length === 0 ? (
         <EmptyState title="No se encontraron eventos de auditoría con los filtros aplicados" />
       ) : (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-          {/* Tabla de Eventos (7 cols) */}
-          <div className="xl:col-span-7">
-            <div className="overflow-x-auto rounded-xl border border-[#DCE3DE] bg-white shadow-card max-h-[600px]">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="sticky top-0 border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
-                    <th className="px-3.5 py-3">ID</th>
-                    <th className="px-3.5 py-3">Fecha y Hora</th>
-                    <th className="px-3.5 py-3">Usuario / IP</th>
-                    <th className="px-3.5 py-3">Acción</th>
-                    <th className="px-3.5 py-3">Tabla / Registro</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#DCE3DE]">
-                  {filteredRows.map((r) => {
-                    const isSelected = selectedEvent?.idAuditoria === r.idAuditoria;
-                    return (
-                      <tr
-                        key={r.idAuditoria}
-                        onClick={() => setSelectedAuditId(r.idAuditoria)}
-                        className={`cursor-pointer transition-colors ${
-                          isSelected ? 'bg-[#E8F0EC]' : 'hover:bg-[#F5F7F4]'
-                        }`}
-                      >
-                        <td className="px-3.5 py-2.5 font-mono font-bold text-[#164B35]">
-                          #{r.idAuditoria}
-                        </td>
-                        <td className="px-3.5 py-2.5 whitespace-nowrap">
-                          {formatDateTime(r.fechaEvento)}
-                        </td>
-                        <td className="px-3.5 py-2.5">
-                          <p className="font-semibold text-[#26352D]">{r.userName}</p>
-                          <p className="font-mono text-[10px] text-[#5A6B61]">{r.direccionIp}</p>
-                        </td>
-                        <td className="px-3.5 py-2.5">
-                          <Badge
-                            variant={
-                              r.tipoAccion.includes('DELETE')
-                                ? 'danger'
-                                : r.tipoAccion.includes('INSERT')
-                                ? 'success'
-                                : 'gold'
-                            }
-                          >
-                            {r.tipoAccion}
-                          </Badge>
-                        </td>
-                        <td className="px-3.5 py-2.5">
-                          <p className="font-mono font-bold text-[#26352D]">{r.tablaAfectada}</p>
-                          <p className="font-mono text-[11px] text-[#5A6B61]">
-                            Reg. #{r.idRegistroAfectado}
-                          </p>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        <div className="space-y-6">
+          <Card className="overflow-hidden">
+            <CardHeader className="flex flex-col gap-3 border-b border-sigemun-border bg-gradient-to-r from-sigemun-bg to-white sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle>Eventos registrados</CardTitle>
+                <CardDescription className="mt-1">
+                  Seleccione una fila para inspeccionar la evidencia y comparar sus valores.
+                </CardDescription>
+              </div>
+              <Badge variant="success">{filteredRows.length} evento(s)</Badge>
+            </CardHeader>
+            <CardContent className="p-0 sm:p-0">
+              <div
+                className="max-h-[34rem] overflow-auto"
+                role="region"
+                aria-label="Eventos de auditoría"
+                tabIndex={0}
+              >
+                <table className="w-full min-w-[1120px] text-left text-sm">
+                  <thead className="sticky top-0 z-10">
+                    <tr className="border-b border-sigemun-border bg-sigemun-surface text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
+                      <th scope="col" className="px-6 py-3.5">Evento</th>
+                      <th scope="col" className="px-4 py-3.5">Fecha y hora</th>
+                      <th scope="col" className="px-4 py-3.5">Usuario</th>
+                      <th scope="col" className="px-4 py-3.5">Departamento</th>
+                      <th scope="col" className="px-4 py-3.5">Acción</th>
+                      <th scope="col" className="px-4 py-3.5">Entidad</th>
+                      <th scope="col" className="px-4 py-3.5">Registro</th>
+                      <th scope="col" className="px-6 py-3.5">Dirección IP</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sigemun-border">
+                    {filteredRows.map((r) => {
+                      const isSelected = selectedEvent?.idAuditoria === r.idAuditoria;
+                      return (
+                        <tr
+                          key={r.idAuditoria}
+                          onClick={() => setSelectedAuditId(r.idAuditoria)}
+                          className={`cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'bg-sigemun-sky-muted shadow-[inset_4px_0_0_var(--sigemun-primary)]'
+                              : 'hover:bg-sigemun-bg'
+                          }`}
+                        >
+                          <td className="whitespace-nowrap px-6 py-4 font-mono font-bold text-sigemun-primary">
+                            #{r.idAuditoria}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-4 text-sigemun-muted">
+                            {formatDateTime(r.fechaEvento)}
+                          </td>
+                          <td className="px-4 py-4 font-semibold text-sigemun-text">{r.userName}</td>
+                          <td className="px-4 py-4 text-sigemun-muted">
+                            {r.nombreDepartamento || 'No especificado'}
+                          </td>
+                          <td className="px-4 py-4">
+                            <Badge
+                              variant={
+                                r.tipoAccion.includes('DELETE')
+                                  ? 'danger'
+                                  : r.tipoAccion.includes('INSERT')
+                                    ? 'success'
+                                    : 'accent'
+                              }
+                            >
+                              {r.tipoAccion || 'Sin clasificar'}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-4 font-mono font-semibold text-sigemun-text">
+                            {r.tablaAfectada || '—'}
+                          </td>
+                          <td className="px-4 py-4 font-mono text-sigemun-muted">
+                            #{r.idRegistroAfectado || '—'}
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4 font-mono text-xs text-sigemun-muted">
+                            {r.direccionIp || 'No disponible'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Panel Derecho (5 cols): Detalle — Comparativa de Cambios (Wireframe 5) */}
-          <div className="xl:col-span-5">
-            {selectedEvent && (
-              <Card className="border-t-4 border-t-[#164B35] sticky top-20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <ArrowLeftRight className="h-4 w-4 text-[#164B35]" /> Detalle — Comparativa de
-                    Cambios (#{selectedEvent.idAuditoria})
-                  </CardTitle>
-                  <CardDescription>
-                    Tabla: <strong>{selectedEvent.tablaAfectada}</strong> · Registro:{' '}
-                    <strong>#{selectedEvent.idRegistroAfectado}</strong> · IP:{' '}
-                    <code className="font-mono">{selectedEvent.direccionIp}</code>
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="rounded-lg bg-[#F5F7F4] p-3 text-xs space-y-1">
-                    <p>
-                      <strong>Funcionario:</strong>{' '}
-                      {selectedEvent.nombreFuncionario || selectedEvent.userName} (
-                      {selectedEvent.userName})
-                    </p>
-                    {selectedEvent.nombreDepartamento && (
-                      <p>
-                        <strong>Departamento:</strong> {selectedEvent.nombreDepartamento}
-                      </p>
-                    )}
-                    <p>
-                      <strong>Fecha exacta:</strong> {formatDateTime(selectedEvent.fechaEvento)}
-                    </p>
+          {selectedEvent && (
+            <Card className="overflow-hidden border-t-4 border-t-sigemun-primary">
+              <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ArrowLeftRight className="h-5 w-5 text-sigemun-primary" /> Comparativa del evento #{selectedEvent.idAuditoria}
+                </CardTitle>
+                <CardDescription>
+                  Evidencia registrada antes y después de la operación seleccionada.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5 pt-5 sm:pt-6">
+                <div className="grid grid-cols-1 overflow-hidden rounded-xl border border-sigemun-border bg-sigemun-bg sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="border-b border-sigemun-border p-4 sm:border-r xl:border-b-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-sigemun-muted">Funcionario</p>
+                    <p className="mt-1 text-sm font-semibold text-sigemun-text">{selectedEvent.nombreFuncionario || selectedEvent.userName}</p>
+                  </div>
+                  <div className="border-b border-sigemun-border p-4 xl:border-b-0 xl:border-r">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-sigemun-muted">Fecha exacta</p>
+                    <p className="mt-1 text-sm font-semibold text-sigemun-text">{formatDateTime(selectedEvent.fechaEvento)}</p>
+                  </div>
+                  <div className="border-b border-sigemun-border p-4 sm:border-b-0 sm:border-r">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-sigemun-muted">Entidad y registro</p>
+                    <p className="mt-1 font-mono text-sm font-semibold text-sigemun-text">{selectedEvent.tablaAfectada} · #{selectedEvent.idRegistroAfectado}</p>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-sigemun-muted">Origen</p>
+                    <p className="mt-1 font-mono text-sm font-semibold text-sigemun-text">{selectedEvent.direccionIp || 'No disponible'}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <div className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50/50">
+                    <div className="border-b border-amber-200 bg-amber-100/60 px-4 py-3">
+                      <p className="text-xs font-extrabold uppercase tracking-wider text-amber-900">Valores anteriores</p>
+                    </div>
+                    <pre className="max-h-72 min-h-36 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed text-amber-950">
+                      {formatDiffContent(selectedEvent.valoresAnteriores)}
+                    </pre>
                   </div>
 
-                  {/* Comparativa Lado a Lado: Valores Anteriores vs Valores Nuevos */}
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
-                      <p className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wider text-amber-900">
-                        Valores Anteriores (Before)
-                      </p>
-                      <pre className="whitespace-pre-wrap break-words font-mono text-[11px] text-amber-950 max-h-60 overflow-y-auto">
-                        {formatDiffContent(selectedEvent.valoresAnteriores)}
-                      </pre>
+                  <div className="overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/50">
+                    <div className="border-b border-emerald-200 bg-emerald-100/60 px-4 py-3">
+                      <p className="text-xs font-extrabold uppercase tracking-wider text-emerald-900">Valores nuevos</p>
                     </div>
-
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
-                      <p className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wider text-emerald-900">
-                        Valores Nuevos (After)
-                      </p>
-                      <pre className="whitespace-pre-wrap break-words font-mono text-[11px] text-emerald-950 max-h-60 overflow-y-auto">
-                        {formatDiffContent(selectedEvent.valoresNuevos)}
-                      </pre>
-                    </div>
+                    <pre className="max-h-72 min-h-36 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed text-emerald-950">
+                      {formatDiffContent(selectedEvent.valoresNuevos)}
+                    </pre>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 

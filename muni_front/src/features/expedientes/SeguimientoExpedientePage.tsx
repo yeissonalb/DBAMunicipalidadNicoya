@@ -153,20 +153,20 @@ export function SeguimientoExpedientePage() {
 
       {/* Barra de Búsqueda */}
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+        <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Search className="h-4 w-4 text-[#164B35]" /> Buscar expedientes
+            <Search className="h-4 w-4 text-sigemun-primary" /> Buscar expedientes
           </CardTitle>
           <CardDescription>Filtre la bandeja por expediente, tipo de trámite o contribuyente.</CardDescription>
         </CardHeader>
         <CardContent className="pt-6 sm:pt-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="sm:col-span-2">
-              <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+              <label className="mb-2 block text-sm font-semibold text-sigemun-text">
                 Expediente, trámite o contribuyente
               </label>
               <div className="relative">
-                <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-[#607168]" />
+                <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-sigemun-muted" />
                 <Input
                   placeholder="Ej. EXP-NIC-2026-0001 o Visado..."
                   value={busquedaExpediente}
@@ -176,7 +176,7 @@ export function SeguimientoExpedientePage() {
               </div>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+              <label className="mb-2 block text-sm font-semibold text-sigemun-text">
                 ID del contribuyente
               </label>
               <Input
@@ -197,7 +197,7 @@ export function SeguimientoExpedientePage() {
         <ErrorState error={seguimientoQuery.error} onRetry={() => seguimientoQuery.refetch()} />
       ) : showBitacoraGlobal ? (
         <Card className="overflow-hidden">
-          <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+          <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
             <CardTitle>Bitácora global de cambios</CardTitle>
             <CardDescription>Movimientos y transiciones registrados para todos los expedientes.</CardDescription>
           </CardHeader>
@@ -205,7 +205,7 @@ export function SeguimientoExpedientePage() {
             <div className="overflow-x-auto" role="region" aria-label="Bitácora global" tabIndex={0}>
               <table className="w-full min-w-[980px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                  <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                     <th className="px-3 py-2.5">Fecha Cambio</th>
                     <th className="px-3 py-2.5">Expediente</th>
                     <th className="px-3 py-2.5">Trámite</th>
@@ -214,23 +214,23 @@ export function SeguimientoExpedientePage() {
                     <th className="px-3 py-2.5">Observaciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DCE3DE]">
+                <tbody className="divide-y divide-sigemun-border">
                   {(bitacoraDetalladaQuery.data ?? []).map((row) => (
-                    <tr key={row.idHistorial} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
+                    <tr key={row.idHistorial} className="even:bg-sigemun-surface transition-colors hover:bg-sigemun-sky-muted/55">
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         {formatDateTime(row.fechaCambio)}
                       </td>
-                      <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">
+                      <td className="px-3 py-2.5 font-mono font-bold text-sigemun-primary">
                         {row.numeroExpediente}
                       </td>
                       <td className="px-3 py-2.5">{row.nombreTramite}</td>
                       <td className="px-3 py-2.5">{solicitantePorTramite.get(row.idTramite) || '—'}</td>
                       <td className="px-3 py-2.5">
-                        <Badge variant={esCodigoFinal(row.codigoEstado) ? 'success' : 'gold'}>
+                        <Badge variant={esCodigoFinal(row.codigoEstado) ? 'success' : 'accent'}>
                           {row.codigoEstado} — {row.nombreEstado}
                         </Badge>
                       </td>
-                      <td className="px-3 py-2.5 text-[#5A6B61]">{row.observaciones}</td>
+                      <td className="px-3 py-2.5 text-sigemun-muted">{row.observaciones}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -243,10 +243,10 @@ export function SeguimientoExpedientePage() {
       ) : (
         <>
           {/* Tabla de Expedientes para seleccionar */}
-          <div className="overflow-x-auto rounded-2xl border border-[#DCE3DE] bg-white shadow-card" role="region" aria-label="Bandeja de expedientes" tabIndex={0}>
+          <div className="overflow-x-auto rounded-2xl border border-sigemun-border bg-white shadow-card" role="region" aria-label="Bandeja de expedientes" tabIndex={0}>
             <table className="w-full min-w-[1100px] text-left text-sm">
               <thead>
-                <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                   <th className="px-4 py-3">Expediente</th>
                   <th className="px-4 py-3">Tipo de Trámite</th>
                   <th className="px-4 py-3">Contribuyente</th>
@@ -256,7 +256,7 @@ export function SeguimientoExpedientePage() {
                   <th className="px-4 py-3">Estado Actual</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#DCE3DE]">
+              <tbody className="divide-y divide-sigemun-border">
                 {listaFiltrada.map((t) => {
                   const isSelected = activeTramite?.idTramite === t.idTramite;
                   return (
@@ -264,10 +264,10 @@ export function SeguimientoExpedientePage() {
                       key={t.idTramite}
                       onClick={() => setSelectedIdTramite(t.idTramite)}
                       className={`cursor-pointer transition-colors ${
-                        isSelected ? 'bg-[#E8F0EC] shadow-[inset_4px_0_0_#164B35]' : 'even:bg-[#FAFCFB] hover:bg-[#F5F7F4]'
+                        isSelected ? 'bg-sigemun-sky-muted shadow-[inset_4px_0_0_var(--sigemun-primary)]' : 'even:bg-sigemun-surface hover:bg-sigemun-bg'
                       }`}
                     >
-                      <td className="px-4 py-3 font-mono font-bold text-[#164B35]">
+                      <td className="px-4 py-3 font-mono font-bold text-sigemun-primary">
                         {t.numeroExpediente}
                       </td>
                       <td className="px-4 py-3 font-semibold">{t.nombreTramite}</td>
@@ -286,7 +286,7 @@ export function SeguimientoExpedientePage() {
                               ? 'success'
                               : codigoEstadoPorNombre(t.estadoActual, estadosQuery.data) === 'RECH'
                               ? 'danger'
-                              : 'gold'
+                              : 'accent'
                           }
                         >
                           {t.estadoActual}
@@ -304,7 +304,7 @@ export function SeguimientoExpedientePage() {
             <div className="flex flex-col" style={{ gap: '2rem' }}>
               {/* Stepper Horizontal del Wireframe 10 */}
               <Card className="overflow-hidden">
-                <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+                <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
                   <CardTitle className="text-base">
                     Ruta del expediente · {activeTramite.numeroExpediente}
                   </CardTitle>
@@ -321,12 +321,12 @@ export function SeguimientoExpedientePage() {
                           key={step.code}
                           className={`rounded-xl border p-3 text-center text-xs ${
                             isCurrent
-                              ? 'border-[#164B35] bg-[#164B35] text-white font-bold shadow-xs'
-                              : 'border-[#DCE3DE] bg-[#F5F7F4] text-[#5A6B61]'
+                              ? 'border-sigemun-primary bg-sigemun-primary text-white font-bold shadow-xs'
+                              : 'border-sigemun-border bg-sigemun-bg text-sigemun-muted'
                           }`}
                         >
                           {isCurrent ? (
-                            <CheckCircle2 className="mx-auto h-4 w-4 text-[#B6944A]" />
+                            <CheckCircle2 className="mx-auto h-4 w-4 text-sigemun-medium" />
                           ) : (
                             <Clock className="mx-auto h-4 w-4" />
                           )}
@@ -342,30 +342,30 @@ export function SeguimientoExpedientePage() {
               <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: '2rem' }}>
                 {/* Columna 1 (5 cols): Historial de Cambio (Línea de Tiempo) */}
                 <Card className="h-full overflow-hidden">
-                  <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+                  <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
                     <CardTitle className="text-base">Historial de cambios</CardTitle>
                     <CardDescription>Movimientos registrados para este expediente.</CardDescription>
                   </CardHeader>
                   <CardContent className="pt-6 sm:pt-6">
                     {!historialIndividualQuery.data ||
                     historialIndividualQuery.data.length === 0 ? (
-                      <p className="text-xs text-[#5A6B61]">
+                      <p className="text-xs text-sigemun-muted">
                         Sin movimientos registrados para este expediente.
                       </p>
                     ) : (
-                      <div className="relative border-l-2 border-[#164B35]/30 pl-4 space-y-4">
+                      <div className="relative border-l-2 border-sigemun-primary/30 pl-4 space-y-4">
                         {historialIndividualQuery.data.map((h) => (
                           <div key={h.idHistorial} className="relative text-xs">
-                            <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-[#164B35]" />
+                            <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-sigemun-primary" />
                             <div className="flex items-center justify-between">
-                              <span className="font-bold text-[#164B35]">
+                              <span className="font-bold text-sigemun-primary">
                                 {h.codigoEstado} — {h.nombreEstado}
                               </span>
-                              <span className="text-[11px] text-[#5A6B61]">
+                              <span className="text-[11px] text-sigemun-muted">
                                 {formatDate(h.fechaCambio)}
                               </span>
                             </div>
-                            <p className="mt-1 text-[#26352D]">{h.observaciones}</p>
+                            <p className="mt-1 text-sigemun-text">{h.observaciones}</p>
                           </div>
                         ))}
                       </div>
@@ -375,14 +375,14 @@ export function SeguimientoExpedientePage() {
 
                 {/* Columna 2 (3 cols): Archivos Adjuntos */}
                 <Card className="h-full overflow-hidden">
-                  <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+                  <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
                     <CardTitle className="text-base">Archivos adjuntos</CardTitle>
                     <CardDescription>Documentos del expediente</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3 pt-6 sm:pt-6">
-                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#DCE3DE] bg-[#F5F7F4] p-4 text-center hover:border-[#164B35]">
-                      <Upload className="h-5 w-5 text-[#164B35]" />
-                      <span className="mt-1.5 text-xs font-semibold text-[#164B35]">
+                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-sigemun-border bg-sigemun-bg p-4 text-center hover:border-sigemun-primary">
+                      <Upload className="h-5 w-5 text-sigemun-primary" />
+                      <span className="mt-1.5 text-xs font-semibold text-sigemun-primary">
                         Adjuntar Documento
                       </span>
                       <input
@@ -398,18 +398,18 @@ export function SeguimientoExpedientePage() {
                     </label>
 
                     {archivosQuery.isLoading ? (
-                      <p className="text-[11px] text-[#5A6B61]">Consultando documentos...</p>
+                      <p className="text-[11px] text-sigemun-muted">Consultando documentos...</p>
                     ) : (archivosQuery.data ?? []).length === 0 ? (
-                      <p className="text-[11px] text-[#5A6B61]">Este expediente aún no tiene documentos.</p>
+                      <p className="text-[11px] text-sigemun-muted">Este expediente aún no tiene documentos.</p>
                     ) : (
                       (archivosQuery.data ?? []).map((a) => (
                         <div
                           key={a.idArchivoAdjunto}
-                          className="flex items-center justify-between rounded-lg border border-[#DCE3DE] p-2.5 text-xs"
+                          className="flex items-center justify-between rounded-lg border border-sigemun-border p-2.5 text-xs"
                         >
                           <div className="min-w-0 pr-2">
                             <p className="truncate font-semibold">{a.nombreOriginal}</p>
-                            <p className="text-[10px] text-[#5A6B61]">
+                            <p className="text-[10px] text-sigemun-muted">
                               {a.nombreRequisito ?? 'Adjunto general'} · {formatBytes(a.pesoBytes)} ·{' '}
                               {formatDate(a.fechaSubida)}
                             </p>
@@ -418,7 +418,7 @@ export function SeguimientoExpedientePage() {
                             href={`${BACKEND_ORIGIN}/${a.rutaAlmacenamiento}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[#164B35] hover:underline"
+                            className="text-sigemun-primary hover:underline"
                             title="Abrir documento"
                           >
                             <ExternalLink className="h-4 w-4" />
@@ -427,15 +427,15 @@ export function SeguimientoExpedientePage() {
                       ))
                     )}
 
-                    <p className="text-[11px] text-[#5A6B61]">
+                    <p className="text-[11px] text-sigemun-muted">
                       <FileText className="mr-1 inline h-3 w-3" /> Los documentos se vinculan de forma segura al expediente.
                     </p>
                   </CardContent>
                 </Card>
 
                 {/* Columna 3 (4 cols): Actualizar Estado del Trámite */}
-                <Card className="h-full overflow-hidden border-[#D7C28E]">
-                  <CardHeader className="border-b border-[#E9DFC4] bg-[#FBF7EE]">
+                <Card className="h-full overflow-hidden border-sigemun-sky">
+                  <CardHeader className="border-b border-sigemun-border bg-sigemun-bg">
                     <CardTitle className="text-base">Actualizar estado</CardTitle>
                     <CardDescription>Registre el avance y las observaciones de la gestión.</CardDescription>
                   </CardHeader>
