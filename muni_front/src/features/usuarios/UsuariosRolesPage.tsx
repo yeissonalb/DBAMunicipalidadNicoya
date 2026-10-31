@@ -15,6 +15,7 @@ import {
   Users,
 } from 'lucide-react';
 import { catalogosGeneralesApi, rolPermisoApi, usuarioApi } from '@/services/api';
+import { normalizeRoleName, ROLES } from '@/features/auth/permissions';
 import type { SpUsuarioResultDto } from '@/types/api';
 import { PageHeader } from '@/components/common/PageHeader';
 import { ErrorState, LoadingState } from '@/components/common/StateFeedback';
@@ -105,14 +106,33 @@ export function UsuariosRolesPage() {
     resolver: zodResolver(editarUsuarioSchema),
   });
 
+  const watchedRolInicial = createForm.watch('idRolInicial');
+  const rolInicialObj = (rolesQuery.data ?? []).find((r) => r.idRol === Number(watchedRolInicial));
+  const isRolCiudadano = rolInicialObj
+    ? normalizeRoleName(rolInicialObj.nombreRol) === ROLES.CIUDADANO
+    : false;
+
   // Crear usuario + asignar rol inicial automáticamente en SQL Server
   const crearUsuarioMut = useMutation({
     mutationFn: async (dto: CrearUsuarioForm) => {
+      // Si el rol es Ciudadano Contribuyente, no pertenece a departamentos internos
+      // Se vincula internamente al catálogo de Plataforma de Servicios al Contribuyente (PLA)
+      // para cumplir con la llave foránea FK_Usuario_Departamento de SQL Server sin alterar la BD.
+      const deptoPlataforma = (departamentosQuery.data ?? []).find(
+        (d) =>
+          d.codigoDepartamento === 'PLA' ||
+          d.nombreDepartamento.toLowerCase().includes('contribuyente')
+      );
+      const effectiveIdDepto =
+        isRolCiudadano && deptoPlataforma
+          ? deptoPlataforma.idDepartamento
+          : dto.idDepartamento;
+
       const res = await usuarioApi.registrar({
         userName: dto.userName,
         passwordTextoPlano: dto.passwordTextoPlano,
         nombreFuncionario: dto.nombreFuncionario,
-        idDepartamento: dto.idDepartamento,
+        idDepartamento: effectiveIdDepto,
       });
       const nuevoIdUsuario = res.data;
       if (nuevoIdUsuario && dto.idRolInicial > 0) {
@@ -264,7 +284,11 @@ export function UsuariosRolesPage() {
                           {u.nombreFuncionario}
                         </td>
                         <td className="px-4 py-3.5">
-                          <Badge variant="neutral">{u.nombreDepartamento}</Badge>
+                          {userRoles.some((r) => normalizeRoleName(r) === ROLES.CIUDADANO) ? (
+                            <Badge variant="blue">Externo · Sin Departamento</Badge>
+                          ) : (
+                            <Badge variant="neutral">{u.nombreDepartamento}</Badge>
+                          )}
                         </td>
                         <td className="px-4 py-3.5">
                           {userRoles.length > 0 ? (
@@ -399,20 +423,6 @@ export function UsuariosRolesPage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
-              label="Departamento Municipal"
-              required
-              error={createForm.formState.errors.idDepartamento?.message}
-            >
-              <Select {...createForm.register('idDepartamento')}>
-                {(departamentosQuery.data ?? []).map((d) => (
-                  <option key={d.idDepartamento} value={d.idDepartamento}>
-                    {d.codigoDepartamento} — {d.nombreDepartamento}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-
-            <FormField
               label="Rol Institucional a Asignar"
               required
               error={createForm.formState.errors.idRolInicial?.message}
@@ -425,7 +435,36 @@ export function UsuariosRolesPage() {
                 ))}
               </Select>
             </FormField>
+
+            <FormField
+              label="Departamento Municipal"
+              required={!isRolCiudadano}
+              error={createForm.formState.errors.idDepartamento?.message}
+            >
+              {isRolCiudadano ? (
+                <div className="flex h-[42px] items-center rounded-[10px] border border-[#BFDBFE] bg-[#EFF6FF] px-3.5 text-xs font-semibold text-[#1E3A8A]">
+                  Externo · Sin Departamento Municipal
+                </div>
+              ) : (
+                <Select {...createForm.register('idDepartamento')}>
+                  {(departamentosQuery.data ?? []).map((d) => (
+                    <option key={d.idDepartamento} value={d.idDepartamento}>
+                      {d.codigoDepartamento} — {d.nombreDepartamento}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </FormField>
           </div>
+
+          {isRolCiudadano && (
+            <div className="rounded-[10px] border border-[#BFDBFE] bg-[#EFF6FF] p-3 text-xs text-[#1E3A8A]">
+              <p className="font-bold">Perfil de Usuario Contribuyente / Ciudadano (Externo):</p>
+              <p className="mt-0.5 text-[#1E3A8A]/90">
+                Los contribuyentes son usuarios externos a la nómina institucional. No se les asigna ningún departamento municipal interno y su navegación está blindada con acceso exclusivo al <strong>Portal Ciudadano en Línea</strong>.
+              </p>
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="secondary" onClick={() => setOpenCreateModal(false)}>
@@ -442,36 +481,52 @@ export function UsuariosRolesPage() {
       <Modal
         open={Boolean(editingUser)}
         onClose={() => setEditingUser(null)}
-        title={`Editar Funcionario — @${editingUser?.userName ?? ''}`}
+        title={
+          editingUser && (rolesPorUsuarioMap.get(editingUser.idUsuario) ?? []).some(
+            (r) => normalizeRoleName(r) === ROLES.CIUDADANO
+          )
+            ? `Editar Contribuyente — @${editingUser?.userName ?? ''}`
+            : `Editar Funcionario — @${editingUser?.userName ?? ''}`
+        }
       >
-        {editingUser && (
-          <form
-            onSubmit={editForm.handleSubmit((dto) =>
-              actualizarUsuarioMut.mutate({ id: editingUser.idUsuario, dto })
-            )}
-            className="space-y-4"
-          >
-            <FormField
-              label="Nombre y Apellidos"
-              required
-              error={editForm.formState.errors.nombreFuncionario?.message}
+        {editingUser && (() => {
+          const isCitizen = (rolesPorUsuarioMap.get(editingUser.idUsuario) ?? []).some(
+            (r) => normalizeRoleName(r) === ROLES.CIUDADANO
+          );
+          return (
+            <form
+              onSubmit={editForm.handleSubmit((dto) =>
+                actualizarUsuarioMut.mutate({ id: editingUser.idUsuario, dto })
+              )}
+              className="space-y-4"
             >
-              <Input {...editForm.register('nombreFuncionario')} />
-            </FormField>
+              <FormField
+                label="Nombre y Apellidos"
+                required
+                error={editForm.formState.errors.nombreFuncionario?.message}
+              >
+                <Input {...editForm.register('nombreFuncionario')} />
+              </FormField>
 
-            <FormField
-              label="Departamento"
-              required
-              error={editForm.formState.errors.idDepartamento?.message}
-            >
-              <Select {...editForm.register('idDepartamento')}>
-                {(departamentosQuery.data ?? []).map((d) => (
-                  <option key={d.idDepartamento} value={d.idDepartamento}>
-                    {d.codigoDepartamento} — {d.nombreDepartamento}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
+              <FormField
+                label="Departamento Municipal"
+                required={!isCitizen}
+                error={editForm.formState.errors.idDepartamento?.message}
+              >
+                {isCitizen ? (
+                  <div className="flex h-[42px] items-center rounded-[10px] border border-[#BFDBFE] bg-[#EFF6FF] px-3.5 text-xs font-semibold text-[#1E3A8A]">
+                    Externo · Sin Departamento Municipal (Contribuyente)
+                  </div>
+                ) : (
+                  <Select {...editForm.register('idDepartamento')}>
+                    {(departamentosQuery.data ?? []).map((d) => (
+                      <option key={d.idDepartamento} value={d.idDepartamento}>
+                        {d.codigoDepartamento} — {d.nombreDepartamento}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </FormField>
 
             <label className="flex items-center gap-2 text-sm font-medium text-[#171717]">
               <input
@@ -491,7 +546,7 @@ export function UsuariosRolesPage() {
               </Button>
             </div>
           </form>
-        )}
+        ); })()}
       </Modal>
 
       {/* MODAL: SELECCIONAR ROL PARA ASIGNAR */}
