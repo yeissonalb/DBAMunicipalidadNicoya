@@ -33,7 +33,7 @@ export function PortalCiudadanoPage() {
         ].map(([icon, titulo, desc]) => (
           <Card key={titulo as string}>
             <CardHeader className="flex flex-row items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E8F0EC] text-[#164B35]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sigemun-sky-muted text-sigemun-primary">
                 {icon}
               </div>
               <div>
@@ -49,14 +49,14 @@ export function PortalCiudadanoPage() {
         <CardHeader>
           <CardTitle className="text-base">¿Cómo ingresa un contribuyente?</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm text-[#42534A]">
+        <CardContent className="space-y-3 text-sm text-sigemun-muted">
           <p className="flex items-start gap-2">
-            <IdCard className="mt-0.5 h-4 w-4 shrink-0 text-[#164B35]" />
+            <IdCard className="mt-0.5 h-4 w-4 shrink-0 text-sigemun-primary" />
             La primera vez elige <strong>«Activar mi cuenta»</strong> e indica su cédula y el correo
             que tiene registrado en el padrón municipal, y define una contraseña (mínimo 8 caracteres).
           </p>
           <p className="flex items-start gap-2">
-            <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-[#164B35]" />
+            <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-sigemun-primary" />
             Luego inicia sesión con cédula y contraseña. Si el correo del padrón está desactualizado,
             actualícelo en <strong>Padrón de Contribuyentes</strong> antes de que active la cuenta.
           </p>

@@ -166,14 +166,14 @@ export function RevisionExpedientePage() {
 
       {/* Selector de Expediente y Resumen Superior del Wireframe 9 */}
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+        <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
           <CardTitle className="text-base">Expediente en revisión</CardTitle>
           <CardDescription>Seleccione un elemento de la bandeja para consultar su información y continuar la gestión.</CardDescription>
         </CardHeader>
         <CardContent className="pt-6 sm:pt-6">
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:items-end">
             <div className="lg:col-span-4">
-              <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+              <label className="mb-2 block text-sm font-semibold text-sigemun-text">
                 Seleccionar expediente
               </label>
               <Select
@@ -190,19 +190,19 @@ export function RevisionExpedientePage() {
 
             {activeTramite && (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:col-span-8">
-                <div className="rounded-xl border border-[#E1E8E4] bg-[#F7FAF8] p-4">
+                <div className="rounded-xl border border-sigemun-border bg-sigemun-bg p-4">
                   <p className="section-label">Contribuyente</p>
-                  <p className="mt-1.5 truncate text-sm font-bold text-[#26352D]">
+                  <p className="mt-1.5 truncate text-sm font-bold text-sigemun-text">
                     {activeTramite.solicitante || `ID #${activeTramite.idContribuyente}`}
                   </p>
                 </div>
-                <div className="rounded-xl border border-[#E1E8E4] bg-[#F7FAF8] p-4">
+                <div className="rounded-xl border border-sigemun-border bg-sigemun-bg p-4">
                   <p className="section-label">Finca asociada</p>
-                  <p className="mt-1.5 font-mono text-sm font-bold text-[#164B35]">
+                  <p className="mt-1.5 font-mono text-sm font-bold text-sigemun-primary">
                     {activeTramite.numeroFinca || 'No aplica'}
                   </p>
                 </div>
-                <div className="rounded-xl border border-[#E1E8E4] bg-[#F7FAF8] p-4">
+                <div className="rounded-xl border border-sigemun-border bg-sigemun-bg p-4">
                   <p className="section-label">Estado actual</p>
                   <div className="mt-1.5 flex items-center gap-1.5">
                     <Badge
@@ -211,18 +211,18 @@ export function RevisionExpedientePage() {
                           ? 'success'
                           : codigoActual === 'RECH'
                           ? 'danger'
-                          : 'gold'
+                          : 'accent'
                       }
                     >
                       {codigoActual} — {activeTramite.estadoActual}
                     </Badge>
                   </div>
                 </div>
-                <div className="rounded-xl border border-[#E1E8E4] bg-[#F7FAF8] p-4">
+                <div className="rounded-xl border border-sigemun-border bg-sigemun-bg p-4">
                   <p className="section-label">Plazo de atención</p>
                   <p
                     className={`mt-0.5 text-xs font-bold ${
-                      slaRestante < 0 ? 'text-red-600' : 'text-[#164B35]'
+                      slaRestante < 0 ? 'text-red-600' : 'text-sigemun-primary'
                     }`}
                   >
                     <Clock className="mr-1 inline h-3.5 w-3.5" />
@@ -243,9 +243,9 @@ export function RevisionExpedientePage() {
           {/* Izquierda (7 cols): Lista de Chequeo de Requisitos y Bitácora */}
           <div className="contents">
             <Card className="order-1 h-full overflow-hidden lg:col-start-1 lg:row-start-1">
-              <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+              <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
                 <CardTitle className="flex items-center gap-2">
-                  <FileCheck className="h-5 w-5 text-[#164B35]" /> Verificación de Requisitos del
+                  <FileCheck className="h-5 w-5 text-sigemun-primary" /> Verificación de Requisitos del
                   Expediente
                 </CardTitle>
                 <CardDescription>
@@ -256,21 +256,21 @@ export function RevisionExpedientePage() {
               </CardHeader>
               <CardContent className="space-y-3 pt-6 sm:pt-6">
                 {!requisitosQuery.data || requisitosQuery.data.length === 0 ? (
-                  <p className="text-xs text-[#5A6B61]">
+                  <p className="text-xs text-sigemun-muted">
                     No hay requisitos parametrizados para este tipo de trámite.
                   </p>
                 ) : (
                   requisitosQuery.data.map((req) => (
                     <div
                       key={req.idRequisito}
-                      className="flex flex-col justify-between gap-3 rounded-xl border border-[#DCE3DE] bg-[#F5F7F4]/50 p-3.5 sm:flex-row sm:items-center"
+                      className="flex flex-col justify-between gap-3 rounded-xl border border-sigemun-border bg-sigemun-bg/50 p-3.5 sm:flex-row sm:items-center"
                     >
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-[#26352D]">
+                          <span className="text-xs font-bold text-sigemun-text">
                             #{req.idRequisito} · {req.nombreRequisito}
                           </span>
-                          <Badge variant={req.esObligatorio ? 'gold' : 'outline'}>
+                          <Badge variant={req.esObligatorio ? 'accent' : 'outline'}>
                             {req.esObligatorio ? 'Obligatorio' : 'Opcional'}
                           </Badge>
                           <Badge variant={req.presentado ? 'success' : 'warning'}>
@@ -279,10 +279,10 @@ export function RevisionExpedientePage() {
                               : 'Pendiente'}
                           </Badge>
                         </div>
-                        <p className="mt-1 text-xs text-[#5A6B61]">{req.descripcion}</p>
+                        <p className="mt-1 text-xs text-sigemun-muted">{req.descripcion}</p>
                       </div>
 
-                      <label className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-[#164B35] bg-white px-3 py-1.5 text-xs font-semibold text-[#164B35] hover:bg-[#E8F0EC]">
+                      <label className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-sigemun-primary bg-white px-3 py-1.5 text-xs font-semibold text-sigemun-primary hover:bg-sigemun-sky-muted">
                         <Upload className="h-3.5 w-3.5" /> Acreditar Archivo
                         <input
                           type="file"
@@ -299,24 +299,24 @@ export function RevisionExpedientePage() {
                   ))
                 )}
 
-                <div className="border-t border-[#E5EBE7] pt-4">
-                  <p className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-[#607168]">
+                <div className="border-t border-sigemun-border pt-4">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                     Documentos del expediente ({archivosQuery.data?.length ?? 0})
                   </p>
                   {archivosQuery.isLoading ? (
-                    <p className="text-xs text-[#5A6B61]">Consultando documentos...</p>
+                    <p className="text-xs text-sigemun-muted">Consultando documentos...</p>
                   ) : !archivosQuery.data || archivosQuery.data.length === 0 ? (
-                    <p className="text-xs text-[#5A6B61]">El expediente aún no tiene documentos.</p>
+                    <p className="text-xs text-sigemun-muted">El expediente aún no tiene documentos.</p>
                   ) : (
                     <ul className="space-y-1.5">
                       {archivosQuery.data.map((a) => (
                         <li
                           key={a.idArchivoAdjunto}
-                          className="flex items-center justify-between gap-3 rounded-lg border border-[#DCE3DE] bg-white px-3 py-2 text-xs"
+                          className="flex items-center justify-between gap-3 rounded-lg border border-sigemun-border bg-white px-3 py-2 text-xs"
                         >
                           <div className="min-w-0">
-                            <p className="truncate font-semibold text-[#26352D]">{a.nombreOriginal}</p>
-                            <p className="text-[11px] text-[#5A6B61]">
+                            <p className="truncate font-semibold text-sigemun-text">{a.nombreOriginal}</p>
+                            <p className="text-[11px] text-sigemun-muted">
                               {a.nombreRequisito ?? 'Adjunto general'} · {formatBytes(a.pesoBytes)} ·{' '}
                               {formatDate(a.fechaSubida)}
                             </p>
@@ -325,7 +325,7 @@ export function RevisionExpedientePage() {
                             href={`${BACKEND_ORIGIN}/${a.rutaAlmacenamiento}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="shrink-0 font-semibold text-[#164B35] hover:underline"
+                            className="shrink-0 font-semibold text-sigemun-primary hover:underline"
                           >
                             Abrir
                           </a>
@@ -339,29 +339,29 @@ export function RevisionExpedientePage() {
 
             {/* Bitácora resumida del expediente */}
             <Card className="order-3 h-full overflow-hidden lg:col-start-1 lg:row-start-2">
-              <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+              <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
                 <CardTitle className="text-base">
                   Historial de Movimientos del Expediente #{activeTramite.idTramite}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-6 sm:pt-6">
                 {!historialQuery.data || historialQuery.data.length === 0 ? (
-                  <p className="text-xs text-[#5A6B61]">Sin movimientos registrados.</p>
+                  <p className="text-xs text-sigemun-muted">Sin movimientos registrados.</p>
                 ) : (
                   <div className="space-y-2.5">
                     {historialQuery.data.map((h) => (
                       <div
                         key={h.idHistorial}
-                        className="flex items-start justify-between gap-3 rounded-lg border border-[#DCE3DE] p-3 text-xs"
+                        className="flex items-start justify-between gap-3 rounded-lg border border-sigemun-border p-3 text-xs"
                       >
                         <div>
                           <div className="flex items-center gap-2">
-                            <Badge variant={esCodigoFinal(h.codigoEstado) ? 'success' : 'gold'}>
+                            <Badge variant={esCodigoFinal(h.codigoEstado) ? 'success' : 'accent'}>
                               {h.codigoEstado} — {h.nombreEstado}
                             </Badge>
-                            <span className="text-[#5A6B61]">{formatDate(h.fechaCambio)}</span>
+                            <span className="text-sigemun-muted">{formatDate(h.fechaCambio)}</span>
                           </div>
-                          <p className="mt-1.5 text-[#26352D]">{h.observaciones}</p>
+                          <p className="mt-1.5 text-sigemun-text">{h.observaciones}</p>
                         </div>
                       </div>
                     ))}
@@ -373,8 +373,8 @@ export function RevisionExpedientePage() {
 
           {/* Derecha (5 cols): Acción Operativa — Actualizar Estado y Resolución Final */}
           <div className="contents">
-            <Card className="order-2 h-full overflow-hidden border-[#BBD3C6] lg:col-start-2 lg:row-start-1">
-              <CardHeader className="border-b border-[#DCE3DE] bg-[#F2F7F4]">
+            <Card className="order-2 h-full overflow-hidden border-sigemun-sky lg:col-start-2 lg:row-start-1">
+              <CardHeader className="border-b border-sigemun-border bg-sigemun-bg">
                 <CardTitle>Actualizar estado del trámite</CardTitle>
                 <CardDescription>Registre el resultado de la revisión y avance el expediente a su siguiente etapa.</CardDescription>
               </CardHeader>
@@ -426,10 +426,10 @@ export function RevisionExpedientePage() {
             </Card>
 
             {/* Panel de Resolución Final y Cierre (CU-TR-07) */}
-            <Card className="order-4 flex h-full flex-col overflow-hidden border-[#D7C28E] lg:col-start-2 lg:row-start-2">
-              <CardHeader className="border-b border-[#E9DFC4] bg-[#FBF7EE]">
+            <Card className="order-4 flex h-full flex-col overflow-hidden border-sigemun-sky lg:col-start-2 lg:row-start-2">
+              <CardHeader className="border-b border-sigemun-border bg-sigemun-bg">
                 <CardTitle className="flex items-center gap-2">
-                  <Gavel className="h-5 w-5 text-[#967736]" /> Resolución final
+                  <Gavel className="h-5 w-5 text-sigemun-primary" /> Resolución final
                 </CardTitle>
                 <CardDescription>Apruebe o rechace la solicitud y cierre formalmente el expediente.</CardDescription>
               </CardHeader>
@@ -443,24 +443,24 @@ export function RevisionExpedientePage() {
                 ) : (
                   <>
                     <div className="flex flex-1 items-center">
-                      <div className="w-full rounded-2xl border border-[#E9DFC4] bg-[#FFFCF5] p-5">
-                        <p className="text-sm font-bold text-[#26352D]">Antes de emitir la resolución</p>
+                      <div className="w-full rounded-2xl border border-sigemun-border bg-sigemun-bg p-5">
+                        <p className="text-sm font-bold text-sigemun-text">Antes de emitir la resolución</p>
                         <div className="mt-4 grid grid-cols-2 gap-3">
-                          <div className="rounded-xl bg-white p-3 ring-1 ring-[#E9DFC4]">
+                          <div className="rounded-xl bg-white p-3 ring-1 ring-sigemun-border">
                             <p className="section-label">Estado actual</p>
-                            <p className="mt-1 text-sm font-semibold text-[#164B35]">
+                            <p className="mt-1 text-sm font-semibold text-sigemun-primary">
                               {activeTramite.estadoActual || 'En revisión'}
                             </p>
                           </div>
-                          <div className="rounded-xl bg-white p-3 ring-1 ring-[#E9DFC4]">
+                          <div className="rounded-xl bg-white p-3 ring-1 ring-sigemun-border">
                             <p className="section-label">Requisitos</p>
-                            <p className="mt-1 text-sm font-semibold text-[#164B35]">
+                            <p className="mt-1 text-sm font-semibold text-sigemun-primary">
                               {requisitosQuery.data?.filter((r) => r.presentado).length ?? 0} de{' '}
                               {requisitosQuery.data?.length ?? 0} presentados
                             </p>
                           </div>
                         </div>
-                        <div className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-[#735A26]">
+                        <div className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-sigemun-primary">
                           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                           <span>La decisión cerrará el expediente y quedará registrada en su historial.</span>
                         </div>

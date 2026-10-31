@@ -170,7 +170,7 @@ export function CatalogoTramitesPage() {
           {/* Lista de Tipos de Trámite */}
           <div>
             <Card className="h-full overflow-hidden">
-              <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+              <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
                 <CardTitle>Tipos de trámite</CardTitle>
                 <CardDescription>
                   Seleccione un trámite para consultar y configurar sus requisitos.
@@ -186,23 +186,23 @@ export function CatalogoTramitesPage() {
                         onClick={() => setSelectedTipoId(t.idTipoTramite)}
                         className={`cursor-pointer rounded-xl border p-4 transition-all ${
                           isSelected
-                            ? 'border-[#164B35] bg-[#E8F0EC]/60 shadow-sm ring-1 ring-[#164B35]/10'
-                            : 'border-[#DCE3DE] bg-white hover:border-[#AFC2B8] hover:bg-[#FAFCFB]'
+                            ? 'border-sigemun-primary bg-sigemun-sky-muted/60 shadow-sm ring-1 ring-sigemun-primary/10'
+                            : 'border-sigemun-border bg-white hover:border-sigemun-border-strong hover:bg-sigemun-surface'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs font-bold text-[#164B35]">
+                              <span className="font-mono text-xs font-bold text-sigemun-primary">
                                 #{t.idTipoTramite}
                               </span>
-                              <h4 className="text-sm font-bold text-[#26352D]">
+                              <h4 className="text-sm font-bold text-sigemun-text">
                                 {t.nombreTramite}
                               </h4>
-                              <Badge variant="gold">SLA: {t.diasResolucionMax} días</Badge>
+                              <Badge variant="accent">SLA: {t.diasResolucionMax} días</Badge>
                             </div>
-                            <p className="mt-1 text-xs text-[#5A6B61]">{t.descripcionTipo}</p>
-                            <p className="mt-2 text-xs font-medium text-[#164B35]">
+                            <p className="mt-1 text-xs text-sigemun-muted">{t.descripcionTipo}</p>
+                            <p className="mt-2 text-xs font-medium text-sigemun-primary">
                               Departamento responsable: {t.nombreDepartamento}
                             </p>
                           </div>
@@ -234,8 +234,8 @@ export function CatalogoTramitesPage() {
 
           {/* Configuración de Requisitos por Tipo */}
           <div>
-            <Card className="h-full overflow-hidden border-[#D7C28E]">
-              <CardHeader className="border-b border-[#E9DFC4] bg-[#FBF7EE]">
+            <Card className="h-full overflow-hidden border-sigemun-sky">
+              <CardHeader className="border-b border-sigemun-border bg-sigemun-bg">
                 <CardTitle>Requisitos del trámite seleccionado</CardTitle>
                 <CardDescription>Asocie documentos del catálogo al servicio municipal activo.</CardDescription>
               </CardHeader>
@@ -269,24 +269,24 @@ export function CatalogoTramitesPage() {
 
                 <div className="space-y-2 pt-2">
                   {(requisitosPorTipoQuery.data ?? []).length === 0 ? (
-                    <p className="text-xs text-[#5A6B61]">
+                    <p className="text-xs text-sigemun-muted">
                       No hay requisitos configurados para este tipo de trámite.
                     </p>
                   ) : (
                     (requisitosPorTipoQuery.data ?? []).map((r) => (
                       <div
                         key={r.idRequisito}
-                        className="rounded-xl border border-[#DCE3DE] bg-[#FAFCFB] p-4 text-sm transition-colors hover:border-[#C6D4CC]"
+                        className="rounded-xl border border-sigemun-border bg-sigemun-surface p-4 text-sm transition-colors hover:border-sigemun-border"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-[#26352D]">
+                          <span className="font-bold text-sigemun-text">
                             #{r.idRequisito} · {r.nombreRequisito}
                           </span>
-                          <Badge variant={r.esObligatorio ? 'gold' : 'outline'}>
+                          <Badge variant={r.esObligatorio ? 'accent' : 'outline'}>
                             {r.esObligatorio ? 'Obligatorio' : 'Opcional'}
                           </Badge>
                         </div>
-                        <p className="mt-2 text-xs leading-relaxed text-[#5A6B61]">{r.descripcion}</p>
+                        <p className="mt-2 text-xs leading-relaxed text-sigemun-muted">{r.descripcion}</p>
                       </div>
                     ))
                   )}
@@ -382,10 +382,10 @@ export function CatalogoTramitesPage() {
             <Input {...reqForm.register('descripcion')} />
           </FormField>
 
-          <label className="flex items-center gap-2 text-sm font-medium text-[#26352D]">
+          <label className="flex items-center gap-2 text-sm font-medium text-sigemun-text">
             <input
               type="checkbox"
-              className="h-4 w-4 rounded border-[#DCE3DE]"
+              className="h-4 w-4 rounded border-sigemun-border"
               {...reqForm.register('esObligatorio')}
             />
             Es un requisito obligatorio para la admisibilidad

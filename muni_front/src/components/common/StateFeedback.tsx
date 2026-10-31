@@ -4,10 +4,10 @@ import { ApiClientError } from '@/services/httpClient';
 
 export function LoadingState({ message = 'Consultando datos en SQL Server...' }: { message?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-[#DCE3DE] bg-white p-12 text-center shadow-card">
-      <Loader2 className="h-8 w-8 animate-spin text-[#164B35]" />
-      <p className="mt-3 text-sm font-medium text-[#26352D]">{message}</p>
-      <p className="mt-1 text-xs text-[#5A6B61]">Municipalidad de Nicoya — SIGEMUN</p>
+    <div className="flex flex-col items-center justify-center rounded-xl border border-sigemun-border bg-white p-12 text-center shadow-card">
+      <Loader2 className="h-8 w-8 animate-spin text-sigemun-primary" />
+      <p className="mt-3 text-sm font-medium text-sigemun-text">{message}</p>
+      <p className="mt-1 text-xs text-sigemun-muted">Municipalidad de Nicoya — SIGEMUN</p>
     </div>
   );
 }
@@ -22,12 +22,12 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#DCE3DE] bg-white/80 p-10 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E8F0EC] text-[#164B35]">
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-sigemun-border bg-white/80 p-10 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sigemun-sky-muted text-sigemun-primary">
         <Inbox className="h-6 w-6" />
       </div>
-      <h3 className="mt-3 text-sm font-semibold text-[#26352D]">{title}</h3>
-      <p className="mt-1 max-w-md text-xs text-[#5A6B61]">{description}</p>
+      <h3 className="mt-3 text-sm font-semibold text-sigemun-text">{title}</h3>
+      <p className="mt-1 max-w-md text-xs text-sigemun-muted">{description}</p>
       {action && <div className="mt-4">{action}</div>}
     </div>
   );

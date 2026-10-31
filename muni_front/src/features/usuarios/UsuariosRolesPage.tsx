@@ -221,7 +221,7 @@ export function UsuariosRolesPage() {
       />
 
       {/* Subnavegación superior del Wireframe 6 */}
-      <nav className="grid gap-3 rounded-2xl border border-[#DCE3DE] bg-white p-3 shadow-card sm:grid-cols-2" aria-label="Administración de seguridad">
+      <nav className="grid gap-3 rounded-2xl border border-sigemun-border bg-white p-3 shadow-card sm:grid-cols-2" aria-label="Administración de seguridad">
         <Button variant="default" className="h-auto justify-start px-4 py-3" asChild>
           <Link to="/seguridad/usuarios">
             <UserCheck className="h-4 w-4" /> Usuarios y roles
@@ -236,20 +236,20 @@ export function UsuariosRolesPage() {
 
       {/* Filtro de búsqueda por username (sp_consultar_usuario) */}
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+        <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Search className="h-4 w-4 text-[#164B35]" /> Buscar usuarios
+            <Search className="h-4 w-4 text-sigemun-primary" /> Buscar usuarios
           </CardTitle>
           <CardDescription>Consulte una cuenta por su nombre de usuario institucional.</CardDescription>
         </CardHeader>
         <CardContent className="pt-6 sm:pt-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
             <div className="flex-1">
-              <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+              <label className="mb-2 block text-sm font-semibold text-sigemun-text">
                 Nombre de usuario
               </label>
               <div className="relative">
-                <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-[#607168]" />
+                <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-sigemun-muted" />
                 <Input
                   placeholder="Ej. admin_nicoya, analista_curb, cajero_caja1..."
                   value={userNameFilter}
@@ -289,10 +289,10 @@ export function UsuariosRolesPage() {
       ) : !usuariosQuery.data || usuariosQuery.data.length === 0 ? (
         <EmptyState title="No se encontraron usuarios" />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-[#DCE3DE] bg-white shadow-card" role="region" aria-label="Usuarios municipales" tabIndex={0}>
+        <div className="overflow-x-auto rounded-2xl border border-sigemun-border bg-white shadow-card" role="region" aria-label="Usuarios municipales" tabIndex={0}>
           <table className="w-full min-w-[1250px] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+              <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                 <th className="px-4 py-3">ID</th>
                 <th className="px-4 py-3">Usuario</th>
                 <th className="px-4 py-3">Nombre y Apellidos</th>
@@ -302,31 +302,31 @@ export function UsuariosRolesPage() {
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#DCE3DE]">
+            <tbody className="divide-y divide-sigemun-border">
               {usuariosQuery.data.map((u) => {
                 const rolesList = rolesPorUsuarioMap.get(u.idUsuario) ?? [];
                 return (
-                  <tr key={u.idUsuario} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
-                    <td className="px-4 py-3 font-mono font-bold text-[#164B35]">
+                  <tr key={u.idUsuario} className="even:bg-sigemun-surface transition-colors hover:bg-sigemun-sky-muted/55">
+                    <td className="px-4 py-3 font-mono font-bold text-sigemun-primary">
                       #{u.idUsuario}
                     </td>
-                    <td className="px-4 py-3 font-mono font-semibold text-[#26352D]">
+                    <td className="px-4 py-3 font-mono font-semibold text-sigemun-text">
                       {u.userName}
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-[#26352D]">
+                      <p className="font-semibold text-sigemun-text">
                         {u.nombreUsuario} {u.apellido1Usuario} {u.apellido2Usuario}
                       </p>
-                      <p className="text-xs text-[#5A6B61]">{u.emailUsuario}</p>
+                      <p className="text-xs text-sigemun-muted">{u.emailUsuario}</p>
                     </td>
-                    <td className="px-4 py-3 text-xs font-medium text-[#164B35]">
+                    <td className="px-4 py-3 text-xs font-medium text-sigemun-primary">
                       {u.nombreDepartamento}
                     </td>
                     <td className="px-4 py-3">
                       {rolesList.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {rolesList.map((r) => (
-                            <Badge key={r.idRol} variant="gold">
+                            <Badge key={r.idRol} variant="accent">
                               {r.nombreRol}
                             </Badge>
                           ))}
@@ -347,7 +347,7 @@ export function UsuariosRolesPage() {
                       >
                         <span
                           className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                            u.activo ? 'bg-[#164B35]' : 'bg-gray-300'
+                            u.activo ? 'bg-sigemun-primary' : 'bg-gray-300'
                           }`}
                         >
                           <span
@@ -583,15 +583,15 @@ export function UsuariosRolesPage() {
         {assignRoleTarget && (
           <div className="space-y-4">
             <div>
-              <p className="mb-2 text-sm font-semibold text-[#26352D]">Roles actuales</p>
+              <p className="mb-2 text-sm font-semibold text-sigemun-text">Roles actuales</p>
               {rolesDelObjetivo.length === 0 ? (
-                <p className="text-xs text-[#5A6B61]">El funcionario no tiene roles asignados.</p>
+                <p className="text-xs text-sigemun-muted">El funcionario no tiene roles asignados.</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {rolesDelObjetivo.map((r) => (
                     <span
                       key={r.idRol}
-                      className="inline-flex items-center gap-1 rounded-full border border-[#B6944A]/50 bg-[#FBF7EE] py-0.5 pl-2.5 pr-1 text-xs font-semibold text-[#735A26]"
+                      className="inline-flex items-center gap-1 rounded-full border border-sigemun-medium/50 bg-sigemun-bg py-0.5 pl-2.5 pr-1 text-xs font-semibold text-sigemun-primary"
                     >
                       {r.nombreRol}
                       <button
@@ -657,22 +657,22 @@ export function UsuariosRolesPage() {
       >
         <div className="space-y-3 text-xs">
           {permisosUsuarioQuery.isLoading ? (
-            <p className="text-[#5A6B61]">Consultando permisos del usuario...</p>
+            <p className="text-sigemun-muted">Consultando permisos del usuario...</p>
           ) : !permisosUsuarioQuery.data || permisosUsuarioQuery.data.length === 0 ? (
-            <p className="text-[#5A6B61]">
+            <p className="text-sigemun-muted">
               Este usuario aún no tiene roles o permisos efectivos asignados.
             </p>
           ) : (
-            <div className="max-h-72 overflow-y-auto divide-y divide-[#DCE3DE] rounded-lg border border-[#DCE3DE]">
+            <div className="max-h-72 overflow-y-auto divide-y divide-sigemun-border rounded-lg border border-sigemun-border">
               {permisosUsuarioQuery.data.map((p, idx) => (
                 <div key={idx} className="flex items-center justify-between px-3 py-2">
                   <div>
-                    <p className="font-bold text-[#164B35]">{p.nombreRol}</p>
-                    <p className="text-[#5A6B61]">
+                    <p className="font-bold text-sigemun-primary">{p.nombreRol}</p>
+                    <p className="text-sigemun-muted">
                       Módulo: <strong>{p.modulo || 'General'}</strong>
                     </p>
                   </div>
-                  <Badge variant="gold">{p.accion || 'Asignado'}</Badge>
+                  <Badge variant="accent">{p.accion || 'Asignado'}</Badge>
                 </div>
               ))}
             </div>

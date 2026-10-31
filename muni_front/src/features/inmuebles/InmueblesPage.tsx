@@ -272,20 +272,20 @@ export function InmueblesPage() {
         {/* Consulta y tabla a ancho completo para conservar una lectura horizontal cómoda. */}
         <div className="flex flex-col" style={{ gap: '1.5rem' }}>
           <Card className="overflow-hidden">
-            <CardHeader className="border-b border-[#E5EBE7] bg-[#FAFCFB]">
+            <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
               <CardTitle className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-[#164B35]" /> Consultar catastro
+                <Search className="h-4 w-4 text-sigemun-primary" /> Consultar catastro
               </CardTitle>
               <CardDescription>Filtre por finca, plano, distrito o contribuyente propietario.</CardDescription>
             </CardHeader>
             <CardContent className="pt-6 sm:pt-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                  <label className="mb-2 block text-sm font-semibold text-sigemun-text">
                     Finca, plano o propietario
                   </label>
                   <div className="relative">
-                    <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-[#607168]" />
+                    <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-sigemun-muted" />
                     <Input
                       placeholder="Ej. 5-123456-000 o G-..."
                       value={fincaFiltro}
@@ -296,7 +296,7 @@ export function InmueblesPage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                  <label className="mb-2 block text-sm font-semibold text-sigemun-text">
                     Distrito
                   </label>
                   <Select
@@ -313,7 +313,7 @@ export function InmueblesPage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                  <label className="mb-2 block text-sm font-semibold text-sigemun-text">
                     ID del contribuyente
                   </label>
                   <Input
@@ -341,10 +341,10 @@ export function InmueblesPage() {
               description="Ajuste los filtros o registre un nuevo bien inmueble."
             />
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-[#DCE3DE] bg-white shadow-card" role="region" aria-label="Catastro de bienes inmuebles" tabIndex={0}>
+            <div className="overflow-x-auto rounded-2xl border border-sigemun-border bg-white shadow-card" role="region" aria-label="Catastro de bienes inmuebles" tabIndex={0}>
               <table className="w-full min-w-[1080px] border-collapse text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                  <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                     <th scope="col" className="px-5 py-4">Finca y plano</th>
                     <th scope="col" className="px-4 py-4">Distrito y uso</th>
                     <th scope="col" className="px-4 py-4">Áreas</th>
@@ -353,43 +353,43 @@ export function InmueblesPage() {
                     <th scope="col" className="px-5 py-4 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DCE3DE]">
+                <tbody className="divide-y divide-sigemun-border">
                   {rows.map((r, idx) => (
                     <tr
                       key={`${r.idInmueble}-${r.idContribuyente ?? 'none'}-${idx}`}
-                      className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55"
+                      className="even:bg-sigemun-surface transition-colors hover:bg-sigemun-sky-muted/55"
                     >
                       <td className="px-3.5 py-3">
-                        <p className="font-mono font-bold text-[#164B35]">{r.numeroFinca}</p>
-                        <p className="font-mono text-[11px] text-[#5A6B61]">
+                        <p className="font-mono font-bold text-sigemun-primary">{r.numeroFinca}</p>
+                        <p className="font-mono text-[11px] text-sigemun-muted">
                           Plano: {r.planoCatastrado}
                         </p>
                       </td>
                       <td className="px-3.5 py-3">
-                        <p className="font-semibold text-[#26352D]">{r.nombreDistrito}</p>
+                        <p className="font-semibold text-sigemun-text">{r.nombreDistrito}</p>
                         <Badge variant="outline" className="mt-0.5 text-[10px]">
                           {r.usoSuelo}
                         </Badge>
                       </td>
                       <td className="px-3.5 py-3">
                         <p>Terreno: {formatNumber(r.areaTerrenoM2, 2)} m²</p>
-                        <p className="text-[#5A6B61]">
+                        <p className="text-sigemun-muted">
                           Const.: {formatNumber(r.areaConstruccionM2, 2)} m²
                         </p>
                       </td>
-                      <td className="px-3.5 py-3 font-semibold text-[#26352D]">
+                      <td className="px-3.5 py-3 font-semibold text-sigemun-text">
                         {formatCurrencyCRC(r.valorFiscal)}
                       </td>
                       <td className="px-3.5 py-3">
                         {r.nombreORazonSocial ? (
                           <div>
-                            <p className="font-semibold text-[#26352D]">
+                            <p className="font-semibold text-sigemun-text">
                               {r.nombreORazonSocial}{' '}
-                              <span className="font-mono text-[11px] text-[#5A6B61]">
+                              <span className="font-mono text-[11px] text-sigemun-muted">
                                 (#{r.idContribuyente})
                               </span>
                             </p>
-                            <Badge variant="gold" className="mt-0.5">
+                            <Badge variant="accent" className="mt-0.5">
                               {formatNumber(r.porcentajeParticipacion, 2)}% participación
                             </Badge>
                           </div>
@@ -437,7 +437,7 @@ export function InmueblesPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-xs text-[#5A6B61]">
+                <p className="text-xs text-sigemun-muted">
                   Inmuebles asociados al contribuyente #{contribuyenteFiltroId}:{' '}
                   <strong>{porContribuyenteQuery.data.length}</strong> registro(s).
                 </p>
@@ -448,10 +448,10 @@ export function InmueblesPage() {
 
         {/* Herramientas complementarias en disposición horizontal. */}
         <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: '2rem' }}>
-          <Card className="overflow-hidden border-[#D7C28E]">
-            <CardHeader className="border-b border-[#E9DFC4] bg-[#FBF7EE]">
+          <Card className="overflow-hidden border-sigemun-sky">
+            <CardHeader className="border-b border-sigemun-border bg-sigemun-bg">
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#164B35] shadow-sm">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-sigemun-primary shadow-sm">
                   <Link2 className="h-5 w-5" />
                 </div>
                 <div>
@@ -555,12 +555,12 @@ export function InmueblesPage() {
                 {(distritosQuery.data ?? []).map((d) => (
                   <div
                     key={d.idDistrito}
-                    className="flex items-center justify-between rounded-lg bg-[#F5F7F4] px-3 py-1.5"
+                    className="flex items-center justify-between rounded-lg bg-sigemun-bg px-3 py-1.5"
                   >
-                    <span className="font-semibold text-[#26352D]">
+                    <span className="font-semibold text-sigemun-text">
                       {d.codigoDistrital} · {d.nombreDistrito}
                     </span>
-                    <span className="text-[#5A6B61]">
+                    <span className="text-sigemun-muted">
                       {formatNumber(inmueblesUnicos.filter((i) => i.nombreDistrito === d.nombreDistrito).length)} inmueble(s)
                     </span>
                   </div>

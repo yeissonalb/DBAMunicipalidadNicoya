@@ -222,10 +222,10 @@ export function RadicacionTramitePage() {
         {/* Columna Izquierda (7 cols): Paso 1 - Datos del trámite y contribuyente */}
         <div className="contents">
           <Card className="overflow-hidden lg:col-span-2">
-            <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+            <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E8F0EC] font-bold text-[#164B35]">1</div>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sigemun-sky-muted font-bold text-sigemun-primary">1</div>
                   <div>
                     <CardTitle>Datos del trámite y del contribuyente</CardTitle>
                     <CardDescription className="mt-1">
@@ -272,33 +272,33 @@ export function RadicacionTramitePage() {
 
                 {/* SLA & Departamento Banner */}
                 {tipoSeleccionado && (
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#B6944A]/40 bg-[#FBF7EE] px-4 py-2.5 text-xs">
-                    <div className="flex items-center gap-2 text-[#967736]">
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sigemun-medium/40 bg-sigemun-bg px-4 py-2.5 text-xs">
+                    <div className="flex items-center gap-2 text-sigemun-primary">
                       <Clock className="h-4 w-4" />
                       <span>
                         <strong>SLA Estimado:</strong> {tipoSeleccionado.diasResolucionMax} días
                         hábiles máximos
                       </span>
                     </div>
-                    <span className="font-semibold text-[#164B35]">
+                    <span className="font-semibold text-sigemun-primary">
                       Depto.: {tipoSeleccionado.nombreDepartamento}
                     </span>
                   </div>
                 )}
 
                 {/* Selección / Búsqueda de Contribuyente */}
-                <div className="rounded-xl border border-[#DCE3DE] bg-[#F5F7F4]/50 p-4 space-y-3">
-                  <p className="text-xs font-bold uppercase tracking-wider text-[#164B35]">
+                <div className="rounded-xl border border-sigemun-border bg-sigemun-bg/50 p-4 space-y-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-sigemun-primary">
                     Detalles del Ciudadano / Contribuyente Solicitante
                   </p>
 
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div className="sm:col-span-2">
-                      <label className="mb-1 block text-xs font-medium text-[#26352D]">
+                      <label className="mb-1 block text-xs font-medium text-sigemun-text">
                         Filtrar / Seleccionar Contribuyente
                       </label>
                       <div className="relative mb-2">
-                        <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#5A6B61]" />
+                        <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-sigemun-muted" />
                         <Input
                           placeholder="Filtrar por nombre o identificación..."
                           value={criterioContribuyente}
@@ -397,15 +397,15 @@ export function RadicacionTramitePage() {
 
           {/* Requisitos del Trámite Seleccionado */}
           <Card className="overflow-hidden">
-            <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+            <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
               <CardTitle className="text-base">Requisitos del trámite</CardTitle>
               <CardDescription>Documentos configurados para el tipo de trámite seleccionado.</CardDescription>
             </CardHeader>
             <CardContent className="pt-6 sm:pt-6">
               {requisitosPorTipoQuery.isLoading ? (
-                <p className="text-xs text-[#5A6B61]">Consultando requisitos...</p>
+                <p className="text-xs text-sigemun-muted">Consultando requisitos...</p>
               ) : !requisitosPorTipoQuery.data || requisitosPorTipoQuery.data.length === 0 ? (
-                <p className="text-xs text-[#5A6B61]">
+                <p className="text-xs text-sigemun-muted">
                   Este tipo de trámite no tiene requisitos específicos asociados en el catálogo.
                 </p>
               ) : (
@@ -417,19 +417,19 @@ export function RadicacionTramitePage() {
                     return (
                       <div
                         key={req.idRequisito}
-                        className="flex items-start justify-between gap-3 rounded-lg border border-[#DCE3DE] bg-[#F5F7F4]/60 p-3 text-xs"
+                        className="flex items-start justify-between gap-3 rounded-lg border border-sigemun-border bg-sigemun-bg/60 p-3 text-xs"
                       >
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-[#26352D]">
+                            <span className="font-bold text-sigemun-text">
                               #{req.idRequisito} · {req.nombreRequisito}
                             </span>
-                            <Badge variant={req.esObligatorio ? 'gold' : 'outline'}>
+                            <Badge variant={req.esObligatorio ? 'accent' : 'outline'}>
                               {req.esObligatorio ? 'Obligatorio' : 'Opcional'}
                             </Badge>
                             {acreditado && <Badge variant="success">Acreditado</Badge>}
                           </div>
-                          <p className="mt-1 text-[#5A6B61]">{req.descripcion}</p>
+                          <p className="mt-1 text-sigemun-muted">{req.descripcion}</p>
                         </div>
                         <Button
                           type="button"
@@ -451,12 +451,12 @@ export function RadicacionTramitePage() {
         {/* Columna Derecha (5 cols): Paso 2 - Documentación Adjunta y Requisitos Presentados */}
         <div className="contents">
           <Card className="overflow-hidden">
-            <CardHeader className="border-b border-[#DCE3DE] bg-[#F2F7F4]">
+            <CardHeader className="border-b border-sigemun-border bg-sigemun-bg">
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white font-bold text-[#164B35] shadow-sm">2</div>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white font-bold text-sigemun-primary shadow-sm">2</div>
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    <Upload className="h-5 w-5 text-[#164B35]" /> Documentación adjunta
+                    <Upload className="h-5 w-5 text-sigemun-primary" /> Documentación adjunta
                   </CardTitle>
                   <CardDescription className="mt-1">
                     Acredite requisitos o agregue anexos al expediente. Tamaño máximo: 10 MB.
@@ -499,12 +499,12 @@ export function RadicacionTramitePage() {
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {/* Subir como Requisito Presentado */}
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#164B35]/40 bg-[#E8F0EC]/40 p-4 text-center transition-colors hover:bg-[#E8F0EC]">
-                  <CheckCircle2 className="h-6 w-6 text-[#164B35]" />
-                  <span className="mt-2 text-xs font-bold text-[#164B35]">
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-sigemun-primary/40 bg-sigemun-sky-muted/40 p-4 text-center transition-colors hover:bg-sigemun-sky-muted">
+                  <CheckCircle2 className="h-6 w-6 text-sigemun-primary" />
+                  <span className="mt-2 text-xs font-bold text-sigemun-primary">
                     Acreditar Requisito
                   </span>
-                  <span className="mt-0.5 text-[11px] text-[#5A6B61]">Documento de requisito</span>
+                  <span className="mt-0.5 text-[11px] text-sigemun-muted">Documento de requisito</span>
                   <input
                     type="file"
                     className="hidden"
@@ -519,12 +519,12 @@ export function RadicacionTramitePage() {
                 </label>
 
                 {/* Subir como Archivo Adjunto General */}
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#B6944A]/50 bg-[#FBF7EE]/60 p-4 text-center transition-colors hover:bg-[#FBF7EE]">
-                  <FileText className="h-6 w-6 text-[#967736]" />
-                  <span className="mt-2 text-xs font-bold text-[#967736]">
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-sigemun-medium/50 bg-sigemun-bg/60 p-4 text-center transition-colors hover:bg-sigemun-bg">
+                  <FileText className="h-6 w-6 text-sigemun-primary" />
+                  <span className="mt-2 text-xs font-bold text-sigemun-primary">
                     Adjuntar Anexo General
                   </span>
-                  <span className="mt-0.5 text-[11px] text-[#5A6B61]">Documento complementario</span>
+                  <span className="mt-0.5 text-[11px] text-sigemun-muted">Documento complementario</span>
                   <input
                     type="file"
                     className="hidden"
@@ -540,22 +540,22 @@ export function RadicacionTramitePage() {
               </div>
 
               {uploadingFile && (
-                <div className="flex items-center justify-center gap-2 text-xs font-medium text-[#164B35]">
+                <div className="flex items-center justify-center gap-2 text-xs font-medium text-sigemun-primary">
                   <Loader2 className="h-4 w-4 animate-spin" /> Subiendo archivo al servidor...
                 </div>
               )}
 
-              <p className="text-[11px] text-[#5A6B61]">
+              <p className="text-[11px] text-sigemun-muted">
                 Formatos permitidos: <code className="font-mono">.pdf, .jpg, .jpeg, .png, .doc, .docx, .xls, .xlsx</code> (máx. 10 MB).
               </p>
 
               {/* Lista de Archivos Subidos */}
-              <div className="border-t border-[#DCE3DE] pt-3">
-                <p className="mb-2 text-xs font-bold text-[#26352D]">
+              <div className="border-t border-sigemun-border pt-3">
+                <p className="mb-2 text-xs font-bold text-sigemun-text">
                   Archivos Subidos en esta Sesión ({archivosSubidos.length})
                 </p>
                 {archivosSubidos.length === 0 ? (
-                  <p className="text-xs text-[#5A6B61]">
+                  <p className="text-xs text-sigemun-muted">
                     Aún no se han adjuntado archivos en esta sesión.
                   </p>
                 ) : (
@@ -563,13 +563,13 @@ export function RadicacionTramitePage() {
                     {archivosSubidos.map((a, i) => (
                       <div
                         key={`${a.nombreAlmacenado}-${i}`}
-                        className="flex items-center justify-between rounded-lg border border-[#DCE3DE] bg-[#F5F7F4] px-3 py-2 text-xs"
+                        className="flex items-center justify-between rounded-lg border border-sigemun-border bg-sigemun-bg px-3 py-2 text-xs"
                       >
                         <div className="min-w-0 pr-2">
-                          <p className="truncate font-semibold text-[#26352D]">
+                          <p className="truncate font-semibold text-sigemun-text">
                             {a.nombreOriginal}
                           </p>
-                          <p className="text-[11px] text-[#5A6B61]">
+                          <p className="text-[11px] text-sigemun-muted">
                             {formatBytes(a.pesoBytes)} · Trámite #{a.idTramite}{' '}
                             {a.idRequisito ? `· Req. #${a.idRequisito}` : ''}
                           </p>
@@ -578,7 +578,7 @@ export function RadicacionTramitePage() {
                           href={`${BACKEND_ORIGIN}/${a.rutaRelativa}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 rounded bg-[#164B35] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#0F3626]"
+                          className="inline-flex items-center gap-1 rounded bg-sigemun-primary px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-sigemun-navy"
                         >
                           Abrir <ExternalLink className="h-3 w-3" />
                         </a>

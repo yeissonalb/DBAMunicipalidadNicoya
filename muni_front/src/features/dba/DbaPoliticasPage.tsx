@@ -191,7 +191,7 @@ export function DbaPoliticasPage() {
               <RefreshCw className="h-4 w-4" /> Actualizar
             </Button>
             <Button
-              variant="gold"
+              variant="accent"
               size="sm"
               onClick={() => {
                 setBackupTipo('FULL');
@@ -208,7 +208,7 @@ export function DbaPoliticasPage() {
       />
 
       {/* Subnavegación Consola DBA (Wireframes 3, 4 y 5) */}
-      <nav className="grid gap-3 rounded-2xl border border-[#DCE3DE] bg-white p-3 shadow-card sm:grid-cols-2 xl:grid-cols-4" aria-label="Consola DBA">
+      <nav className="grid gap-3 rounded-2xl border border-sigemun-border bg-white p-3 shadow-card sm:grid-cols-2 xl:grid-cols-4" aria-label="Consola DBA">
         <Button variant="default" className="h-auto justify-start px-4 py-3" asChild>
           <Link to="/dba/politicas">
             <Database className="h-4 w-4" /> Políticas de respaldo
@@ -233,17 +233,17 @@ export function DbaPoliticasPage() {
 
       {/* Tarjetas Superiores del Wireframe 3 (p. 114) */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-        <Card className="h-full border-l-4 border-l-[#164B35]">
+        <Card className="h-full border-l-4 border-l-sigemun-primary">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-1.5">
-              <HardDrive className="h-4 w-4 text-[#164B35]" /> Volumen del último ciclo
+              <HardDrive className="h-4 w-4 text-sigemun-primary" /> Volumen del último ciclo
             </CardDescription>
-            <CardTitle className="text-2xl font-extrabold text-[#164B35]">
+            <CardTitle className="text-2xl font-extrabold text-sigemun-primary">
               {formatNumber(totalTamanoMb, 2)} MB
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-[#5A6B61]">
+            <p className="text-xs text-sigemun-muted">
               Políticas configuradas:{' '}
               <strong>{configuracionesQuery.data?.length ?? 0}</strong> (Activas:{' '}
               <strong>
@@ -254,12 +254,12 @@ export function DbaPoliticasPage() {
           </CardContent>
         </Card>
 
-        <Card className="h-full border-l-4 border-l-[#B6944A]">
+        <Card className="h-full border-l-4 border-l-sigemun-medium">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4 text-[#967736]" /> Integridad de la base de datos
+              <ShieldCheck className="h-4 w-4 text-sigemun-primary" /> Integridad de la base de datos
             </CardDescription>
-            <CardTitle className="text-base font-bold text-[#26352D]">
+            <CardTitle className="text-base font-bold text-sigemun-text">
               {lastDbccStatus || 'Listo para verificación en demanda'}
             </CardTitle>
           </CardHeader>
@@ -291,7 +291,7 @@ export function DbaPoliticasPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-[#5A6B61]">
+            <p className="text-xs text-sigemun-muted">
               El historial conserva la verificación de integridad de cada respaldo.
             </p>
           </CardContent>
@@ -308,7 +308,7 @@ export function DbaPoliticasPage() {
         />
       ) : (
         <Card className="overflow-hidden">
-          <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+          <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
             <CardTitle>Políticas configuradas</CardTitle>
             <CardDescription>Programación, retención, destino y estado de las políticas de respaldo.</CardDescription>
           </CardHeader>
@@ -316,7 +316,7 @@ export function DbaPoliticasPage() {
             <div className="overflow-x-auto" role="region" aria-label="Políticas de respaldo" tabIndex={0}>
               <table className="w-full min-w-[1200px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                  <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                     <th className="px-3.5 py-3">ID</th>
                     <th className="px-3.5 py-3">Nombre de Política</th>
                     <th className="px-3.5 py-3">Tipo / Frecuencia</th>
@@ -328,43 +328,43 @@ export function DbaPoliticasPage() {
                     <th className="px-3.5 py-3 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DCE3DE]">
+                <tbody className="divide-y divide-sigemun-border">
                   {(configuracionesQuery.data ?? []).map((cfg) => {
                     const monitor = resumenPorPolitica.get(cfg.nombreConfiguracion ?? '');
                     return (
-                      <tr key={cfg.idRespaldosConfig} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
-                        <td className="px-3.5 py-3 font-mono font-bold text-[#164B35]">
+                      <tr key={cfg.idRespaldosConfig} className="even:bg-sigemun-surface transition-colors hover:bg-sigemun-sky-muted/55">
+                        <td className="px-3.5 py-3 font-mono font-bold text-sigemun-primary">
                           #{cfg.idRespaldosConfig}
                         </td>
                         <td className="px-3.5 py-3">
-                          <p className="font-bold text-[#26352D]">{cfg.nombreConfiguracion}</p>
-                          <p className="font-mono text-[11px] text-[#5A6B61]">BD: {cfg.origen}</p>
+                          <p className="font-bold text-sigemun-text">{cfg.nombreConfiguracion}</p>
+                          <p className="font-mono text-[11px] text-sigemun-muted">BD: {cfg.origen}</p>
                         </td>
                         <td className="px-3.5 py-3">
-                          <Badge variant="gold">{cfg.nombreTipoRespaldo}</Badge>
-                          <p className="mt-0.5 font-semibold text-[#164B35]">
+                          <Badge variant="accent">{cfg.nombreTipoRespaldo}</Badge>
+                          <p className="mt-0.5 font-semibold text-sigemun-primary">
                             {cfg.nombreFrecuencia}
                           </p>
                         </td>
                         <td className="px-3.5 py-3 font-mono font-semibold">{cfg.horaEjecucion}</td>
                         <td className="px-3.5 py-3">
                           <p className="font-semibold">{cfg.retencionDias} días</p>
-                          <p className="text-[11px] text-[#5A6B61]">{cfg.cifrado}</p>
+                          <p className="text-[11px] text-sigemun-muted">{cfg.cifrado}</p>
                         </td>
-                        <td className="px-3.5 py-3 font-mono text-[11px] text-[#5A6B61]">
+                        <td className="px-3.5 py-3 font-mono text-[11px] text-sigemun-muted">
                           {cfg.rutaDestino}
                         </td>
                         <td className="px-3.5 py-3">
                           {monitor ? (
                             <div>
                               <p>{formatDateTime(monitor.ultima.fechaInicio)}</p>
-                              <p className="text-[11px] text-[#5A6B61]">
+                              <p className="text-[11px] text-sigemun-muted">
                                 {monitor.ultima.estadoEjecucion} ·{' '}
                                 {formatNumber(monitor.ultima.tamanoMb, 2)} MB · {monitor.total} ejec.
                               </p>
                             </div>
                           ) : (
-                            <span className="text-[#5A6B61]">Sin ejecuciones</span>
+                            <span className="text-sigemun-muted">Sin ejecuciones</span>
                           )}
                         </td>
                         <td className="px-3.5 py-3">
@@ -547,10 +547,10 @@ export function DbaPoliticasPage() {
               <Input {...editForm.register('rutaDestino')} />
             </FormField>
 
-            <label className="flex items-center gap-2 text-sm font-medium text-[#26352D]">
+            <label className="flex items-center gap-2 text-sm font-medium text-sigemun-text">
               <input
                 type="checkbox"
-                className="h-4 w-4 rounded border-[#DCE3DE]"
+                className="h-4 w-4 rounded border-sigemun-border"
                 {...editForm.register('activo')}
               />
               Política Activa

@@ -123,7 +123,7 @@ export function DbaRespaldosPage() {
               <Play className="h-4 w-4" /> Backup DIFERENCIAL
             </Button>
             <Button
-              variant="gold"
+              variant="accent"
               size="sm"
               disabled={backupFullMut.isPending}
               onClick={() => backupFullMut.mutate()}
@@ -135,7 +135,7 @@ export function DbaRespaldosPage() {
       />
 
       {/* Subnavegación Consola DBA */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-[#DCE3DE] pb-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-sigemun-border pb-3">
         <Button variant="outline" size="sm" asChild>
           <Link to="/dba/politicas">
             <Database className="h-4 w-4" /> Políticas de Respaldo
@@ -160,23 +160,23 @@ export function DbaRespaldosPage() {
 
       {/* 3 Tarjetas Superiores del Wireframe 4 (p. 115): DATABASE ENGINE, ÚLTIMO RESPALDO, HISTORIAL */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card className="border-l-4 border-l-[#164B35]">
+        <Card className="border-l-4 border-l-sigemun-primary">
           <CardHeader className="pb-2">
             <CardDescription>DATABASE ENGINE</CardDescription>
-            <CardTitle className="text-lg font-extrabold text-[#164B35]">
+            <CardTitle className="text-lg font-extrabold text-sigemun-primary">
               Microsoft SQL Server · MunicipalidadNicoya2026
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-xs text-[#5A6B61]">
+          <CardContent className="text-xs text-sigemun-muted">
             Timeout extendido DBA: <strong>15 minutos</strong> para operaciones{' '}
             <code className="font-mono">BACKUP</code> y <code className="font-mono">DBCC</code>.
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-[#B6944A]">
+        <Card className="border-l-4 border-l-sigemun-medium">
           <CardHeader className="pb-2">
             <CardDescription>ÚLTIMO RESPALDO REGISTRADO</CardDescription>
-            <CardTitle className="text-lg font-extrabold text-[#26352D]">
+            <CardTitle className="text-lg font-extrabold text-sigemun-text">
               {ultimoRespaldo
                 ? `${ultimoRespaldo.nombreTipoRespaldo} · ${formatNumber(
                     ultimoRespaldo.tamanoMb,
@@ -185,7 +185,7 @@ export function DbaRespaldosPage() {
                 : 'Sin registros en el rango'}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-xs text-[#5A6B61]">
+          <CardContent className="text-xs text-sigemun-muted">
             {ultimoRespaldo
               ? `Fecha: ${formatDateTime(ultimoRespaldo.fechaInicio)} (${ultimoRespaldo.estadoEjecucion ?? '—'})`
               : 'Ejecute un respaldo inmediato para poblar el historial.'}
@@ -199,7 +199,7 @@ export function DbaRespaldosPage() {
               {formatNumber((estadoQuery.data ?? []).length)}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-xs text-[#5A6B61]">
+          <CardContent className="text-xs text-sigemun-muted">
             Archivos verificables mediante <code className="font-mono">RESTORE VERIFYONLY</code>.
           </CardContent>
         </Card>
@@ -250,10 +250,10 @@ export function DbaRespaldosPage() {
                   description="Presione 'Generar Respaldo FULL Inmediato' para ejecutar un backup real."
                 />
               ) : (
-                <div className="overflow-x-auto rounded-lg border border-[#DCE3DE]">
+                <div className="overflow-x-auto rounded-lg border border-sigemun-border">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-[#DCE3DE] bg-[#F5F7F4] font-bold uppercase text-[#5A6B61]">
+                      <tr className="border-b border-sigemun-border bg-sigemun-bg font-bold uppercase text-sigemun-muted">
                         <th className="px-3 py-2.5">ID</th>
                         <th className="px-3 py-2.5">Fecha Inicio / Fin</th>
                         <th className="px-3 py-2.5">Tipo / Política</th>
@@ -264,20 +264,20 @@ export function DbaRespaldosPage() {
                         <th className="px-3 py-2.5 text-right">Acciones</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#DCE3DE]">
+                    <tbody className="divide-y divide-sigemun-border">
                       {historialQuery.data.map((h) => (
-                        <tr key={h.idRespaldos} className="hover:bg-[#E8F0EC]/40">
-                          <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">
+                        <tr key={h.idRespaldos} className="hover:bg-sigemun-sky-muted/40">
+                          <td className="px-3 py-2.5 font-mono font-bold text-sigemun-primary">
                             #{h.idRespaldos}
                           </td>
                           <td className="px-3 py-2.5 whitespace-nowrap">
                             <p>{formatDateTime(h.fechaInicio)}</p>
-                            <p className="text-[10px] text-[#5A6B61]">
+                            <p className="text-[10px] text-sigemun-muted">
                               Fin: {formatDateTime(h.fechaFin)}
                             </p>
                           </td>
                           <td className="px-3 py-2.5">
-                            <Badge variant="gold">{h.nombreTipoRespaldo}</Badge>
+                            <Badge variant="accent">{h.nombreTipoRespaldo}</Badge>
                             <p className="mt-0.5 text-[11px] font-medium">
                               {h.nombreConfiguracion}
                             </p>
@@ -289,7 +289,7 @@ export function DbaRespaldosPage() {
                             {formatNumber(h.tamanoMb, 2)} MB
                           </td>
                           <td
-                            className="px-3 py-2.5 whitespace-nowrap text-[#5A6B61]"
+                            className="px-3 py-2.5 whitespace-nowrap text-sigemun-muted"
                             title={h.detallesError ?? undefined}
                           >
                             {h.duracionSegundos != null ? `${h.duracionSegundos} s` : '—'}
@@ -336,12 +336,12 @@ export function DbaRespaldosPage() {
             </CardContent>
           </Card>
 
-          <div className="flex items-start gap-2.5 rounded-xl border border-[#DCE3DE] bg-white p-4 text-xs text-[#5A6B61]">
-            <Info className="h-4 w-4 shrink-0 text-[#164B35] mt-0.5" />
+          <div className="flex items-start gap-2.5 rounded-xl border border-sigemun-border bg-white p-4 text-xs text-sigemun-muted">
+            <Info className="h-4 w-4 shrink-0 text-sigemun-primary mt-0.5" />
             <div>
               El monitoreo de sesiones, bloqueos, archivos y fragmentación de índices, así como el
               mantenimiento (CU-DBA-04 / CU-DBA-06), está en{' '}
-              <Link to="/dba/monitoreo" className="font-semibold text-[#164B35] hover:underline">
+              <Link to="/dba/monitoreo" className="font-semibold text-sigemun-primary hover:underline">
                 Monitoreo y mantenimiento
               </Link>
               .
@@ -374,7 +374,7 @@ export function DbaRespaldosPage() {
               </div>
 
               <FormField label="Base de Datos Objetivo">
-                <Input value="MunicipalidadNicoya2026" disabled className="bg-[#F5F7F4]" />
+                <Input value="MunicipalidadNicoya2026" disabled className="bg-sigemun-bg" />
               </FormField>
 
               <FormField

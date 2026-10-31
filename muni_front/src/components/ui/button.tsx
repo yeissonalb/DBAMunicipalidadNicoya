@@ -4,18 +4,18 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#164B35] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sigemun-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-[#164B35] text-white shadow-sm hover:bg-[#0F3626]',
-        gold: 'bg-[#B6944A] text-white shadow-sm hover:bg-[#967736]',
+        default: 'bg-sigemun-primary text-white shadow-sm hover:bg-sigemun-navy',
+        accent: 'bg-sigemun-medium text-white shadow-sm hover:bg-sigemun-primary',
         destructive: 'bg-red-600 text-white shadow-sm hover:bg-red-700',
         outline:
-          'border border-[#DCE3DE] bg-white text-[#26352D] hover:bg-[#E8F0EC] hover:text-[#164B35]',
-        secondary: 'bg-[#E8F0EC] text-[#164B35] hover:bg-[#D5E4DC]',
-        ghost: 'text-[#26352D] hover:bg-[#E8F0EC] hover:text-[#164B35]',
-        link: 'text-[#164B35] underline-offset-4 hover:underline',
+          'border border-sigemun-border bg-white text-sigemun-text hover:bg-sigemun-sky-muted hover:text-sigemun-primary',
+        secondary: 'bg-sigemun-sky-muted text-sigemun-primary hover:bg-sigemun-border',
+        ghost: 'text-sigemun-text hover:bg-sigemun-sky-muted hover:text-sigemun-primary',
+        link: 'text-sigemun-primary underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-10 px-4 py-2',

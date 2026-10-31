@@ -229,20 +229,20 @@ export function AppLayout() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F4F7F5] text-[#23342B]">
+    <div className="flex min-h-screen bg-sigemun-bg text-sigemun-text">
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-[#071A12]/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-sigemun-navy/60 backdrop-blur-sm lg:hidden"
           onClick={() => setMobileOpen(false)}
           aria-hidden="true"
         />
       )}
 
-      {/* Institutional Dark Green Sidebar (#164B35) */}
+      {/* Sidebar institucional azul marino */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex flex-col bg-[#103D2B] text-white shadow-xl transition-all duration-200 lg:sticky lg:top-0 lg:h-screen',
+          'fixed inset-y-0 left-0 z-50 flex flex-col bg-sigemun-navy text-white shadow-xl transition-all duration-200 lg:sticky lg:top-0 lg:h-screen',
           collapsed ? 'w-20' : 'w-72',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
@@ -263,7 +263,7 @@ export function AppLayout() {
               <div className="leading-tight">
                 <div className="flex items-center gap-1.5">
                   <span className="text-base font-extrabold tracking-wider text-white">SIGEMUN</span>
-                  <span className="rounded bg-[#B6944A]/25 px-1.5 py-0.5 text-[10px] font-semibold text-[#D4B872]">
+                  <span className="rounded bg-sigemun-medium/25 px-1.5 py-0.5 text-[10px] font-semibold text-sigemun-sky">
                     NICOYA
                   </span>
                 </div>
@@ -296,7 +296,7 @@ export function AppLayout() {
           {visibleGroups.map((group) => (
             <div key={group.groupTitle}>
               {!collapsed && (
-                <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-[#D4B872]">
+                <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-sigemun-sky">
                   {group.groupTitle}
                 </p>
               )}
@@ -310,7 +310,7 @@ export function AppLayout() {
                       cn(
                         'flex min-h-10 items-center gap-3 rounded-xl px-3 py-2.5 text-[0.8125rem] font-medium transition-all',
                         isActive
-                          ? 'bg-[#B6944A] text-white font-semibold shadow-sm ring-1 ring-white/10'
+                          ? 'bg-sigemun-medium text-white font-semibold shadow-sm ring-1 ring-white/10'
                           : 'text-white/80 hover:bg-white/10 hover:text-white',
                         collapsed && 'justify-center px-2'
                       )
@@ -335,7 +335,7 @@ export function AppLayout() {
               <p className="truncate text-xs font-semibold text-white">
                 {user.nombreCompleto || user.userName}
               </p>
-              <p className="truncate text-[11px] text-[#D4B872]">{user.rol}</p>
+              <p className="truncate text-[11px] text-sigemun-sky">{user.rol}</p>
               {user.nombreDepartamento && (
                 <p className="mt-0.5 truncate text-[10px] text-white/60">
                   {user.nombreDepartamento}
@@ -361,24 +361,24 @@ export function AppLayout() {
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Top Institutional Header */}
-        <header className="sticky top-0 z-30 flex h-[4.5rem] items-center justify-between border-b border-[#DCE3DE] bg-white/95 px-4 shadow-sm backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-30 flex h-[4.5rem] items-center justify-between border-b border-sigemun-border bg-white/95 px-4 shadow-sm backdrop-blur sm:px-6">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="rounded-lg p-2 text-[#26352D] hover:bg-[#E8F0EC] lg:hidden"
+              className="rounded-lg p-2 text-sigemun-text hover:bg-sigemun-sky-muted lg:hidden"
               aria-label="Abrir menú"
             >
               <Menu className="h-5 w-5" />
             </button>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-2 text-xs text-[#5A6B61]">
+              <div className="flex items-center gap-2 text-xs text-sigemun-muted">
                 <span>SIGEMUN</span>
                 <span>/</span>
-                <span className="truncate font-medium text-[#164B35]">{currentPageTitle}</span>
+                <span className="truncate font-medium text-sigemun-primary">{currentPageTitle}</span>
               </div>
-              <h2 className="truncate text-sm font-bold text-[#26352D] sm:text-base">
+              <h2 className="truncate text-sm font-bold text-sigemun-text sm:text-base">
                 {currentPageTitle}
               </h2>
             </div>
@@ -388,16 +388,16 @@ export function AppLayout() {
             {user && (
               <div className="hidden items-center gap-2.5 sm:flex">
                 <div className="text-right">
-                  <p className="text-xs font-bold text-[#26352D]">
+                  <p className="text-xs font-bold text-sigemun-text">
                     {user.nombreCompleto || user.userName}
                   </p>
                   <div className="flex items-center justify-end gap-1">
-                    <Badge variant="gold" className="text-[10px] py-0 px-2">
+                    <Badge variant="accent" className="text-[10px] py-0 px-2">
                       {user.rol}
                     </Badge>
                   </div>
                 </div>
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#164B35] text-xs font-bold text-[#B6944A]">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sigemun-primary text-xs font-bold text-sigemun-medium">
                   {(user.nombreCompleto || user.userName).slice(0, 2).toUpperCase()}
                 </div>
               </div>
@@ -411,7 +411,7 @@ export function AppLayout() {
         </main>
 
         {/* Institutional Footer */}
-        <footer className="border-t border-[#DCE3DE] bg-white px-6 py-3 text-xs text-[#5A6B61]">
+        <footer className="border-t border-sigemun-border bg-white px-6 py-3 text-xs text-sigemun-muted">
           <div className="mx-auto flex max-w-[1600px] flex-col items-center justify-between gap-2 sm:flex-row">
             <p>
               <strong>SIGEMUN</strong> — Sistema de Gestión Municipal · Municipalidad de Nicoya,

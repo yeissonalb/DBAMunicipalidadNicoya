@@ -166,7 +166,7 @@ export function DataWarehousePage() {
         <ErrorState error={estadoQuery.error} onRetry={() => estadoQuery.refetch()} />
       ) : !instalado ? (
         <Card className="border-l-4 border-l-amber-500">
-          <CardContent className="flex items-start gap-3 pt-6 text-sm text-[#5A3E0A] sm:pt-6">
+          <CardContent className="flex items-start gap-3 pt-6 text-sm text-sigemun-primary sm:pt-6">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <div>
               <p className="font-semibold">La base MunicipalidadNicoyaDataMart2026 no existe en este servidor.</p>
@@ -180,10 +180,10 @@ export function DataWarehousePage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-          <Card className="border-l-4 border-l-[#164B35]">
+          <Card className="border-l-4 border-l-sigemun-primary">
             <CardHeader className="pb-2">
               <CardDescription>Última carga ETL</CardDescription>
-              <CardTitle className="text-lg font-extrabold text-[#164B35]">
+              <CardTitle className="text-lg font-extrabold text-sigemun-primary">
                 {estadoQuery.data?.ultimaCargaInicio
                   ? formatDateTime(estadoQuery.data.ultimaCargaInicio)
                   : 'Sin cargas registradas'}
@@ -195,7 +195,7 @@ export function DataWarehousePage() {
                   {estadoQuery.data.ultimaCargaEstado}
                 </Badge>
               ) : (
-                <span className="text-[#5A6B61]">Ejecute la primera carga.</span>
+                <span className="text-sigemun-muted">Ejecute la primera carga.</span>
               )}
             </CardContent>
           </Card>
@@ -204,14 +204,14 @@ export function DataWarehousePage() {
             ['Hechos de morosidad', estadoQuery.data?.filasFactMorosidad],
             ['Hechos de eficiencia', estadoQuery.data?.filasFactEficiencia],
           ].map(([label, valor]) => (
-            <Card key={label as string} className="border-l-4 border-l-[#B6944A]">
+            <Card key={label as string} className="border-l-4 border-l-sigemun-medium">
               <CardHeader className="pb-2">
                 <CardDescription>{label}</CardDescription>
-                <CardTitle className="text-2xl font-extrabold text-[#26352D]">
+                <CardTitle className="text-2xl font-extrabold text-sigemun-text">
                   {formatNumber(valor as number)}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-xs text-[#5A6B61]">filas en el Data Mart</CardContent>
+              <CardContent className="text-xs text-sigemun-muted">filas en el Data Mart</CardContent>
             </Card>
           ))}
         </div>
@@ -220,7 +220,7 @@ export function DataWarehousePage() {
       {/* Resultado de la última validación ETL ejecutada desde esta pantalla */}
       {ultimaValidacion && ultimaValidacion.length > 0 && (
         <Card className="overflow-hidden">
-          <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+          <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
             <CardTitle className="text-base">Validación de la carga #{ultimaValidacion[0].idCarga}</CardTitle>
             <CardDescription>Comparación de totales entre la base operativa (OLTP) y el Data Mart.</CardDescription>
           </CardHeader>
@@ -242,7 +242,7 @@ export function DataWarehousePage() {
       {instalado && (
         <>
           <nav
-            className="grid gap-2 rounded-2xl border border-[#DCE3DE] bg-white p-3 shadow-card sm:grid-cols-3 xl:grid-cols-6"
+            className="grid gap-2 rounded-2xl border border-sigemun-border bg-white p-3 shadow-card sm:grid-cols-3 xl:grid-cols-6"
             aria-label="Consultas del Data Mart"
           >
             {VISTAS.map((v) => (
@@ -273,7 +273,7 @@ export function DataWarehousePage() {
                   <div className="h-72 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={grafico.datos}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#DCE3DE" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#D9E6F2" />
                         <XAxis dataKey="etiqueta" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} />
                         <Tooltip
@@ -298,7 +298,7 @@ export function DataWarehousePage() {
               )}
 
               <Card className="overflow-hidden">
-                <CardHeader className="flex flex-row items-center justify-between border-b border-[#DCE3DE] bg-[#FAFCFB]">
+                <CardHeader className="flex flex-row items-center justify-between border-b border-sigemun-border bg-sigemun-surface">
                   <div>
                     <CardTitle className="text-base">
                       {VISTAS.find((v) => v.id === vista)?.label}
@@ -324,7 +324,7 @@ export function DataWarehousePage() {
 
       {/* Historial de cargas ETL */}
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+        <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
           <CardTitle className="text-base">Historial de cargas ETL</CardTitle>
           <CardDescription>Registro de cada ejecución (dbo.Control_Cargas_ETL).</CardDescription>
         </CardHeader>
@@ -334,12 +334,12 @@ export function DataWarehousePage() {
           ) : historialQuery.isError ? (
             <ErrorState error={historialQuery.error} onRetry={() => historialQuery.refetch()} />
           ) : (historialQuery.data ?? []).length === 0 ? (
-            <p className="p-4 text-xs text-[#5A6B61]">Todavía no se ha ejecutado ninguna carga.</p>
+            <p className="p-4 text-xs text-sigemun-muted">Todavía no se ha ejecutado ninguna carga.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                  <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                     <th className="px-3 py-2.5">Carga</th>
                     <th className="px-3 py-2.5">Inicio</th>
                     <th className="px-3 py-2.5">Duración</th>
@@ -348,10 +348,10 @@ export function DataWarehousePage() {
                     <th className="px-3 py-2.5">Detalle</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DCE3DE]">
+                <tbody className="divide-y divide-sigemun-border">
                   {(historialQuery.data ?? []).map((h) => (
-                    <tr key={h.idCarga} className="even:bg-[#FAFCFB]">
-                      <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">#{h.idCarga}</td>
+                    <tr key={h.idCarga} className="even:bg-sigemun-surface">
+                      <td className="px-3 py-2.5 font-mono font-bold text-sigemun-primary">#{h.idCarga}</td>
                       <td className="px-3 py-2.5">{formatDateTime(h.fechaInicio)}</td>
                       <td className="px-3 py-2.5">
                         {h.duracionSegundos != null ? `${h.duracionSegundos} s` : '—'}
@@ -360,7 +360,7 @@ export function DataWarehousePage() {
                         <Badge variant={estadoBadge(h.estado)}>{h.estado}</Badge>
                       </td>
                       <td className="px-3 py-2.5">{h.ejecutadoPor || '—'}</td>
-                      <td className="max-w-md px-3 py-2.5 text-xs text-[#5A6B61]">{h.detalle || '—'}</td>
+                      <td className="max-w-md px-3 py-2.5 text-xs text-sigemun-muted">{h.detalle || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -476,7 +476,7 @@ function TablaGenerica({
     <div className="max-h-[480px] overflow-auto">
       <table className="w-full min-w-[720px] text-left text-sm">
         <thead>
-          <tr className="sticky top-0 border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+          <tr className="sticky top-0 border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
             {cols.map(([k, label]) => (
               <th key={k} className="whitespace-nowrap px-3 py-2.5">
                 {label}
@@ -484,9 +484,9 @@ function TablaGenerica({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#DCE3DE]">
+        <tbody className="divide-y divide-sigemun-border">
           {filas.map((f, idx) => (
-            <tr key={idx} className="even:bg-[#FAFCFB]">
+            <tr key={idx} className="even:bg-sigemun-surface">
               {cols.map(([k]) => (
                 <td key={k} className="whitespace-nowrap px-3 py-2">
                   {formatearCelda(k, f[k])}
@@ -522,8 +522,8 @@ function construirGrafico(vista: Vista, filas: Record<string, unknown>[]): Grafi
           intereses: num(f.totalRecaudadoIntereses),
         })),
         series: [
-          { clave: 'principal', nombre: 'Principal (₡)', color: '#164B35' },
-          { clave: 'intereses', nombre: 'Intereses (₡)', color: '#B6944A' },
+          { clave: 'principal', nombre: 'Principal (₡)', color: '#1E5A9C' },
+          { clave: 'intereses', nombre: 'Intereses (₡)', color: '#3E8FD6' },
         ],
       };
     case 'tributo':
@@ -531,14 +531,14 @@ function construirGrafico(vista: Vista, filas: Record<string, unknown>[]): Grafi
         titulo: 'Recaudación por tributo',
         moneda: true,
         datos: filas.map((f) => ({ etiqueta: f.codigoTributo ?? f.nombreTributo, total: num(f.totalRecaudado) })),
-        series: [{ clave: 'total', nombre: 'Total recaudado (₡)', color: '#164B35' }],
+        series: [{ clave: 'total', nombre: 'Total recaudado (₡)', color: '#1E5A9C' }],
       };
     case 'ubicacion':
       return {
         titulo: 'Recaudación por distrito',
         moneda: true,
         datos: filas.map((f) => ({ etiqueta: f.distrito, total: num(f.totalRecaudado) })),
-        series: [{ clave: 'total', nombre: 'Total recaudado (₡)', color: '#164B35' }],
+        series: [{ clave: 'total', nombre: 'Total recaudado (₡)', color: '#1E5A9C' }],
       };
     case 'morosidad': {
       const porDistrito = new Map<string, number>();
@@ -566,8 +566,8 @@ function construirGrafico(vista: Vista, filas: Record<string, unknown>[]): Grafi
           rechazados: num(f.tramitesRechazados),
         })),
         series: [
-          { clave: 'aprobados', nombre: 'Aprobados', color: '#164B35' },
-          { clave: 'rechazados', nombre: 'Rechazados', color: '#B6944A' },
+          { clave: 'aprobados', nombre: 'Aprobados', color: '#1E5A9C' },
+          { clave: 'rechazados', nombre: 'Rechazados', color: '#3E8FD6' },
         ],
       };
   }

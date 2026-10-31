@@ -195,7 +195,7 @@ export function MatrizPermisosPage() {
       />
 
       {/* Subnavegación superior (Wireframes 6 y 7) */}
-      <nav className="grid gap-3 rounded-2xl border border-[#DCE3DE] bg-white p-3 shadow-card sm:grid-cols-2" aria-label="Administración de seguridad">
+      <nav className="grid gap-3 rounded-2xl border border-sigemun-border bg-white p-3 shadow-card sm:grid-cols-2" aria-label="Administración de seguridad">
         <Button variant="outline" className="h-auto justify-start px-4 py-3" asChild>
           <Link to="/seguridad/usuarios">
             <UserCheck className="h-4 w-4" /> Usuarios y roles
@@ -210,14 +210,14 @@ export function MatrizPermisosPage() {
 
       {/* Selector de Rol y Nota Técnica */}
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+        <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
           <CardTitle className="text-base">Rol en configuración</CardTitle>
           <CardDescription>Seleccione el perfil institucional al que desea conceder permisos.</CardDescription>
         </CardHeader>
         <CardContent className="pt-6 sm:pt-6">
           <div className="grid gap-5 lg:grid-cols-[minmax(280px,420px)_minmax(0,1fr)] lg:items-center">
             <div className="w-full">
-              <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+              <label className="mb-2 block text-sm font-semibold text-sigemun-text">
                 Rol institucional
               </label>
               <Select
@@ -236,7 +236,7 @@ export function MatrizPermisosPage() {
               </Select>
             </div>
 
-            <div className="flex items-start gap-3 rounded-xl border border-[#B6944A]/40 bg-[#FBF7EE] p-4 text-sm text-[#735A26]">
+            <div className="flex items-start gap-3 rounded-xl border border-sigemun-medium/40 bg-sigemun-bg p-4 text-sm text-sigemun-primary">
               <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
               <span>
                 <strong>Principio de mínimo privilegio:</strong> conceda únicamente las acciones
@@ -260,7 +260,7 @@ export function MatrizPermisosPage() {
         />
       ) : (
         <Card className="overflow-hidden">
-          <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+          <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
             <CardTitle>Matriz de autorizaciones · {activeRolName}</CardTitle>
             <CardDescription>Permisos disponibles por módulo y acción institucional.</CardDescription>
           </CardHeader>
@@ -268,7 +268,7 @@ export function MatrizPermisosPage() {
             <div className="overflow-x-auto" role="region" aria-label="Matriz de autorizaciones" tabIndex={0}>
               <table className="w-full min-w-[960px] border-collapse text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                  <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                     <th className="px-4 py-3">Módulo del Sistema</th>
                     {actionsList.map((act) => (
                       <th key={act} className="px-4 py-3 text-center">
@@ -277,15 +277,15 @@ export function MatrizPermisosPage() {
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DCE3DE]">
+                <tbody className="divide-y divide-sigemun-border">
                   {modulesList.map((mod) => (
-                    <tr key={mod} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
-                      <td className="px-4 py-3 font-bold text-[#26352D]">{mod}</td>
+                    <tr key={mod} className="even:bg-sigemun-surface transition-colors hover:bg-sigemun-sky-muted/55">
+                      <td className="px-4 py-3 font-bold text-sigemun-text">{mod}</td>
                       {actionsList.map((act) => {
                         const permId = permLookup.get(`${mod}::${act}`);
                         if (!permId) {
                           return (
-                            <td key={act} className="px-4 py-3 text-center text-[#5A6B61]/40">
+                            <td key={act} className="px-4 py-3 text-center text-sigemun-muted/40">
                               —
                             </td>
                           );
@@ -319,7 +319,7 @@ export function MatrizPermisosPage() {
                                 type="checkbox"
                                 checked={marcado}
                                 onChange={() => togglePendingPerm(permId)}
-                                className="h-4 w-4 rounded border-[#DCE3DE] text-[#164B35] focus:ring-[#164B35]"
+                                className="h-4 w-4 rounded border-sigemun-border text-sigemun-primary focus:ring-sigemun-primary"
                               />
                               <span className="text-[11px] font-semibold">
                                 {alreadyGranted && !isPending ? (
@@ -340,8 +340,8 @@ export function MatrizPermisosPage() {
               </table>
             </div>
 
-            <div className="mt-4 flex items-center gap-2 text-xs text-[#5A6B61]">
-              <Info className="h-4 w-4 text-[#164B35]" />
+            <div className="mt-4 flex items-center gap-2 text-xs text-sigemun-muted">
+              <Info className="h-4 w-4 text-sigemun-primary" />
               <span>
                 Marque una casilla para conceder el permiso o desmarque uno activo para revocarlo.
                 Los cambios se aplican en SQL Server al pulsar «Guardar cambios».
@@ -353,7 +353,7 @@ export function MatrizPermisosPage() {
 
       {/* Vista Detallada de la Matriz Usuario-Rol-Permiso */}
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+        <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
           <CardTitle className="text-base">Accesos asignados</CardTitle>
           <CardDescription>Vista consolidada de usuarios, roles y permisos efectivos.</CardDescription>
         </CardHeader>
@@ -361,7 +361,7 @@ export function MatrizPermisosPage() {
           <div className="max-h-96 overflow-auto" role="region" aria-label="Accesos asignados" tabIndex={0}>
             <table className="w-full min-w-[900px] text-left text-sm">
               <thead>
-                <tr className="sticky top-0 border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                <tr className="sticky top-0 border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                   <th className="px-3 py-2">Usuario</th>
                   <th className="px-3 py-2">Funcionario</th>
                   <th className="px-3 py-2">Departamento</th>
@@ -370,16 +370,16 @@ export function MatrizPermisosPage() {
                   <th className="px-3 py-2">Acción</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#DCE3DE]">
+              <tbody className="divide-y divide-sigemun-border">
                 {(matrizQuery.data ?? []).map((row, idx) => (
-                  <tr key={`${row.idUsuario}-${row.idRol}-${row.idPermiso}-${idx}`} className="even:bg-[#FAFCFB] hover:bg-[#E8F0EC]/55">
-                    <td className="px-3 py-2 font-mono font-semibold text-[#164B35]">
+                  <tr key={`${row.idUsuario}-${row.idRol}-${row.idPermiso}-${idx}`} className="even:bg-sigemun-surface hover:bg-sigemun-sky-muted/55">
+                    <td className="px-3 py-2 font-mono font-semibold text-sigemun-primary">
                       {row.userName}
                     </td>
                     <td className="px-3 py-2">{row.nombreCompleto}</td>
-                    <td className="px-3 py-2 text-[#5A6B61]">{row.nombreDepartamento}</td>
+                    <td className="px-3 py-2 text-sigemun-muted">{row.nombreDepartamento}</td>
                     <td className="px-3 py-2">
-                      <Badge variant="gold">{row.nombreRol}</Badge>
+                      <Badge variant="accent">{row.nombreRol}</Badge>
                     </td>
                     <td className="px-3 py-2 font-medium">{row.modulo}</td>
                     <td className="px-3 py-2">

@@ -206,7 +206,7 @@ export function PagosMunicipalesPage() {
           {/* Panel Izquierdo (7 cols): Saldos pendientes por facturar / Facturas Pendientes (Wireframe 12) */}
           <div className="contents">
             <Card className="overflow-hidden lg:col-span-2">
-              <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+              <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
                 <CardTitle>Facturas pendientes de cobro</CardTitle>
                 <CardDescription>
                   Seleccione una factura para consultar su saldo y preparar el registro del pago.
@@ -214,7 +214,7 @@ export function PagosMunicipalesPage() {
               </CardHeader>
               <CardContent className="space-y-5 pt-6 sm:pt-6">
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-[#607168]" />
+                  <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-sigemun-muted" />
                   <Input
                     placeholder="Buscar por contribuyente, finca, tributo, ID factura o clave Hacienda..."
                     value={busqueda}
@@ -229,10 +229,10 @@ export function PagosMunicipalesPage() {
                     description="Puede generar nuevas facturas desde el módulo de Tributos y Deudas."
                   />
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-[#DCE3DE]" role="region" aria-label="Facturas pendientes" tabIndex={0}>
+                  <div className="overflow-x-auto rounded-xl border border-sigemun-border" role="region" aria-label="Facturas pendientes" tabIndex={0}>
                     <table className="w-full min-w-[1100px] text-left text-sm">
                       <thead>
-                        <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                        <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                           <th className="px-3 py-2.5">Factura</th>
                           <th className="px-3 py-2.5">Contribuyente / Finca</th>
                           <th className="px-3 py-2.5">Tributo / Periodo</th>
@@ -242,7 +242,7 @@ export function PagosMunicipalesPage() {
                           <th className="px-3 py-2.5">Saldo Pendiente</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#DCE3DE]">
+                      <tbody className="divide-y divide-sigemun-border">
                         {facturasFiltradas.map((f) => {
                           const isSelected = selectedFactura?.idFactura === f.idFactura;
                           return (
@@ -250,23 +250,23 @@ export function PagosMunicipalesPage() {
                               key={f.idFactura}
                               onClick={() => selectFacturaAndPrefill(f)}
                               className={`cursor-pointer transition-colors ${
-                                isSelected ? 'bg-[#E8F0EC] shadow-[inset_4px_0_0_#164B35]' : 'even:bg-[#FAFCFB] hover:bg-[#F5F7F4]'
+                                isSelected ? 'bg-sigemun-sky-muted shadow-[inset_4px_0_0_var(--sigemun-primary)]' : 'even:bg-sigemun-surface hover:bg-sigemun-bg'
                               }`}
                             >
-                              <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">
+                              <td className="px-3 py-2.5 font-mono font-bold text-sigemun-primary">
                                 #{f.idFactura}
                               </td>
                               <td className="px-3 py-2.5">
-                                <p className="font-semibold text-[#26352D]">
+                                <p className="font-semibold text-sigemun-text">
                                   {f.contribuyente || `ID #${f.idContribuyente}`}
                                 </p>
-                                <p className="font-mono text-[11px] text-[#5A6B61]">
+                                <p className="font-mono text-[11px] text-sigemun-muted">
                                   Finca: {f.numeroFinca}
                                 </p>
                               </td>
                               <td className="px-3 py-2.5">
                                 <p className="font-medium">{f.nombreTributo}</p>
-                                <p className="text-[#5A6B61]">{f.periodoDeuda}</p>
+                                <p className="text-sigemun-muted">{f.periodoDeuda}</p>
                               </td>
                               <td className="px-3 py-2.5">
                                 <p>{formatDate(f.fechaDeVencimiento)}</p>
@@ -293,38 +293,38 @@ export function PagosMunicipalesPage() {
 
                 {/* Resumen de la Factura Seleccionada (Tal como en el Wireframe 12) */}
                 {selectedFactura && (
-                  <div className="space-y-3 rounded-xl border border-[#164B35]/30 bg-[#E8F0EC]/40 p-5 text-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#DCE3DE] pb-2">
-                      <span className="font-bold text-[#164B35]">
+                  <div className="space-y-3 rounded-xl border border-sigemun-primary/30 bg-sigemun-sky-muted/40 p-5 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-sigemun-border pb-2">
+                      <span className="font-bold text-sigemun-primary">
                         Factura Seleccionada #{selectedFactura.idFactura} · Estado:{' '}
                         {selectedFactura.estadoFactura}
                       </span>
-                      <span className="font-mono text-[11px] text-[#5A6B61]">
+                      <span className="font-mono text-[11px] text-sigemun-muted">
                         Clave Hacienda: {selectedFactura.claveNumericaHacienda}
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 pt-1">
                       <div>
-                        <p className="text-[#5A6B61]">Subtotal</p>
-                        <p className="font-bold text-[#26352D]">
+                        <p className="text-sigemun-muted">Subtotal</p>
+                        <p className="font-bold text-sigemun-text">
                           {formatCurrencyCRC(selectedFactura.subtotal)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[#5A6B61]">Descuentos</p>
-                        <p className="font-bold text-[#26352D]">
+                        <p className="text-sigemun-muted">Descuentos</p>
+                        <p className="font-bold text-sigemun-text">
                           {formatCurrencyCRC(selectedFactura.descuentos)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[#5A6B61]">Total Abonado</p>
+                        <p className="text-sigemun-muted">Total Abonado</p>
                         <p className="font-bold text-emerald-800">
                           {formatCurrencyCRC(selectedFactura.totalAbonado)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[#5A6B61]">Saldo por pagar</p>
-                        <p className="text-sm font-extrabold text-[#164B35]">
+                        <p className="text-sigemun-muted">Saldo por pagar</p>
+                        <p className="text-sm font-extrabold text-sigemun-primary">
                           {formatCurrencyCRC(selectedFactura.saldoPendiente)}
                         </p>
                       </div>
@@ -336,7 +336,7 @@ export function PagosMunicipalesPage() {
 
             {/* Consulta de Factura por Clave Numérica Hacienda (sp_consultar_factura) */}
             <Card className="h-full overflow-hidden">
-              <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
+              <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
                 <CardTitle className="text-base">Verificar comprobante electrónico</CardTitle>
                 <CardDescription>Consulte una factura mediante su clave numérica de Hacienda.</CardDescription>
               </CardHeader>
@@ -349,13 +349,13 @@ export function PagosMunicipalesPage() {
                 />
                 {consultarFacturaPuntualQuery.data &&
                   consultarFacturaPuntualQuery.data.length > 0 && (
-                    <div className="rounded-lg bg-[#F5F7F4] p-3 text-xs">
+                    <div className="rounded-lg bg-sigemun-bg p-3 text-xs">
                       {consultarFacturaPuntualQuery.data.map((fc) => (
                         <div key={fc.idFactura} className="flex justify-between">
                           <span>
                             Factura #{fc.idFactura} · Finca {fc.numeroFinca} ({fc.periodoDeuda})
                           </span>
-                          <span className="font-bold text-[#164B35]">
+                          <span className="font-bold text-sigemun-primary">
                             Saldo: {formatCurrencyCRC(fc.saldoPendiente)} ({fc.estadoFactura})
                           </span>
                         </div>
@@ -368,17 +368,17 @@ export function PagosMunicipalesPage() {
 
           {/* Panel Derecho (5 cols): Registro de Pago en Caja (Wireframe 12) */}
           <div className="contents">
-            <Card className="h-full overflow-hidden border-[#BBD3C6]">
-              <CardHeader className="border-b border-[#DCE3DE] bg-[#F2F7F4]">
+            <Card className="h-full overflow-hidden border-sigemun-sky">
+              <CardHeader className="border-b border-sigemun-border bg-sigemun-bg">
                 <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-[#164B35]" /> Registrar pago en caja
+                  <CreditCard className="h-5 w-5 text-sigemun-primary" /> Registrar pago en caja
                 </CardTitle>
                 <CardDescription>Seleccione el medio de pago y distribuya el monto aplicado a la factura.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-5 pt-6 sm:pt-6">
                 {/* Botones de Método de Pago como en el Wireframe 12 */}
                 <div>
-                  <label className="mb-2 block text-xs font-semibold text-[#26352D]">
+                  <label className="mb-2 block text-xs font-semibold text-sigemun-text">
                     Método de pago autorizado
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -391,8 +391,8 @@ export function PagosMunicipalesPage() {
                           onClick={() => setSelectedMedioPagoId(mp.idMedioPago)}
                           className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-semibold transition-all ${
                             active
-                              ? 'border-[#164B35] bg-[#164B35] text-white shadow-xs'
-                              : 'border-[#DCE3DE] bg-white text-[#26352D] hover:bg-[#E8F0EC]'
+                              ? 'border-sigemun-primary bg-sigemun-primary text-white shadow-xs'
+                              : 'border-sigemun-border bg-white text-sigemun-text hover:bg-sigemun-sky-muted'
                           }`}
                         >
                           {getMedioIcon(mp.nombreMedioPago ?? '')}
@@ -416,16 +416,16 @@ export function PagosMunicipalesPage() {
                   />
                 </FormField>
 
-                <div className="rounded-xl border border-[#DCE3DE] bg-[#F5F7F4]/70 p-3.5 space-y-3">
+                <div className="rounded-xl border border-sigemun-border bg-sigemun-bg/70 p-3.5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold text-[#164B35]">
+                    <p className="text-xs font-bold text-sigemun-primary">
                       Imputación a Factura #{selectedFactura?.idFactura ?? '—'}
                     </p>
                     {selectedFactura && (
                       <button
                         type="button"
                         onClick={() => selectFacturaAndPrefill(selectedFactura)}
-                        className="text-[11px] font-semibold text-[#164B35] underline"
+                        className="text-[11px] font-semibold text-sigemun-primary underline"
                       >
                         Usar saldo exacto ({formatCurrencyCRC(selectedFactura.saldoPendiente)})
                       </button>
@@ -462,9 +462,9 @@ export function PagosMunicipalesPage() {
                     </FormField>
                   </div>
 
-                  <div className="flex items-center justify-between border-t border-[#DCE3DE] pt-2.5 text-sm">
-                    <span className="font-bold text-[#26352D]">Total a Registrar y Aplicar:</span>
-                    <span className="text-base font-extrabold text-[#164B35]">
+                  <div className="flex items-center justify-between border-t border-sigemun-border pt-2.5 text-sm">
+                    <span className="font-bold text-sigemun-text">Total a Registrar y Aplicar:</span>
+                    <span className="text-base font-extrabold text-sigemun-primary">
                       {formatCurrencyCRC(montoTotalPagar)}
                     </span>
                   </div>
@@ -501,7 +501,7 @@ export function PagosMunicipalesPage() {
               </span>
             </div>
 
-            <div className="rounded-lg border border-[#DCE3DE] bg-[#F5F7F4] p-3.5 text-xs space-y-1.5">
+            <div className="rounded-lg border border-sigemun-border bg-sigemun-bg p-3.5 text-xs space-y-1.5">
               <p>
                 <strong>Contribuyente:</strong> {selectedFactura.contribuyente} (#
                 {selectedFactura.idContribuyente})
@@ -515,7 +515,7 @@ export function PagosMunicipalesPage() {
               </p>
               <p>
                 <strong>Monto Total a Cobrar:</strong>{' '}
-                <span className="text-sm font-extrabold text-[#164B35]">
+                <span className="text-sm font-extrabold text-sigemun-primary">
                   {formatCurrencyCRC(montoTotalPagar)}
                 </span>
               </p>

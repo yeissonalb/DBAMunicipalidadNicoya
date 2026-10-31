@@ -244,7 +244,7 @@ export function ContribuyentesPage() {
         }
       />
 
-      <nav className="grid gap-3 rounded-2xl border border-[#DCE3DE] bg-white p-3 shadow-card sm:grid-cols-3" aria-label="Secciones del padrón">
+      <nav className="grid gap-3 rounded-2xl border border-sigemun-border bg-white p-3 shadow-card sm:grid-cols-3" aria-label="Secciones del padrón">
         <Button
           variant={activeTab === 'padron' ? 'default' : 'outline'}
           className="h-auto justify-start px-4 py-3"
@@ -272,20 +272,20 @@ export function ContribuyentesPage() {
       {activeTab === 'padron' && (
         <div className="flex flex-col" style={{ gap: '1.5rem' }}>
           <Card className="overflow-hidden">
-            <CardHeader className="border-b border-[#E5EBE7] bg-[#FAFCFB]">
+            <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
               <CardTitle className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-[#164B35]" /> Buscar contribuyentes
+                <Search className="h-4 w-4 text-sigemun-primary" /> Buscar contribuyentes
               </CardTitle>
               <CardDescription>Consulte por identificación, nombre, razón social o correo electrónico.</CardDescription>
             </CardHeader>
             <CardContent className="pt-6 sm:pt-6">
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px_auto] lg:items-end">
                 <div className="flex-1">
-                  <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                  <label className="mb-2 block text-sm font-semibold text-sigemun-text">
                     Criterio de búsqueda
                   </label>
                   <div className="relative">
-                    <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-[#607168]" />
+                    <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-sigemun-muted" />
                     <Input
                       placeholder="Cédula de identidad/jurídica, nombre, razón social o correo..."
                       value={criterioBusqueda}
@@ -298,7 +298,7 @@ export function ContribuyentesPage() {
                   </div>
                 </div>
                 <div className="w-full">
-                  <label className="mb-2 block text-sm font-semibold text-[#26352D]">
+                  <label className="mb-2 block text-sm font-semibold text-sigemun-text">
                     Tipo de persona
                   </label>
                   <Select
@@ -343,10 +343,10 @@ export function ContribuyentesPage() {
               description="Intente con otro criterio de búsqueda o registre un nuevo contribuyente."
             />
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-[#DCE3DE] bg-white shadow-card" role="region" aria-label="Listado de contribuyentes" tabIndex={0}>
+            <div className="overflow-x-auto rounded-2xl border border-sigemun-border bg-white shadow-card" role="region" aria-label="Listado de contribuyentes" tabIndex={0}>
               <table className="w-full min-w-[1180px] border-collapse text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
+                  <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
                     <th scope="col" className="px-5 py-4">ID</th>
                     <th scope="col" className="px-4 py-4">Tipo</th>
                     <th scope="col" className="px-4 py-4">Identificación</th>
@@ -358,16 +358,16 @@ export function ContribuyentesPage() {
                     <th scope="col" className="px-5 py-4 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DCE3DE]">
+                <tbody className="divide-y divide-sigemun-border">
                   {listaFiltrada.map((c) => {
                     const isJuridica = (c.tipoPersona || '').toUpperCase().includes('JUR');
                     return (
-                      <tr key={c.idContribuyente} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
-                        <td className="px-5 py-4 font-mono font-bold text-[#164B35]">
+                      <tr key={c.idContribuyente} className="even:bg-sigemun-surface transition-colors hover:bg-sigemun-sky-muted/55">
+                        <td className="px-5 py-4 font-mono font-bold text-sigemun-primary">
                           #{c.idContribuyente}
                         </td>
                         <td className="px-4 py-3">
-                          <Badge variant={isJuridica ? 'gold' : 'info'}>
+                          <Badge variant={isJuridica ? 'accent' : 'info'}>
                             {c.tipoPersona}
                           </Badge>
                         </td>
@@ -375,20 +375,20 @@ export function ContribuyentesPage() {
                           {c.identificacionOficial || '—'}
                         </td>
                         <td className="px-4 py-3">
-                          <p className="font-semibold text-[#26352D]">
+                          <p className="font-semibold text-sigemun-text">
                             {c.nombreORazonSocial || '—'}
                           </p>
                           {c.nombreFantasia && (
-                            <p className="text-xs text-[#5A6B61]">
+                            <p className="text-xs text-sigemun-muted">
                               Fantasía: {c.nombreFantasia}
                             </p>
                           )}
                         </td>
                         <td className="px-4 py-3 text-xs">
-                          <p className="font-medium text-[#26352D]">{c.correoElectronico}</p>
-                          <p className="text-[#5A6B61]">{c.telefono}</p>
+                          <p className="font-medium text-sigemun-text">{c.correoElectronico}</p>
+                          <p className="text-sigemun-muted">{c.telefono}</p>
                         </td>
-                        <td className="px-4 py-3 max-w-xs truncate text-xs text-[#5A6B61]">
+                        <td className="px-4 py-3 max-w-xs truncate text-xs text-sigemun-muted">
                           {c.direccionNotificaciones}
                         </td>
                         <td className="px-4 py-3 text-xs whitespace-nowrap">
@@ -693,10 +693,10 @@ export function ContribuyentesPage() {
               <Input {...editForm.register('direccionNotificaciones')} />
             </FormField>
 
-            <label className="flex items-center gap-2.5 text-sm font-medium text-[#26352D]">
+            <label className="flex items-center gap-2.5 text-sm font-medium text-sigemun-text">
               <input
                 type="checkbox"
-                className="h-4 w-4 rounded border-[#DCE3DE] text-[#164B35]"
+                className="h-4 w-4 rounded border-sigemun-border text-sigemun-primary"
                 {...editForm.register('estadoContribuyente')}
               />
               Contribuyente Activo en el Padrón Municipal
