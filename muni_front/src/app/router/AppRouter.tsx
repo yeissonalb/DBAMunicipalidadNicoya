@@ -1,7 +1,8 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+﻿import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { useAuth } from '@/app/providers/AuthProvider';
 import { AppLayout } from '@/app/layouts/AppLayout';
 import { ProtectedRoute } from '@/app/router/ProtectedRoute';
-import { MODULE_PERMISSIONS } from '@/features/auth/permissions';
+import { MODULE_PERMISSIONS, getDefaultRouteForRoles } from '@/features/auth/permissions';
 
 import { LoginPage } from '@/features/auth/LoginPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
@@ -26,14 +27,20 @@ import { DbaRespaldosPage } from '@/features/dba/DbaRespaldosPage';
 import { DbaMonitoreoPage } from '@/features/dba/DbaMonitoreoPage';
 import { DataWarehousePage } from '@/features/reportes/DataWarehousePage';
 
+function IndexRedirect() {
+  const { user } = useAuth();
+  const target = getDefaultRouteForRoles(user?.roles ?? []);
+  return <Navigate to={target} replace />;
+}
+
 export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Ruta pública: Inicio de sesión institucional (Wireframe 1) */}
+        {/* Ruta pública: Inicio de sesión institucional */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Portal ciudadano (wireframe p. 113): sesión y token propios del contribuyente */}
+        {/* Portal ciudadano (autoservicio): sesión y token propios del contribuyente */}
         <Route path="/portal" element={<PortalRoot />}>
           <Route path="login" element={<PortalLoginPage />} />
           <Route
@@ -55,7 +62,7 @@ export function AppRouter() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route index element={<IndexRedirect />} />
 
           <Route
             path="/dashboard"
@@ -93,6 +100,15 @@ export function AppRouter() {
             }
           />
 
+          {/* Trámites y Expedientes */}
+          <Route
+            path="/tramites/radicacion"
+            element={
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES}>
+                <RadicacionTramitePage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/tramites/radicar"
             element={
@@ -112,6 +128,14 @@ export function AppRouter() {
           />
 
           <Route
+            path="/tramites/revision"
+            element={
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES}>
+                <RevisionExpedientePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/expedientes/revision"
             element={
               <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES}>
@@ -121,6 +145,14 @@ export function AppRouter() {
           />
 
           <Route
+            path="/tramites/seguimiento"
+            element={
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES}>
+                <SeguimientoExpedientePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/expedientes/seguimiento"
             element={
               <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES}>
@@ -129,6 +161,15 @@ export function AppRouter() {
             }
           />
 
+          {/* Pagos y Tributos */}
+          <Route
+            path="/pagos-municipales"
+            element={
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRIBUTOS_PAGOS}>
+                <PagosMunicipalesPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/pagos"
             element={
@@ -139,6 +180,14 @@ export function AppRouter() {
           />
 
           <Route
+            path="/tributos-deudas"
+            element={
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRIBUTOS_PAGOS}>
+                <TributosDeudasPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/tributos"
             element={
               <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRIBUTOS_PAGOS}>
@@ -147,6 +196,7 @@ export function AppRouter() {
             }
           />
 
+          {/* Reportes y Data Warehouse */}
           <Route
             path="/reportes"
             element={
@@ -165,6 +215,7 @@ export function AppRouter() {
             }
           />
 
+          {/* Auditoría Forense */}
           <Route
             path="/auditoria"
             element={
@@ -173,7 +224,6 @@ export function AppRouter() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/dba/auditoria"
             element={
@@ -183,6 +233,7 @@ export function AppRouter() {
             }
           />
 
+          {/* Seguridad y Gobernanza RBAC */}
           <Route
             path="/seguridad/usuarios"
             element={
@@ -193,14 +244,23 @@ export function AppRouter() {
           />
 
           <Route
+            path="/seguridad/matriz-permisos"
+            element={
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.MATRIZ_PERMISOS}>
+                <MatrizPermisosPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/seguridad/matriz"
             element={
-              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.USUARIOS_ROLES}>
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.MATRIZ_PERMISOS}>
                 <MatrizPermisosPage />
               </ProtectedRoute>
             }
           />
 
+          {/* Consola Técnica DBA */}
           <Route
             path="/dba/politicas"
             element={
@@ -228,10 +288,9 @@ export function AppRouter() {
             }
           />
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>
   );
 }
-

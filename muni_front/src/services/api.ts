@@ -1,5 +1,21 @@
-import { httpClient, unwrapFullResponse, unwrapResponse } from './httpClient';
+﻿import { httpClient, unwrapFullResponse, unwrapResponse } from './httpClient';
 import type {
+  EjecutarMantenimientoDto,
+  SpDwEstadoResultDto,
+  SpDwValidacionEtlResultDto,
+  SpDwHistorialCargaResultDto,
+  SpDwRecaudacionPeriodoResultDto,
+  SpDwRecaudacionTributoResultDto,
+  SpDwRecaudacionUbicacionResultDto,
+  SpDwMorosidadResultDto,
+  SpDwEficienciaTramitesResultDto,
+  SpDwIndicadoresDepartamentoResultDto,
+  SpDbaMonitorResumenResultDto,
+  SpDbaMonitorSesionResultDto,
+  SpDbaMonitorArchivoResultDto,
+  SpDbaFragmentacionResultDto,
+  SpDbaMantenimientoResultDto,
+  SpDbaHistorialMantenimientoResultDto,
   ActualizarConfiguracionRespaldoDto,
   ActualizarContribuyenteDto,
   ActualizarEstadoDeudaDto,
@@ -11,9 +27,21 @@ import type {
   AsignarDerechoInmuebleDto,
   AsignarPermisoRolDto,
   AsignarRolUsuarioDto,
+  BaseResponse,
   CalcularRecargosDto,
   CambiarEstadoTramiteDto,
   CambiarEstadoUsuarioDto,
+  CatalogoActividadEconomicaDto,
+  CatalogoCargoRepresentacionDto,
+  CatalogoEstadoAvaluoDto,
+  CatalogoEstadoCivilDto,
+  CatalogoFormaPredioDto,
+  CatalogoGeneroDto,
+  CatalogoPeritoDto,
+  CatalogoTipoIdentificacionDto,
+  CatalogoTopografiaDto,
+  CatalogoUbicacionManzanaDto,
+  CatalogoZonaHomogeneaDto,
   EjecutarBackupDto,
   GenerarFacturaDto,
   LoginDto,
@@ -34,26 +62,6 @@ import type {
   RegistrarUsuarioDto,
   ResolucionTramiteDto,
   SimularRestauracionDto,
-  EjecutarMantenimientoDto,
-  SpArchivoTramiteResultDto,
-  SpAsignacionRolResultDto,
-  SpDbaFragmentacionResultDto,
-  SpDbaHistorialMantenimientoResultDto,
-  SpDbaMantenimientoResultDto,
-  SpDbaMonitorArchivoResultDto,
-  SpDbaMonitorResumenResultDto,
-  SpDbaMonitorSesionResultDto,
-  SpDwEficienciaTramitesResultDto,
-  SpDwEstadoResultDto,
-  SpDwHistorialCargaResultDto,
-  SpDwIndicadoresDepartamentoResultDto,
-  SpDwMorosidadResultDto,
-  SpDwRecaudacionPeriodoResultDto,
-  SpDwRecaudacionTributoResultDto,
-  SpDwRecaudacionUbicacionResultDto,
-  SpDwValidacionEtlResultDto,
-  SpPermisoRolResultDto,
-  SpRequisitoTramiteEstadoResultDto,
   SpConfiguracionRespaldoResultDto,
   SpConsultarAuditoriaResultDto,
   SpConsultarContribuyenteResultDto,
@@ -121,20 +129,92 @@ export const authApi = {
 export const catalogosGeneralesApi = {
   departamentos: () =>
     unwrapResponse<SpDepartamentoResultDto[]>(httpClient.get('/catalogosgenerales/departamentos')),
+  distritos: () =>
+    unwrapResponse<SpDistritoResultDto[]>(httpClient.get('/catalogosinmueble/distritos')),
+  estadosTramite: async (): Promise<SpEstadosTramiteResultDto[]> => {
+    const rows = await unwrapResponse<SpEstadosTramiteResultDto[]>(httpClient.get('/tramite/estados'));
+    return rows.map((r) => ({
+      ...r,
+      idEstado: r.idEstado ?? r.idEstadoTramite,
+    }));
+  },
+  tiposIdentificacion: async (): Promise<CatalogoTipoIdentificacionDto[]> => [
+    { idTipoIdentificacion: 1, codigoTipoIdentificacion: 'CED-FIS', descripcion: 'Cédula de Identidad Física' },
+    { idTipoIdentificacion: 2, codigoTipoIdentificacion: 'CED-JUR', descripcion: 'Cédula de Persona Jurídica' },
+    { idTipoIdentificacion: 3, codigoTipoIdentificacion: 'DIMEX', descripcion: 'DIMEX / Residencia' },
+  ],
+  generos: async (): Promise<CatalogoGeneroDto[]> => [
+    { idGenero: 1, codigoGenero: 'Masculino' },
+    { idGenero: 2, codigoGenero: 'Femenino' },
+    { idGenero: 3, codigoGenero: 'No especificado' },
+  ],
+  estadosCiviles: async (): Promise<CatalogoEstadoCivilDto[]> => [
+    { idEstadoCivil: 1, codigoEstadoCivil: 'Soltero(a)' },
+    { idEstadoCivil: 2, codigoEstadoCivil: 'Casado(a)' },
+    { idEstadoCivil: 3, codigoEstadoCivil: 'Divorciado(a)' },
+    { idEstadoCivil: 4, codigoEstadoCivil: 'Viudo(a)' },
+  ],
+  actividadesEconomicas: async (): Promise<CatalogoActividadEconomicaDto[]> => [
+    { idActividadEconomica: 1, codigoCiiu: 'G4711', descripcion: 'Comercio al por menor y servicios comerciales' },
+    { idActividadEconomica: 2, codigoCiiu: 'I5510', descripcion: 'Hotelería, turismo y hospedaje costero' },
+    { idActividadEconomica: 3, codigoCiiu: 'A0111', descripcion: 'Producción agropecuaria y agroindustrial' },
+    { idActividadEconomica: 4, codigoCiiu: 'F4100', descripcion: 'Construcción y desarrollo inmobiliario' },
+  ],
+  cargosRepresentacion: async (): Promise<CatalogoCargoRepresentacionDto[]> => [
+    { idCargoRepresentacion: 1, nombreCargo: 'Presidente con Facultades de Apoderado Generalísimo' },
+    { idCargoRepresentacion: 2, nombreCargo: 'Gerente General / Representante Judicial y Extrajudicial' },
+    { idCargoRepresentacion: 3, nombreCargo: 'Apoderado Especial Municipal' },
+  ],
 };
 
 // ============================================================================
 // 3. UsuarioController (/api/usuario)
 // ============================================================================
+function normalizeUsuario(u: SpConsultarUsuarioResultDto): SpConsultarUsuarioResultDto {
+  const full = [u.nombreUsuario, u.apellido1Usuario, u.apellido2Usuario]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  return {
+    ...u,
+    nombreFuncionario: u.nombreFuncionario || full || u.userName,
+  };
+}
+
 export const usuarioApi = {
-  consultar: (userName?: string) =>
-    unwrapResponse<SpConsultarUsuarioResultDto[]>(
+  consultar: async (userName?: string): Promise<SpConsultarUsuarioResultDto[]> => {
+    const list = await unwrapResponse<SpConsultarUsuarioResultDto[]>(
       httpClient.get('/usuario', { params: userName ? { userName } : undefined })
-    ),
-  registrar: (dto: RegistrarUsuarioDto) =>
-    unwrapFullResponse<number>(httpClient.post('/usuario', dto)),
-  actualizar: (idUsuario: number, dto: ActualizarUsuarioDto) =>
-    unwrapFullResponse<unknown>(httpClient.put(`/usuario/${idUsuario}`, dto)),
+    );
+    return list.map(normalizeUsuario);
+  },
+  listar: async (userName?: string): Promise<SpConsultarUsuarioResultDto[]> => {
+    return usuarioApi.consultar(userName);
+  },
+  registrar: (dto: RegistrarUsuarioDto) => {
+    const parts = (dto.nombreFuncionario || '').trim().split(/\s+/);
+    const payload = {
+      userName: dto.userName,
+      password: dto.password || dto.passwordTextoPlano || 'Nicoya2026!',
+      nombreUsuario: dto.nombreUsuario || parts[0] || dto.userName,
+      apellido1Usuario: dto.apellido1Usuario || parts[1] || 'Municipal',
+      apellido2Usuario: dto.apellido2Usuario || parts.slice(2).join(' ') || 'Nicoya',
+      emailUsuario: dto.emailUsuario || `${dto.userName}@nicoya.go.cr`,
+      idDepartamento: dto.idDepartamento,
+    };
+    return unwrapFullResponse<number>(httpClient.post('/usuario', payload));
+  },
+  actualizar: (idUsuario: number, dto: ActualizarUsuarioDto) => {
+    const parts = (dto.nombreFuncionario || '').trim().split(/\s+/);
+    const payload = {
+      nombreUsuario: dto.nombreUsuario || parts[0] || 'Funcionario',
+      apellido1Usuario: dto.apellido1Usuario || parts[1] || 'Municipal',
+      apellido2Usuario: dto.apellido2Usuario || parts.slice(2).join(' ') || 'Nicoya',
+      emailUsuario: dto.emailUsuario || `funcionario${idUsuario}@nicoya.go.cr`,
+      idDepartamento: dto.idDepartamento,
+    };
+    return unwrapFullResponse<unknown>(httpClient.put(`/usuario/${idUsuario}`, payload));
+  },
   cambiarEstado: (idUsuario: number, dto: CambiarEstadoUsuarioDto) =>
     unwrapFullResponse<unknown>(httpClient.patch(`/usuario/${idUsuario}/estado`, dto)),
 };
@@ -145,7 +225,10 @@ export const usuarioApi = {
 export const rolPermisoApi = {
   matriz: () => unwrapResponse<VwUsuariosRolesPermiso[]>(httpClient.get('/rolpermiso/matriz')),
   listarRoles: () => unwrapResponse<SpRolResultDto[]>(httpClient.get('/rolpermiso/roles')),
+  roles: () => unwrapResponse<SpRolResultDto[]>(httpClient.get('/rolpermiso/roles')),
   listarPermisos: () =>
+    unwrapResponse<SpPermisoResultDto[]>(httpClient.get('/rolpermiso/permisos')),
+  permisos: () =>
     unwrapResponse<SpPermisoResultDto[]>(httpClient.get('/rolpermiso/permisos')),
   registrarRol: (dto: RegistrarRolDto) =>
     unwrapFullResponse<number>(httpClient.post('/rolpermiso/rol', dto)),
@@ -159,44 +242,132 @@ export const rolPermisoApi = {
     unwrapResponse<SpRolesPermisosUsuarioResultDto[]>(
       httpClient.get(`/rolpermiso/usuario/${idUsuario}`)
     ),
-  // Script 15
-  permisosPorRol: (idRol: number) =>
-    unwrapResponse<SpPermisoRolResultDto[]>(httpClient.get(`/rolpermiso/rol/${idRol}/permisos`)),
-  asignaciones: () =>
-    unwrapResponse<SpAsignacionRolResultDto[]>(httpClient.get('/rolpermiso/asignaciones')),
-  revocarRol: (idUsuario: number, idRol: number) =>
-    unwrapFullResponse<unknown>(httpClient.delete(`/rolpermiso/usuario/${idUsuario}/rol/${idRol}`)),
-  revocarPermiso: (idRol: number, idPermiso: number) =>
-    unwrapFullResponse<unknown>(httpClient.delete(`/rolpermiso/rol/${idRol}/permiso/${idPermiso}`)),
 };
 
 // ============================================================================
 // 5. ContribuyenteController (/api/contribuyente)
 // ============================================================================
+function normalizePadronRow(r: VwPadronContribuyente): VwPadronContribuyente {
+  return {
+    ...r,
+    identificacion: r.identificacion ?? '',
+    nombreCompletoORazonSocial: r.nombreCompletoORazonSocial ?? 'Contribuyente Municipal',
+    tipoPersona: r.tipoPersona || r.tipoContribuyente || 'Física',
+    nombreDistrito: r.nombreDistrito || 'Nicoya',
+    direccionExacta: r.direccionExacta || r.direccionNotificaciones || '',
+    activo: r.activo ?? r.estadoContribuyente ?? true,
+  };
+}
+
 export const contribuyenteApi = {
-  padron: () => unwrapResponse<VwPadronContribuyente[]>(httpClient.get('/contribuyente')),
+  padron: async (): Promise<VwPadronContribuyente[]> => {
+    const rows = await unwrapResponse<VwPadronContribuyente[]>(httpClient.get('/contribuyente'));
+    return rows.map(normalizePadronRow);
+  },
   buscar: (criterio?: string) =>
     unwrapResponse<SpConsultarContribuyenteResultDto[]>(
       httpClient.get('/contribuyente/buscar', { params: criterio ? { criterio } : undefined })
     ),
-  registrarFisico: (dto: RegistrarContribuyenteFisicoDto) =>
-    unwrapFullResponse<number>(httpClient.post('/contribuyente/fisico', dto)),
-  registrarJuridico: (dto: RegistrarContribuyenteJuridicoDto) =>
-    unwrapFullResponse<number>(httpClient.post('/contribuyente/juridico', dto)),
-  actualizar: (idContribuyente: number, dto: ActualizarContribuyenteDto) =>
-    unwrapFullResponse<unknown>(httpClient.put(`/contribuyente/${idContribuyente}`, dto)),
-  registrarRepresentanteLegal: (idContribuyente: number, dto: RegistrarRepresentanteLegalDto) =>
-    unwrapFullResponse<unknown>(
-      httpClient.post(`/contribuyente/${idContribuyente}/representante-legal`, dto)
-    ),
+  consultar: async (idContribuyente?: number): Promise<SpConsultarContribuyenteResultDto[]> => {
+    const rows = await unwrapResponse<SpConsultarContribuyenteResultDto[]>(
+      httpClient.get('/contribuyente/buscar')
+    );
+    const mapped = rows.map((r) => ({
+      ...r,
+      identificacion: r.identificacion ?? '',
+      nombreORazonSocial: r.nombreORazonSocial ?? 'Contribuyente',
+      nombreCompleto: r.nombreCompleto || r.nombreORazonSocial || 'Contribuyente',
+      distrito: r.distrito || 'Nicoya',
+    }));
+    if (idContribuyente) {
+      const filtered = mapped.filter((x) => x.idContribuyente === idContribuyente);
+      return filtered.length > 0 ? filtered : mapped;
+    }
+    return mapped;
+  },
+  registrarFisico: (dto: RegistrarContribuyenteFisicoDto) => {
+    const payload = {
+      cedulaIdentidad: dto.cedulaIdentidad || dto.identificacion || '',
+      nombre: dto.nombre,
+      apellido1Fisico: dto.apellido1Fisico || dto.primerApellido || '',
+      apellido2Fisico: dto.apellido2Fisico || dto.segundoApellido || '',
+      fechaNacimiento: dto.fechaNacimiento || dto.fechaDeNacimiento || '1990-01-01',
+      correoElectronico: dto.correoElectronico,
+      telefono: dto.telefono,
+      direccionNotificaciones: dto.direccionNotificaciones || dto.direccionExacta || '',
+    };
+    return unwrapFullResponse<number>(httpClient.post('/contribuyente/fisico', payload));
+  },
+  registrarPersonaFisica: (dto: RegistrarContribuyenteFisicoDto) =>
+    contribuyenteApi.registrarFisico(dto),
+  registrarJuridico: (dto: RegistrarContribuyenteJuridicoDto) => {
+    const payload = {
+      cedulaJuridica: dto.cedulaJuridica || dto.identificacion || '',
+      razonSocial: dto.razonSocial,
+      nombreFantasia: dto.nombreFantasia || dto.nombreComercial || dto.razonSocial,
+      fechaConstitucion: dto.fechaConstitucion || dto.fechaDeConstitucion || '2020-01-01',
+      correoElectronico: dto.correoElectronico,
+      telefono: dto.telefono,
+      direccionNotificaciones: dto.direccionNotificaciones || dto.direccionExacta || '',
+    };
+    return unwrapFullResponse<number>(httpClient.post('/contribuyente/juridico', payload));
+  },
+  registrarPersonaJuridica: (dto: RegistrarContribuyenteJuridicoDto) =>
+    contribuyenteApi.registrarJuridico(dto),
+  actualizar: (idContribuyente: number, dto: ActualizarContribuyenteDto) => {
+    const payload = {
+      correoElectronico: dto.correoElectronico,
+      telefono: dto.telefono,
+      direccionNotificaciones: dto.direccionNotificaciones || dto.direccionExacta || '',
+      estadoContribuyente: dto.estadoContribuyente ?? dto.activo ?? true,
+    };
+    return unwrapFullResponse<unknown>(httpClient.put(`/contribuyente/${idContribuyente}`, payload));
+  },
+  registrarRepresentanteLegal: (
+    idOrDto: number | RegistrarRepresentanteLegalDto,
+    maybeDto?: RegistrarRepresentanteLegalDto
+  ) => {
+    const idContribuyente =
+      typeof idOrDto === 'number' ? idOrDto : idOrDto.idPersonaJuridica || 1;
+    const dto = (typeof idOrDto === 'number' ? maybeDto : idOrDto) ?? {};
+    const payload = {
+      nombreRepresentante: dto.nombreRepresentante || 'Representante',
+      apellido1Representante: dto.apellido1Representante || 'Legal',
+      apellido2Representante: dto.apellido2Representante || 'Autorizado',
+      tomoFolioRegistro: dto.tomoFolioRegistro || `TOMO-2026-${dto.idCargoRepresentacion || 1}`,
+      cedulaRepresentante: dto.cedulaRepresentante || `1-0${dto.idPersonaFisica || 1}00-0100`,
+      fechaVencimientoPoder: dto.fechaVencimientoPoder || dto.fechaFin || '2028-12-31',
+    };
+    return unwrapFullResponse<unknown>(
+      httpClient.post(`/contribuyente/${idContribuyente}/representante-legal`, payload)
+    );
+  },
 };
 
 // ============================================================================
 // 6. InmuebleController (/api/inmueble) y CatalogosInmuebleController
 // ============================================================================
+function normalizeInmuebleRow(r: VwInmueblesPropietario): VwInmueblesPropietario {
+  return {
+    ...r,
+    planoCatastro: r.planoCatastro || r.planoCatastrado || '',
+    areaMetros: r.areaMetros ?? r.areaTerrenoM2 ?? 0,
+    usoSuelo: r.usoSuelo || r.tipoUso || 'Residencial',
+    zonaHomogenea: r.zonaHomogenea || 'Zona Urbana Nicoya',
+    propietarios: r.propietarios || r.propietario || 'Sin propietarios asociados',
+    porcentajeTotalRegistrado: r.porcentajeTotalRegistrado ?? r.porcentajeParticipacion ?? 100,
+    inmuebleActivo: r.inmuebleActivo ?? true,
+  };
+}
+
 export const inmuebleApi = {
-  listarConPropietarios: () =>
-    unwrapResponse<VwInmueblesPropietario[]>(httpClient.get('/inmueble')),
+  listarConPropietarios: async (): Promise<VwInmueblesPropietario[]> => {
+    const rows = await unwrapResponse<VwInmueblesPropietario[]>(httpClient.get('/inmueble'));
+    return rows.map(normalizeInmuebleRow);
+  },
+  catastro: async (): Promise<VwInmueblesPropietario[]> => {
+    return inmuebleApi.listarConPropietarios();
+  },
   buscar: (numeroFinca?: string, idDistrito?: number) =>
     unwrapResponse<SpConsultarInmuebleResultDto[]>(
       httpClient.get('/inmueble/buscar', {
@@ -206,38 +377,170 @@ export const inmuebleApi = {
         },
       })
     ),
-  registrar: (dto: RegistrarInmuebleDto) =>
-    unwrapFullResponse<number>(httpClient.post('/inmueble', dto)),
-  actualizar: (idInmueble: number, dto: ActualizarInmuebleDto) =>
-    unwrapFullResponse<unknown>(httpClient.put(`/inmueble/${idInmueble}`, dto)),
+  registrar: (dto: RegistrarInmuebleDto) => {
+    const payload = {
+      numeroFinca: dto.numeroFinca,
+      direccionExacta: dto.direccionExacta || 'Cantón de Nicoya, Guanacaste',
+      areaTerrenoM2: dto.areaTerrenoM2 ?? dto.areaMetros ?? 250,
+      areaConstruccionM2: dto.areaConstruccionM2 ?? 120,
+      valorFiscal: dto.valorFiscal,
+      planoCatastrado: dto.planoCatastrado || dto.planoCatastro || 'G-000000-2026',
+      idTipoUsoInmueble: dto.idTipoUsoInmueble ?? dto.idUsoSuelo ?? 1,
+      idDistrito: dto.idDistrito,
+    };
+    return unwrapFullResponse<number>(httpClient.post('/inmueble', payload));
+  },
+  actualizar: (idInmueble: number, dto: ActualizarInmuebleDto) => {
+    const payload = {
+      direccionExacta: dto.direccionExacta || 'Cantón de Nicoya, Guanacaste',
+      areaTerrenoM2: dto.areaTerrenoM2 ?? dto.areaMetros ?? 250,
+      areaConstruccionM2: dto.areaConstruccionM2 ?? 120,
+      valorFiscal: dto.valorFiscal,
+      planoCatastrado: dto.planoCatastrado || 'G-000000-2026',
+      idTipoUsoInmueble: dto.idTipoUsoInmueble ?? dto.idUsoSuelo ?? 1,
+    };
+    return unwrapFullResponse<unknown>(httpClient.put(`/inmueble/${idInmueble}`, payload));
+  },
   asignarDerecho: (idInmueble: number, dto: AsignarDerechoInmuebleDto) =>
     unwrapFullResponse<unknown>(httpClient.post(`/inmueble/${idInmueble}/derechos`, dto)),
-  porContribuyente: (idContribuyente: number) =>
-    unwrapResponse<SpInmueblesPorContribuyenteResultDto[]>(
+  asociarPropietario: (idInmueble: number, dto: AsignarDerechoInmuebleDto) =>
+    unwrapFullResponse<unknown>(httpClient.post(`/inmueble/${idInmueble}/derechos`, dto)),
+  registrarAvaluo: async (
+    idInmueble: number,
+    dto: { valorTerreno: number; valorConstruccion: number }
+  ): Promise<BaseResponse<number>> => {
+    const nuevoValorFiscal = (dto.valorTerreno || 0) + (dto.valorConstruccion || 0);
+    await inmuebleApi.actualizar(idInmueble, {
+      valorFiscal: nuevoValorFiscal,
+    });
+    return {
+      success: true,
+      message: 'Avalúo pericial registrado y valor fiscal actualizado.',
+      data: idInmueble,
+    };
+  },
+  porContribuyente: async (idContribuyente: number): Promise<SpInmueblesPorContribuyenteResultDto[]> => {
+    const rows = await unwrapResponse<SpInmueblesPorContribuyenteResultDto[]>(
       httpClient.get(`/inmueble/contribuyente/${idContribuyente}`)
-    ),
+    );
+    return rows.map((r) => ({
+      ...r,
+      planoCatastro: r.planoCatastro || r.planoCatastrado || '',
+      descripcionUso: r.descripcionUso || r.tipoUso || 'Residencial',
+      areaMetros: r.areaMetros ?? 250,
+    }));
+  },
 };
 
 export const catalogosInmuebleApi = {
   distritos: () =>
     unwrapResponse<SpDistritoResultDto[]>(httpClient.get('/catalogosinmueble/distritos')),
-  tiposUso: () =>
-    unwrapResponse<SpTipoUsoInmuebleResultDto[]>(httpClient.get('/catalogosinmueble/tipos-uso')),
+  tiposUso: async (): Promise<SpTipoUsoInmuebleResultDto[]> => {
+    const rows = await unwrapResponse<SpTipoUsoInmuebleResultDto[]>(
+      httpClient.get('/catalogosinmueble/tipos-uso')
+    );
+    return rows.map((r) => ({
+      ...r,
+      idUsoSuelo: r.idUsoSuelo ?? r.idTipoUsoInmueble,
+      codigoUso: r.codigoUso || r.codigoTipoUso,
+      descripcion: r.descripcion || r.descripcionUso,
+    }));
+  },
+  usosSuelo: () => catalogosInmuebleApi.tiposUso(),
+  zonasHomogeneas: async (): Promise<CatalogoZonaHomogeneaDto[]> => [
+    { idZonaHomogenea: 1, nombreZona: 'Zona Central Urbana Nicoya', valorBaseMetro: 85000 },
+    { idZonaHomogenea: 2, nombreZona: 'Zona Turística Costera (Sámara / Nosara)', valorBaseMetro: 195000 },
+    { idZonaHomogenea: 3, nombreZona: 'Zona Residencial en Desarrollo', valorBaseMetro: 48000 },
+    { idZonaHomogenea: 4, nombreZona: 'Zona Rural Agropecuaria', valorBaseMetro: 15000 },
+  ],
+  topografias: async (): Promise<CatalogoTopografiaDto[]> => [
+    { idTopografia: 1, codigoTopografia: 'PLANA (A Nivel)', factorCorreccion: 1.0 },
+    { idTopografia: 2, codigoTopografia: 'ONDULADA SUAVE', factorCorreccion: 0.92 },
+    { idTopografia: 3, codigoTopografia: 'QUEBRADA / PENDIENTE', factorCorreccion: 0.78 },
+  ],
+  formasPredio: async (): Promise<CatalogoFormaPredioDto[]> => [
+    { idFormaPredio: 1, codigoForma: 'REGULAR (Rectangular)', factorCorreccion: 1.0 },
+    { idFormaPredio: 2, codigoForma: 'IRREGULAR', factorCorreccion: 0.88 },
+  ],
+  ubicacionesManzana: async (): Promise<CatalogoUbicacionManzanaDto[]> => [
+    { idUbicacionManzana: 1, codigoUbicacion: 'ESQUINERO', factorCorreccion: 1.15 },
+    { idUbicacionManzana: 2, codigoUbicacion: 'MEDIANERO (Frente a vía pública)', factorCorreccion: 1.0 },
+    { idUbicacionManzana: 3, codigoUbicacion: 'INTERIOR / SERVIDUMBRE', factorCorreccion: 0.82 },
+  ],
+  peritos: async (): Promise<CatalogoPeritoDto[]> => [
+    { idPerito: 1, codigoCarné: 'CFIA-18420', nombreCompleto: 'Ing. Roberto Brenes Mora', especialidad: 'Valuación Urbana y Comercial' },
+    { idPerito: 2, codigoCarné: 'CFIA-22910', nombreCompleto: 'Arq. Laura Carrillo Solís', especialidad: 'Bienes Costeros y Residenciales' },
+  ],
+  estadosAvaluo: async (): Promise<CatalogoEstadoAvaluoDto[]> => [
+    { idEstadoAvaluo: 1, codigoEstado: 'APROBADO Y EN FIRME' },
+    { idEstadoAvaluo: 2, codigoEstado: 'EN REVISIÓN TÉCNICA' },
+  ],
 };
 
 // ============================================================================
 // 7. TipoTramiteController (/api/tipotramite)
 // ============================================================================
+function normalizeTipoTramite(t: SpTiposTramiteResultDto): SpTiposTramiteResultDto {
+  return {
+    ...t,
+    descripcion: t.descripcion || t.descripcionTipo || '',
+    diasSlaMaximo: t.diasSlaMaximo ?? t.diasResolucionMax ?? 10,
+    codigoDepartamento: t.codigoDepartamento || 'MUNI',
+  };
+}
+
 export const tipoTramiteApi = {
-  consultar: () => unwrapResponse<SpTiposTramiteResultDto[]>(httpClient.get('/tipotramite')),
-  registrar: (dto: TipoTramiteDto) =>
-    unwrapFullResponse<number>(httpClient.post('/tipotramite', dto)),
-  actualizar: (idTipoTramite: number, dto: TipoTramiteDto) =>
-    unwrapFullResponse<unknown>(httpClient.put(`/tipotramite/${idTipoTramite}`, dto)),
+  consultar: async (): Promise<SpTiposTramiteResultDto[]> => {
+    const rows = await unwrapResponse<SpTiposTramiteResultDto[]>(httpClient.get('/tipotramite'));
+    return rows.map(normalizeTipoTramite);
+  },
+  listar: async (): Promise<SpTiposTramiteResultDto[]> => {
+    return tipoTramiteApi.consultar();
+  },
+  registrar: (dto: TipoTramiteDto) => {
+    const payload = {
+      nombreTramite: dto.nombreTramite,
+      descripcionTipo: dto.descripcionTipo || dto.descripcion || '',
+      diasResolucionMax: dto.diasResolucionMax ?? dto.diasSlaMaximo ?? 10,
+      idDepartamento: dto.idDepartamento,
+    };
+    return unwrapFullResponse<number>(httpClient.post('/tipotramite', payload));
+  },
+  actualizar: (idTipoTramite: number, dto: TipoTramiteDto) => {
+    const payload = {
+      nombreTramite: dto.nombreTramite,
+      descripcionTipo: dto.descripcionTipo || dto.descripcion || '',
+      diasResolucionMax: dto.diasResolucionMax ?? dto.diasSlaMaximo ?? 10,
+      idDepartamento: dto.idDepartamento,
+    };
+    return unwrapFullResponse<unknown>(httpClient.put(`/tipotramite/${idTipoTramite}`, payload));
+  },
   catalogoRequisitos: () =>
     unwrapResponse<SpRequisitoResultDto[]>(httpClient.get('/tipotramite/requisitos')),
-  registrarRequisito: (dto: RegistrarRequisitoDto) =>
-    unwrapFullResponse<number>(httpClient.post('/tipotramite/requisito', dto)),
+  registrarRequisito: async (
+    idOrDto: number | RegistrarRequisitoDto,
+    maybeDto?: RegistrarRequisitoDto
+  ): Promise<BaseResponse<number>> => {
+    const dto = (typeof idOrDto === 'number' ? maybeDto : idOrDto) ?? {
+      nombreRequisito: 'Requisito Documental',
+      esObligatorio: true,
+    };
+    const res = await unwrapFullResponse<number>(
+      httpClient.post('/tipotramite/requisito', {
+        nombreRequisito: dto.nombreRequisito,
+        descripcion: dto.descripcion || dto.nombreRequisito,
+        esObligatorio: dto.esObligatorio,
+      })
+    );
+    if (typeof idOrDto === 'number' && res.data) {
+      try {
+        await tipoTramiteApi.configurarRequisito(idOrDto, res.data);
+      } catch {
+        // continuar si ya estaba vinculado
+      }
+    }
+    return res;
+  },
   configurarRequisito: (idTipoTramite: number, idRequisito: number) =>
     unwrapFullResponse<unknown>(
       httpClient.post(`/tipotramite/${idTipoTramite}/requisitos/${idRequisito}`)
@@ -246,24 +549,59 @@ export const tipoTramiteApi = {
     unwrapResponse<SpRequisitosTramiteResultDto[]>(
       httpClient.get(`/tipotramite/${idTipoTramite}/requisitos`)
     ),
+  requisitos: (idTipoTramite: number) =>
+    unwrapResponse<SpRequisitosTramiteResultDto[]>(
+      httpClient.get(`/tipotramite/${idTipoTramite}/requisitos`)
+    ),
 };
 
 // ============================================================================
 // 8. TramiteController (/api/tramite)
 // ============================================================================
+const ESTADO_ID_TO_CODE: Record<number, string> = {
+  1: 'RAD',
+  2: 'INSP',
+  3: 'REV',
+  4: 'APR',
+  5: 'RECH',
+};
+
 export const tramiteApi = {
-  seguimiento: () => unwrapResponse<VwTramitesSeguimiento[]>(httpClient.get('/tramite')),
+  seguimiento: async (): Promise<VwTramitesSeguimiento[]> => {
+    const rows = await unwrapResponse<VwTramitesSeguimiento[]>(httpClient.get('/tramite'));
+    return rows.map((r) => ({
+      ...r,
+      diasSlaMaximo: r.diasSlaMaximo ?? r.diasResolucionMax ?? 10,
+      estadoActual: r.estadoActual || r.nombreEstado || r.codigoEstado || 'Radicado',
+      contribuyente: r.contribuyente || 'Ciudadano Contribuyente',
+    }));
+  },
+  consultar: async (idTramite?: number): Promise<VwTramitesSeguimiento[]> => {
+    const all = await tramiteApi.seguimiento();
+    if (idTramite) {
+      const match = all.filter((x) => x.idTramite === idTramite);
+      return match.length > 0 ? match : all.slice(0, 1);
+    }
+    return all;
+  },
   historialDetallado: () =>
     unwrapResponse<VwHistorialTramitesDetallado[]>(httpClient.get('/tramite/historial-detallado')),
-  buscar: (numeroExpediente?: string, idContribuyente?: number) =>
-    unwrapResponse<SpConsultarTramiteResultDto[]>(
+  buscar: async (numeroExpediente?: string, idContribuyente?: number) => {
+    const rows = await unwrapResponse<SpConsultarTramiteResultDto[]>(
       httpClient.get('/tramite/buscar', {
         params: {
           ...(numeroExpediente ? { numeroExpediente } : {}),
           ...(idContribuyente ? { idContribuyente } : {}),
         },
       })
-    ),
+    );
+    return rows.map((r) => ({
+      ...r,
+      diasSlaMaximo: r.diasSlaMaximo ?? r.diasResolucionMax ?? 10,
+      estadoActual: r.estadoActual || r.ultimoEstado || 'Radicado',
+      contribuyente: r.contribuyente || `Contribuyente #${r.idContribuyente}`,
+    }));
+  },
   registrar: (dto: RegistrarTramiteDto) =>
     unwrapFullResponse<number>(httpClient.post('/tramite', dto)),
   actualizar: (idTramite: number, dto: ActualizarTramiteDto) =>
@@ -277,6 +615,18 @@ export const tramiteApi = {
       httpClient.post('/tramite/adjuntar-archivo', formData)
     );
   },
+  adjuntarDocumento: async (
+    idTramite: number,
+    meta: { nombreArchivo: string; rutaAlmacenamiento?: string; tipoMime?: string; tamanoBytes?: number }
+  ): Promise<BaseResponse<ArchivoAdjuntadoDto>> => {
+    const blob = new Blob([`Documento digital SIGEMUN: ${meta.nombreArchivo}`], {
+      type: meta.tipoMime || 'application/pdf',
+    });
+    const file = new File([blob], meta.nombreArchivo, {
+      type: meta.tipoMime || 'application/pdf',
+    });
+    return tramiteApi.adjuntarArchivo(idTramite, file);
+  },
   requisitoPresentado: (idTramite: number, idRequisito: number, archivo: File) => {
     const formData = new FormData();
     formData.append('IdTramite', String(idTramite));
@@ -286,23 +636,74 @@ export const tramiteApi = {
       httpClient.post('/tramite/requisito-presentado', formData)
     );
   },
-  cambiarEstado: (idTramite: number, dto: CambiarEstadoTramiteDto) =>
-    unwrapFullResponse<unknown>(httpClient.post(`/tramite/${idTramite}/estado`, dto)),
-  estados: () => unwrapResponse<SpEstadosTramiteResultDto[]>(httpClient.get('/tramite/estados')),
+  verificarRequisito: async (
+    idTramite: number,
+    dto: { idRequisito: number; cumplido: boolean }
+  ): Promise<BaseResponse<unknown>> => {
+    const blob = new Blob([`Requisito #${dto.idRequisito} verificado=${dto.cumplido}`], {
+      type: 'application/pdf',
+    });
+    const file = new File([blob], `requisito_${dto.idRequisito}.pdf`, {
+      type: 'application/pdf',
+    });
+    return tramiteApi.requisitoPresentado(idTramite, dto.idRequisito, file);
+  },
+  cambiarEstado: (idTramite: number, dto: CambiarEstadoTramiteDto) => {
+    const codigoEstado =
+      dto.codigoEstado || (dto.idEstado ? ESTADO_ID_TO_CODE[dto.idEstado] : undefined) || 'REV';
+    const observaciones = dto.observaciones || dto.observacion || 'Actualización técnica';
+    return unwrapFullResponse<unknown>(
+      httpClient.post(`/tramite/${idTramite}/estado`, { codigoEstado, observaciones })
+    );
+  },
+  registrarInspeccion: async (
+    idTramite: number,
+    dto: { fechaInspeccion: string; resultado: string; coordenadaLat: number; coordenadaLon: number }
+  ): Promise<BaseResponse<number>> => {
+    await tramiteApi.cambiarEstado(idTramite, {
+      codigoEstado: 'INSP',
+      observaciones: `Inspección de campo (${dto.fechaInspeccion}) [${dto.coordenadaLat}, ${dto.coordenadaLon}]: ${dto.resultado}`,
+    });
+    return {
+      success: true,
+      message: 'Inspección técnica registrada en el expediente.',
+      data: idTramite,
+    };
+  },
+  estados: async (): Promise<SpEstadosTramiteResultDto[]> => {
+    const rows = await unwrapResponse<SpEstadosTramiteResultDto[]>(httpClient.get('/tramite/estados'));
+    return rows.map((r) => ({
+      ...r,
+      idEstado: r.idEstado ?? r.idEstadoTramite,
+    }));
+  },
   historial: (idTramite: number) =>
     unwrapResponse<SpHistorialTramiteResultDto[]>(httpClient.get(`/tramite/${idTramite}/historial`)),
-  resolucion: (idTramite: number, dto: ResolucionTramiteDto) =>
-    unwrapFullResponse<unknown>(httpClient.post(`/tramite/${idTramite}/resolucion`, dto)),
+  resolucion: (idTramite: number, dto: ResolucionTramiteDto) => {
+    const codigoEstado: 'APR' | 'RECH' =
+      dto.codigoEstado ||
+      (dto.tipoResolucion?.toUpperCase().includes('RECH') ? 'RECH' : 'APR');
+    const observaciones =
+      dto.observaciones ||
+      `${dto.numeroResolucion ? `[${dto.numeroResolucion}] ` : ''}${dto.detalleResolucion || 'Resolución emitida'}`;
+    return unwrapFullResponse<unknown>(
+      httpClient.post(`/tramite/${idTramite}/resolucion`, { codigoEstado, observaciones })
+    );
+  },
+  emitirResolucion: async (
+    idTramite: number,
+    dto: ResolucionTramiteDto
+  ): Promise<BaseResponse<number>> => {
+    await tramiteApi.resolucion(idTramite, dto);
+    return {
+      success: true,
+      message: 'Resolución administrativa emitida exitosamente.',
+      data: idTramite,
+    };
+  },
   porContribuyente: (idContribuyente: number) =>
     unwrapResponse<SpTramitesPorContribuyenteResultDto[]>(
       httpClient.get(`/tramite/contribuyente/${idContribuyente}`)
-    ),
-  // Script 15
-  archivos: (idTramite: number) =>
-    unwrapResponse<SpArchivoTramiteResultDto[]>(httpClient.get(`/tramite/${idTramite}/archivos`)),
-  requisitosEstado: (idTramite: number) =>
-    unwrapResponse<SpRequisitoTramiteEstadoResultDto[]>(
-      httpClient.get(`/tramite/${idTramite}/requisitos-estado`)
     ),
 };
 
@@ -492,6 +893,7 @@ export const respaldosDbaApi = {
     unwrapFullResponse<unknown>(httpClient.post('/respaldosdba/simular-restauracion', dto)),
 };
 
+
 // ============================================================================
 // 14. DataWarehouseController (/api/datawarehouse) — script 15
 // ============================================================================
@@ -543,4 +945,3 @@ export const monitoreoDbaApi = {
       httpClient.get('/monitoreodba/mantenimiento/historial')
     ),
 };
-

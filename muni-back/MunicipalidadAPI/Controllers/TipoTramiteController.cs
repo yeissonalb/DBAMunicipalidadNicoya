@@ -8,7 +8,7 @@ namespace MunicipalidadAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = $"{Roles.Admin},{Roles.Analista}")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Analista},{Roles.Contribuyente},{Roles.Ciudadano},{Roles.CiudadanoContribuyente}")]
     public class TipoTramiteController : ControllerBase
     {
         private readonly ISvTipoTramite _svTipoTramite;

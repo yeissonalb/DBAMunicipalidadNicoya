@@ -13,7 +13,7 @@ namespace MunicipalidadAPI.Controllers
     [Authorize]
     public class ContribuyenteController : ControllerBase
     {
-        private const string Lectura = $"{Roles.Admin},{Roles.Cajero},{Roles.Analista}";
+        private const string Lectura = $"{Roles.Admin},{Roles.Cajero},{Roles.Analista},{Roles.Contribuyente},{Roles.Ciudadano},{Roles.CiudadanoContribuyente}";
         private const string Escritura = $"{Roles.Admin},{Roles.Cajero}";
 
         private readonly ISvContribuyente _svContribuyente;

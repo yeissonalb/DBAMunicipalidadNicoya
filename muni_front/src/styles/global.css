@@ -1,0 +1,66 @@
+@import './variables.css';
+
+@layer base {
+  html {
+    font-family: var(--muni-font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--muni-text-primary);
+    background-color: var(--muni-bg-page);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--muni-bg-page);
+    color: var(--muni-text-primary);
+    font-family: var(--muni-font-sans);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--muni-font-sans);
+    color: var(--muni-text-primary);
+    letter-spacing: -0.015em;
+  }
+
+  /* Foco accesible uniforme en azul institucional */
+  :focus-visible {
+    outline: 2px solid var(--muni-blue-focus);
+    outline-offset: 2px;
+  }
+}
+
+/* Clases utilitarias institucionales compartidas */
+.section-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muni-blue-primary);
+}
+
+/* Scrollbar limpio y discreto */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+

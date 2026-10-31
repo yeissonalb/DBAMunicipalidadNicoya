@@ -1,4 +1,4 @@
-import * as React from 'react';
+﻿import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ChartCardProps {
@@ -11,7 +11,7 @@ interface ChartCardProps {
 export function ChartCard({ title, subtitle, rightSlot, children }: ChartCardProps) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div>
           <CardTitle>{title}</CardTitle>
           {subtitle && <CardDescription className="mt-1">{subtitle}</CardDescription>}
@@ -22,4 +22,3 @@ export function ChartCard({ title, subtitle, rightSlot, children }: ChartCardPro
     </Card>
   );
 }
-

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+﻿import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -504,7 +504,7 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
 
   const pendientes = deudas.filter((d) => !['PAG', 'ANU'].includes((d.codigoEstadoDeuda ?? '').toUpperCase()));
   const totalAdeudado = (facturasQuery.data ?? []).reduce((acc, f) => acc + (f.saldoPendiente ?? 0), 0);
-  const vencidas = pendientes.filter((d) => new Date(d.fechaDeVencimiento).getTime() < Date.now()).length;
+  const vencidas = pendientes.filter((d) => new Date(d.fechaDeVencimiento ?? '').getTime() < Date.now()).length;
 
   const pagoMut = useMutation({
     mutationFn: () =>
@@ -676,7 +676,7 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
                 <tbody className="divide-y divide-sigemun-border">
                   {deudas.map((d) => {
                     const vencida =
-                      new Date(d.fechaDeVencimiento).getTime() < Date.now() &&
+                      new Date(d.fechaDeVencimiento ?? '').getTime() < Date.now() &&
                       !['PAG', 'ANU'].includes((d.codigoEstadoDeuda ?? '').toUpperCase());
                     return (
                       <tr key={d.idDeudaMunicipal} className="transition-colors even:bg-sigemun-surface hover:bg-sigemun-bg">
@@ -686,7 +686,7 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
                         </td>
                         <td className="px-3 py-2.5 font-mono text-xs">{d.numeroFinca ?? '—'}</td>
                         <td className="px-3 py-2.5">
-                          {formatDate(d.fechaDeVencimiento)}
+                          {d.fechaDeVencimiento ? formatDate(d.fechaDeVencimiento) : '—'}
                           {vencida && (
                             <Badge variant="danger" className="ml-1">
                               <Clock className="mr-0.5 h-3 w-3" /> Vencida
