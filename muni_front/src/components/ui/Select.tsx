@@ -90,6 +90,17 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
       [forwardedRef, value]
     );
 
+    const [openUpward, setOpenUpward] = React.useState(false);
+
+    // Calcular dinámicamente si debe desplegarse hacia arriba para no salirse de la pantalla
+    React.useEffect(() => {
+      if (!open || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      setOpenUpward(spaceBelow < 260 && spaceAbove > spaceBelow);
+    }, [open]);
+
     // Cerrar al hacer clic fuera
     React.useEffect(() => {
       if (!open) return;
@@ -159,6 +170,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           onClick={() => !disabled && setOpen((prev) => !prev)}
           aria-haspopup="listbox"
           aria-expanded={open}
+          title={displayLabel}
           className={cn(
             'flex h-[42px] w-full items-center justify-between gap-2 rounded-[10px] border bg-white px-3.5 text-left text-sm font-medium text-[#171717] transition-colors focus:outline-none focus:ring-2',
             error
@@ -178,11 +190,14 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           />
         </button>
 
-        {/* Lista desplegable unificada */}
+        {/* Lista desplegable unificada que nunca se corta ni trunca el contenido */}
         {open && parsedOptions.length > 0 && (
           <div
             role="listbox"
-            className="absolute left-0 z-50 mt-1.5 max-h-64 w-full min-w-[180px] overflow-y-auto rounded-[10px] border border-[#D1D5DB] bg-white p-1 shadow-elevated"
+            className={cn(
+              'absolute left-0 z-[70] max-h-72 min-w-full w-max max-w-[min(540px,94vw)] overflow-y-auto rounded-[10px] border border-[#D1D5DB] bg-white p-1.5 shadow-xl',
+              openUpward ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+            )}
           >
             {parsedOptions.map((opt) => {
               const isSelected = String(opt.value) === String(selectedValue);
@@ -191,11 +206,12 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                   key={String(opt.value)}
                   type="button"
                   role="option"
+                  title={opt.label}
                   aria-selected={isSelected}
                   disabled={opt.disabled}
                   onClick={() => handleSelectOption(String(opt.value))}
                   className={cn(
-                    'flex w-full items-center justify-between gap-2 rounded-[8px] px-3 py-2 text-left text-sm transition-colors',
+                    'flex w-full items-center justify-between gap-3 rounded-[8px] px-3 py-2 text-left text-sm transition-colors',
                     opt.disabled
                       ? 'cursor-not-allowed text-[#9CA3AF]'
                       : isSelected
@@ -203,7 +219,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                       : 'text-[#171717] hover:bg-[#F8FAFC]'
                   )}
                 >
-                  <span className="truncate">{opt.label}</span>
+                  <span className="whitespace-normal break-words leading-snug">{opt.label}</span>
                   {isSelected && <Check className="h-4 w-4 shrink-0 text-[#1D4ED8]" />}
                 </button>
               );
