@@ -10,6 +10,7 @@ import { hasAnyRole } from '@/features/auth/permissions';
 
 interface AuthContextValue {
   user: UsuarioTokenDto | null;
+  session: UsuarioTokenDto | null;
   token: string | null;
   expiraUtc: string | null;
   isAuthenticated: boolean;
@@ -23,7 +24,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSessionState] = useState<StoredSession | null>(() => getStoredSession());
+  const [sessionState, setSessionState] = useState<StoredSession | null>(() => getStoredSession());
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const logout = useCallback(() => {
@@ -38,12 +39,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const me = await authApi.me();
       const updated: StoredSession = {
         ...current,
-        usuario: me,
+        usuario: {
+          ...me,
+          nombreFuncionario: me.nombreFuncionario || me.nombreCompleto || me.userName,
+        },
       };
       setStoredSession(updated);
       setSessionState(updated);
     } catch {
-      // Si el token expiró o es inválido, el interceptor o este bloque limpiará la sesión
+      // Si el token expiró o es inválido, el interceptor limpiará la sesión
     }
   }, []);
 
@@ -57,8 +61,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Verificar expiración automática del JWT
   useEffect(() => {
-    if (!session?.expiraUtc) return;
-    const msRemaining = new Date(session.expiraUtc).getTime() - Date.now();
+    if (!sessionState?.expiraUtc) return;
+    const msRemaining = new Date(sessionState.expiraUtc).getTime() - Date.now();
     if (msRemaining <= 0) {
       logout();
       return;
@@ -67,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout();
     }, msRemaining);
     return () => window.clearTimeout(timer);
-  }, [session?.expiraUtc, logout]);
+  }, [sessionState?.expiraUtc, logout]);
 
   const login = useCallback(async (credentials: LoginDto): Promise<UsuarioTokenDto> => {
     setIsLoading(true);
@@ -84,6 +88,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         expiraUtc: res.expiraUtc,
         usuario: {
           ...res.usuario,
+          nombreFuncionario:
+            res.usuario.nombreFuncionario || res.usuario.nombreCompleto || res.usuario.userName,
           roles: normalizedRoles,
         },
       };
@@ -97,31 +103,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const hasRole = useCallback(
     (allowedRoles: readonly string[]) => {
-      if (!session?.usuario) return false;
+      if (!sessionState?.usuario) return false;
       const roles =
-        session.usuario.roles?.length > 0
-          ? session.usuario.roles
-          : session.usuario.rol
-          ? [session.usuario.rol]
+        sessionState.usuario.roles?.length > 0
+          ? sessionState.usuario.roles
+          : sessionState.usuario.rol
+          ? [sessionState.usuario.rol]
           : [];
       return hasAnyRole(roles, allowedRoles);
     },
-    [session]
+    [sessionState]
   );
+
+  const userObj = sessionState?.usuario ?? null;
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      user: session?.usuario ?? null,
-      token: session?.token ?? null,
-      expiraUtc: session?.expiraUtc ?? null,
-      isAuthenticated: Boolean(session?.token && session?.usuario),
+      user: userObj,
+      session: userObj,
+      token: sessionState?.token ?? null,
+      expiraUtc: sessionState?.expiraUtc ?? null,
+      isAuthenticated: Boolean(sessionState?.token && sessionState?.usuario),
       isLoading,
       login,
       logout,
       refreshProfile,
       hasRole,
     }),
-    [session, isLoading, login, logout, refreshProfile, hasRole]
+    [userObj, sessionState, isLoading, login, logout, refreshProfile, hasRole]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -134,4 +143,3 @@ export function useAuth(): AuthContextValue {
   }
   return ctx;
 }
-

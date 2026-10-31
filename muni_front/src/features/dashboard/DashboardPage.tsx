@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -5,479 +6,350 @@ import {
   Building2,
   ClipboardCheck,
   Database,
-  FilePlus2,
   FileSpreadsheet,
-  FolderKanban,
-  Landmark,
+  FileText,
+  Globe,
+  HardDrive,
+  LayoutDashboard,
+  Lock,
   Receipt,
   Scale,
   ShieldCheck,
-  Sliders,
-  UserCheck,
   Users,
 } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
-import { MODULE_PERMISSIONS, ROLES } from '@/features/auth/permissions';
+import { canPerformCrud } from '@/features/auth/permissions';
 import {
-  auditoriaApi,
+  contribuyenteApi,
   facturacionPagoApi,
   inmuebleApi,
-  reportesApi,
-  respaldosDbaApi,
-  tramiteApi,
-  usuarioApi,
+  tipoTramiteApi,
 } from '@/services/api';
 import { PageHeader } from '@/components/common/PageHeader';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { formatCurrencyCRC, formatDateTime, formatNumber } from '@/lib/utils';
-
-const ROLE_DASHBOARD_COPY: Record<string, string> = {
-  [ROLES.ADMIN]: 'Visión ejecutiva de la operación municipal, seguridad y continuidad institucional',
-  [ROLES.ANALISTA]: 'Gestión de expedientes, revisión técnica, catastro y trazabilidad de trámites',
-  [ROLES.CAJERO]: 'Atención al contribuyente, recaudación, facturación y control de obligaciones',
-  [ROLES.AUDITOR]: 'Supervisión de indicadores, cartera, cumplimiento y trazabilidad institucional',
-  [ROLES.DBA]: 'Continuidad operativa, integridad de datos, respaldos y auditoría técnica',
-};
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { formatCurrencyCRC, formatNumber } from '@/lib/utils';
 
 export function DashboardPage() {
-  const { user, hasRole } = useAuth();
+  const { session } = useAuth();
+  const roles = session?.roles ?? [];
+  const [, setRbacTick] = useState(0);
 
-  const activeRole =
-    user?.roles.find((role) => ROLE_DASHBOARD_COPY[role]) || user?.rol || 'Perfil institucional';
-  const dashboardDescription =
-    ROLE_DASHBOARD_COPY[activeRole] || 'Resumen de operación y accesos autorizados para su sesión';
+  useEffect(() => {
+    const onRbacChange = () => setRbacTick((t) => t + 1);
+    window.addEventListener('sigemun-rbac-updated', onRbacChange);
+    return () => window.removeEventListener('sigemun-rbac-updated', onRbacChange);
+  }, []);
 
-  const canTramites = hasRole(MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES);
-  const canPagos = hasRole(MODULE_PERMISSIONS.TRIBUTOS_PAGOS);
-  const canContribuyentes = hasRole(MODULE_PERMISSIONS.CONTRIBUYENTES);
-  const canInmuebles = hasRole(MODULE_PERMISSIONS.INMUEBLES);
-  const canReportes = hasRole(MODULE_PERMISSIONS.REPORTES);
-  const canAuditoria = hasRole(MODULE_PERMISSIONS.AUDITORIA);
-  const canDba = hasRole(MODULE_PERMISSIONS.DBA_CONSOLA);
-  const canAdmin = hasRole(MODULE_PERMISSIONS.USUARIOS_ROLES);
-  const visibleKpiCount = [
-    canTramites,
-    canInmuebles,
-    canPagos,
-    canReportes,
-    canAdmin,
-    canDba,
-  ].filter(Boolean).length;
-  const kpiGridColumns =
-    visibleKpiCount >= 3
-      ? 'lg:grid-cols-3'
-      : visibleKpiCount === 2
-        ? 'lg:grid-cols-2'
-        : 'lg:grid-cols-1';
-  const visibleModuleCount =
-    Number(canContribuyentes) +
-    Number(canInmuebles) +
-    Number(canTramites) * 3 +
-    Number(canPagos) * 2 +
-    Number(canReportes) +
-    Number(canAuditoria) +
-    Number(canAdmin) * 2 +
-    Number(canDba) * 2;
-  const moduleGridColumns =
-    visibleModuleCount === 2 || activeRole === ROLES.ANALISTA
-      ? 'lg:grid-cols-2'
-      : 'lg:grid-cols-3';
+  const canSeeContribuyentes = canPerformCrud(roles, 'Contribuyentes', 'CONSULTAR');
+  const canSeeInmuebles = canPerformCrud(roles, 'Inmuebles', 'CONSULTAR');
+  const canSeeFacturacion =
+    canPerformCrud(roles, 'FacturacionPagos', 'CONSULTAR') ||
+    canPerformCrud(roles, 'TributosDeudas', 'CONSULTAR');
+  const canSeeTramites =
+    canPerformCrud(roles, 'TramitesRadicacion', 'CONSULTAR') ||
+    canPerformCrud(roles, 'CatalogoTramites', 'CONSULTAR');
 
-  const tramitesQuery = useQuery({
-    queryKey: ['dashboard', 'tramites'],
-    queryFn: () => tramiteApi.seguimiento(),
-    enabled: canTramites,
+  const padronQuery = useQuery({
+    queryKey: ['dashboard', 'padron'],
+    queryFn: () => contribuyenteApi.padron(),
+    enabled: canSeeContribuyentes,
   });
 
   const inmueblesQuery = useQuery({
     queryKey: ['dashboard', 'inmuebles'],
-    queryFn: () => inmuebleApi.listarConPropietarios(),
-    enabled: canInmuebles,
+    queryFn: () => inmuebleApi.catastro(),
+    enabled: canSeeInmuebles,
   });
 
   const estadoCuentaQuery = useQuery({
     queryKey: ['dashboard', 'estado-cuenta'],
     queryFn: () => facturacionPagoApi.estadoCuentaGeneral(),
-    enabled: canPagos,
+    enabled: canSeeFacturacion,
   });
 
-  const recaudacionDistritoQuery = useQuery({
-    queryKey: ['dashboard', 'recaudacion-distrito'],
-    queryFn: () => reportesApi.recaudacionDistrito(),
-    enabled: canReportes,
+  const tiposTramiteQuery = useQuery({
+    queryKey: ['dashboard', 'tipos-tramite'],
+    queryFn: () => tipoTramiteApi.listar(),
+    enabled: canSeeTramites,
   });
 
-  const respaldosEstadoQuery = useQuery({
-    queryKey: ['dashboard', 'respaldos-estado'],
-    queryFn: () => respaldosDbaApi.estado(),
-    enabled: canDba,
-  });
+  const totalPendienteCobro =
+    estadoCuentaQuery.data?.reduce((acc, row) => acc + (row.montoPendienteDeuda ?? 0), 0) ?? 0;
 
-  const auditoriaRecienteQuery = useQuery({
-    queryKey: ['dashboard', 'auditoria-recientes'],
-    queryFn: () => auditoriaApi.recientes(),
-    enabled: canAuditoria,
-  });
+  const totalRecaudado =
+    estadoCuentaQuery.data?.reduce((acc, row) => acc + (row.totalPagadoHistorico ?? 0), 0) ?? 0;
 
-  const usuariosQuery = useQuery({
-    queryKey: ['dashboard', 'usuarios'],
-    queryFn: () => usuarioApi.consultar(),
-    enabled: canAdmin,
-  });
-
-  const totalTramites = tramitesQuery.data?.length ?? 0;
-  const tramitesEnCurso =
-    tramitesQuery.data?.filter((t) => !t.esEstadoFinal).length ?? 0;
-  const totalInmueblesUnicos = new Set(
-    (inmueblesQuery.data ?? []).map((i) => i.idInmueble)
-  ).size;
-  const totalPagadoHistorico = (estadoCuentaQuery.data ?? []).reduce(
-    (acc, c) => acc + (c.totalPagadoHistorico ?? 0),
-    0
-  );
-  const totalPendienteDeuda = (estadoCuentaQuery.data ?? []).reduce(
-    (acc, c) => acc + (c.montoPendienteDeuda ?? 0),
-    0
-  );
-  const totalRecaudadoCantonal = (recaudacionDistritoQuery.data ?? []).reduce(
-    (acc, d) => acc + (d.totalRecaudadoDistrito ?? 0),
-    0
-  );
+  // Cada módulo únicamente es visible si el rol actual tiene permiso CONSULTAR en la Matriz RBAC
+  const moduleCards = [
+    {
+      title: 'Padrón de Contribuyentes y Bienes Inmuebles',
+      subtitle: 'Personas Físicas, Jurídicas y API Ministerio de Hacienda',
+      description:
+        'Registro de contribuyentes con consulta de cédula en vivo a Hacienda, representantes legales y copropiedad (% participación).',
+      to: '/contribuyentes',
+      icon: <Users className="h-5 w-5" />,
+      allowed: canSeeContribuyentes,
+    },
+    {
+      title: 'Catastro Municipal y Fincas',
+      subtitle: 'Inventario de Propiedades y Avalúos Fiscales',
+      description:
+        'Administración de fincas, planos catastrados, uso de suelo y actualización de valores fiscales en los 7 distritos.',
+      to: '/inmuebles',
+      icon: <Building2 className="h-5 w-5" />,
+      allowed: canSeeInmuebles,
+    },
+    {
+      title: 'Nueva Radicación y Seguimiento de Expedientes',
+      subtitle: 'Ventanilla Única y Gestión Técnica de Trámites',
+      description:
+        'Búsqueda por cédula en Padrón y Hacienda, SLA estimado, requisitos obligatorios/opcionales y flujo de 4 etapas.',
+      to: '/tramites/radicacion',
+      icon: <FileText className="h-5 w-5" />,
+      allowed: canPerformCrud(roles, 'TramitesRadicacion', 'CONSULTAR'),
+    },
+    {
+      title: 'Revisión Técnica y Cotejo de Requisitos',
+      subtitle: 'Validación Documental de Expedientes',
+      description:
+        'Cotejo de planos y certificaciones, control de plazos SLA y actualización operativa de estado técnico.',
+      to: '/tramites/revision',
+      icon: <ClipboardCheck className="h-5 w-5" />,
+      allowed: canPerformCrud(roles, 'ExpedientesRevision', 'CONSULTAR'),
+    },
+    {
+      title: 'Estado de Cuenta Integral y Gestión de Cobro',
+      subtitle: 'Tributos, Intereses Moratorios y Estatus Legal',
+      description:
+        'Consulta de deuda principal, intereses, emisión de certificación oficial y actualización de estatus legal.',
+      to: '/tributos-deudas',
+      icon: <Scale className="h-5 w-5" />,
+      allowed: canPerformCrud(roles, 'TributosDeudas', 'CONSULTAR'),
+    },
+    {
+      title: 'Caja y Facturación Municipal',
+      subtitle: 'Recaudación y Comprobante Electrónico Hacienda',
+      description:
+        'Selección de saldos pendientes, clave numérica de 50 dígitos y registro de pago (Efectivo, Tarjeta, SINPE Móvil, Transferencia).',
+      to: '/pagos-municipales',
+      icon: <Receipt className="h-5 w-5" />,
+      allowed: canPerformCrud(roles, 'FacturacionPagos', 'CONSULTAR'),
+    },
+    {
+      title: 'Administración de Usuarios y Roles',
+      subtitle: 'Gestión de Funcionarios y Perfiles RBAC',
+      description:
+        'Creación de usuarios institucionales, asignación de roles e interruptor de estado activo.',
+      to: '/seguridad/usuarios',
+      icon: <Users className="h-5 w-5" />,
+      allowed: canPerformCrud(roles, 'UsuariosRoles', 'CONSULTAR'),
+    },
+    {
+      title: 'Matriz de Permisos (RBAC) — CRUD Completo',
+      subtitle: 'Centro de Seguridad y Gobernanza Institucional',
+      description:
+        'Parametrización de permisos Consultar, Crear, Modificar y Eliminar en todos los módulos con confirmación de 3 pasos.',
+      to: '/seguridad/matriz-permisos',
+      icon: <Lock className="h-5 w-5" />,
+      allowed: canPerformCrud(roles, 'MatrizPermisos', 'CONSULTAR'),
+    },
+    {
+      title: 'Data Warehouse y Análisis Tributario',
+      subtitle: 'Tablero de Recaudación Distrital y Cartera Morosa',
+      description:
+        'Indicadores ejecutivos por distrito (Nicoya, Mansión, San Antonio, Quebrada Honda, Sámara, Nosara, Belén) y tributos.',
+      to: '/reportes',
+      icon: <FileSpreadsheet className="h-5 w-5" />,
+      allowed: canPerformCrud(roles, 'ReportesDwh', 'CONSULTAR'),
+    },
+    {
+      title: 'Bitácora y Auditoría Forense',
+      subtitle: 'Trazabilidad e Inspección Lado a Lado (Data Diff)',
+      description:
+        'Filtros por fecha, tabla, acción (INSERT/UPDATE/DELETE) e IP, con comparativa de Valores Anteriores vs Nuevos.',
+      to: '/auditoria',
+      icon: <ShieldCheck className="h-5 w-5" />,
+      allowed: canPerformCrud(roles, 'AuditoriaForense', 'CONSULTAR'),
+    },
+    {
+      title: 'Consola Técnica DBA (SQL Server 2022)',
+      subtitle: 'Políticas de Respaldo, SHA-256 y Recuperación',
+      description:
+        'Estado del motor SQL, políticas FULL/DIFF/LOG, cifrado AES-256 y pruebas con RESTORE VERIFYONLY.',
+      to: '/dba/politicas',
+      icon: <Database className="h-5 w-5" />,
+      allowed:
+        canPerformCrud(roles, 'DbaPoliticas', 'CONSULTAR') ||
+        canPerformCrud(roles, 'DbaRespaldos', 'CONSULTAR'),
+    },
+    {
+      title: 'Portal Ciudadano en Línea',
+      subtitle: 'Atención al Contribuyente (Oficina Virtual)',
+      description:
+        'Consulta de trámites en curso con barra de progreso de 4 etapas, inmuebles inscritos, estado de cuenta y requisitos.',
+      to: '/portal-ciudadano',
+      icon: <Globe className="h-5 w-5" />,
+      allowed: canPerformCrud(roles, 'PortalCiudadano', 'CONSULTAR'),
+    },
+  ].filter((m) => m.allowed);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Bienvenido(a), ${user?.nombreCompleto || user?.userName || 'Funcionario'}`}
-        subtitle={`${dashboardDescription} · Departamento: ${
-          user?.nombreDepartamento || 'Municipalidad de Nicoya'
-        }`}
-        badge={activeRole}
-        icon={
-          <img
-            src="/images/logo2.png"
-            alt="Identidad visual de la Municipalidad de Nicoya"
-            className="h-10 w-10 rounded-xl object-contain shadow-sm"
-          />
+        title={`Bienvenido(a), ${session?.nombreFuncionario || session?.userName}`}
+        subtitle="Sistema de Gestión Municipal de Nicoya (SIGEMUN) — Módulos habilitados según su rol institucional."
+        badge={roles.join(' · ') || 'Sesión Activa'}
+        icon={<LayoutDashboard className="h-6 w-6" />}
+        actions={
+          <>
+            {canPerformCrud(roles, 'PortalCiudadano', 'CONSULTAR') && (
+              <Button variant="secondary" asChild>
+                <Link to="/portal-ciudadano">
+                  <Globe className="h-4 w-4" /> Portal Ciudadano
+                </Link>
+              </Button>
+            )}
+            {canPerformCrud(roles, 'MatrizPermisos', 'CONSULTAR') && (
+              <Button asChild>
+                <Link to="/seguridad/matriz-permisos">
+                  <Lock className="h-4 w-4" /> Matriz de Permisos (CRUD)
+                </Link>
+              </Button>
+            )}
+          </>
         }
       />
 
-      {/* KPI Summary Cards Dynamically Loaded from Authorized Endpoints */}
-      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${kpiGridColumns}`}>
-        {canTramites && (
-          <Card className="border-l-4 border-l-[#164B35]">
-            <CardHeader className="pb-2">
-              <CardDescription>Expedientes municipales</CardDescription>
-              <CardTitle className="text-2xl font-extrabold text-[#164B35]">
-                {tramitesQuery.isLoading ? '...' : formatNumber(totalTramites)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-[#5A6B61]">
-                En gestión activa: <strong>{formatNumber(tramitesEnCurso)}</strong> expediente(s)
-              </p>
-            </CardContent>
-          </Card>
-        )}
+      {/* Indicadores Ejecutivos (Únicamente los autorizados para el rol actual) */}
+      {(canSeeContribuyentes || canSeeInmuebles || canSeeFacturacion || canSeeTramites) && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {canSeeContribuyentes && (
+            <Card className="border-l-4 border-l-[#1D4ED8]">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#4B5563]">
+                  <span>Padrón Municipal</span>
+                  <Users className="h-4 w-4 text-[#1D4ED8]" />
+                </CardDescription>
+                <CardTitle className="text-2xl font-bold text-[#171717]">
+                  {formatNumber(padronQuery.data?.length ?? 0)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-2 text-xs text-[#6B7280]">
+                Contribuyentes activos registrados en SQL Server
+              </CardContent>
+            </Card>
+          )}
 
-        {canInmuebles && (
-          <Card className="border-l-4 border-l-[#B6944A]">
-            <CardHeader className="pb-2">
-              <CardDescription>Fincas registradas</CardDescription>
-              <CardTitle className="text-2xl font-extrabold text-[#26352D]">
-                {inmueblesQuery.isLoading ? '...' : formatNumber(totalInmueblesUnicos)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-[#5A6B61]">
-                Derechos catastrales: <strong>{formatNumber(inmueblesQuery.data?.length ?? 0)}</strong>
-              </p>
-            </CardContent>
-          </Card>
-        )}
+          {canSeeInmuebles && (
+            <Card className="border-l-4 border-l-[#1E3A8A]">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#4B5563]">
+                  <span>Fincas en Catastro</span>
+                  <Building2 className="h-4 w-4 text-[#1E3A8A]" />
+                </CardDescription>
+                <CardTitle className="text-2xl font-bold text-[#171717]">
+                  {formatNumber(inmueblesQuery.data?.length ?? 0)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-2 text-xs text-[#6B7280]">
+                Propiedades geolocalizadas en los 7 distritos
+              </CardContent>
+            </Card>
+          )}
 
-        {canPagos && (
-          <Card className="border-l-4 border-l-emerald-600">
-            <CardHeader className="pb-2">
-              <CardDescription>Recaudación histórica</CardDescription>
-              <CardTitle className="text-xl font-extrabold text-emerald-800">
-                {estadoCuentaQuery.isLoading ? '...' : formatCurrencyCRC(totalPagadoHistorico)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-[#5A6B61]">
-                Saldo pendiente por cobrar:{' '}
-                <strong className="text-amber-700">{formatCurrencyCRC(totalPendienteDeuda)}</strong>
-              </p>
-            </CardContent>
-          </Card>
-        )}
+          {canSeeFacturacion && (
+            <Card className="border-l-4 border-l-[#DC2626]">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#4B5563]">
+                  <span>Saldo Pendiente Cobro</span>
+                  <Scale className="h-4 w-4 text-[#DC2626]" />
+                </CardDescription>
+                <CardTitle className="text-2xl font-bold text-[#171717]">
+                  {formatCurrencyCRC(totalPendienteCobro)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-2 text-xs text-[#6B7280]">
+                Recaudado histórico: {formatCurrencyCRC(totalRecaudado)}
+              </CardContent>
+            </Card>
+          )}
 
-        {canReportes && (
-          <Card className="border-l-4 border-l-sky-600">
-            <CardHeader className="pb-2">
-              <CardDescription>Recaudación cantonal</CardDescription>
-              <CardTitle className="text-xl font-extrabold text-sky-900">
-                {recaudacionDistritoQuery.isLoading
-                  ? '...'
-                  : formatCurrencyCRC(totalRecaudadoCantonal)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-[#5A6B61]">
-                Distritos monitoreados:{' '}
-                <strong>{formatNumber(recaudacionDistritoQuery.data?.length ?? 0)}</strong>
-              </p>
-            </CardContent>
-          </Card>
-        )}
+          {canSeeTramites && (
+            <Card className="border-l-4 border-l-[#15803D]">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#4B5563]">
+                  <span>Catálogo de Trámites</span>
+                  <ClipboardCheck className="h-4 w-4 text-[#15803D]" />
+                </CardDescription>
+                <CardTitle className="text-2xl font-bold text-[#171717]">
+                  {formatNumber(tiposTramiteQuery.data?.length ?? 0)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-2 text-xs text-[#6B7280]">
+                Procedimientos municipales con control de SLA
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
-        {canAdmin && (
-          <Card className="border-l-4 border-l-[#164B35]">
-            <CardHeader className="pb-2">
-              <CardDescription>Funcionarios del sistema</CardDescription>
-              <CardTitle className="text-2xl font-extrabold text-[#164B35]">
-                {usuariosQuery.isLoading ? '...' : formatNumber(usuariosQuery.data?.length ?? 0)}
-              </CardTitle>
+      {/* Tarjetas de Módulos Autorizados para el Rol Actual */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {moduleCards.map((m) => (
+          <Card key={m.to} className="flex flex-col justify-between transition-all hover:border-[#1D4ED8]">
+            <CardHeader>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-[#BFDBFE] bg-[#EFF6FF] text-[#1E3A8A]">
+                  {m.icon}
+                </div>
+                <Badge variant="success">Acceso Autorizado</Badge>
+              </div>
+              <CardTitle className="pt-2 text-base">{m.title}</CardTitle>
+              <CardDescription className="text-xs font-semibold text-[#1E3A8A]">
+                {m.subtitle}
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-xs text-[#5A6B61]">
-                Activos:{' '}
-                <strong>
-                  {formatNumber(usuariosQuery.data?.filter((u) => u.activo).length ?? 0)}
-                </strong>
-              </p>
+            <CardContent className="flex flex-1 flex-col justify-between space-y-4">
+              <p className="text-xs leading-relaxed text-[#4B5563]">{m.description}</p>
+              <div>
+                <Button asChild className="w-full">
+                  <Link to={m.to}>
+                    Abrir módulo <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
-        )}
-
-        {canDba && (
-          <Card className="border-l-4 border-l-[#B6944A]">
-            <CardHeader className="pb-2">
-              <CardDescription>Políticas de respaldo</CardDescription>
-              <CardTitle className="text-2xl font-extrabold text-[#26352D]">
-                {respaldosEstadoQuery.isLoading
-                  ? '...'
-                  : formatNumber(respaldosEstadoQuery.data?.length ?? 0)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-[#5A6B61]">
-                Políticas activas:{' '}
-                <strong>
-                  {formatNumber(
-                    respaldosEstadoQuery.data?.filter((r) => r.configuracionActiva).length ?? 0
-                  )}
-                </strong>
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        ))}
       </div>
 
-      {/* Role-Based Quick Access Grid */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Herramientas disponibles para su perfil</CardTitle>
-          <CardDescription>
-            Accesos habilitados para {activeRole}, de acuerdo con los permisos de su sesión.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${moduleGridColumns}`}>
-            {canContribuyentes && (
-              <QuickModuleCard
-                title="Padrón de Contribuyentes"
-                description="Personas físicas, jurídicas, representantes legales y búsqueda multicriterio."
-                to="/contribuyentes"
-                icon={<Users className="h-5 w-5" />}
-                badge="WF-11"
-              />
-            )}
-            {hasRole(MODULE_PERMISSIONS.INMUEBLES) && (
-              <QuickModuleCard
-                title="Bienes Inmuebles y Copropiedad"
-                description="Registro catastral de fincas, distritos de Nicoya y asignación de derechos."
-                to="/inmuebles"
-                icon={<Building2 className="h-5 w-5" />}
-                badge="WF-11"
-              />
-            )}
-            {hasRole(MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES) && (
-              <>
-                <QuickModuleCard
-                  title="Radicación de Trámites"
-                  description="Apertura de expedientes municipales, requisitos y subida de adjuntos."
-                  to="/tramites/radicar"
-                  icon={<FilePlus2 className="h-5 w-5" />}
-                  badge="WF-8"
-                />
-                <QuickModuleCard
-                  title="Revisión y Resolución"
-                  description="Evaluación técnica de expedientes, avance de estado y resolución APR/RECH."
-                  to="/expedientes/revision"
-                  icon={<ClipboardCheck className="h-5 w-5" />}
-                  badge="WF-9"
-                />
-                <QuickModuleCard
-                  title="Seguimiento y Trazabilidad"
-                  description="Línea de tiempo de estados, SLA transcurrido y bitácora detallada."
-                  to="/expedientes/seguimiento"
-                  icon={<FolderKanban className="h-5 w-5" />}
-                  badge="WF-10"
-                />
-              </>
-            )}
-            {hasRole(MODULE_PERMISSIONS.TRIBUTOS_PAGOS) && (
-              <>
-                <QuickModuleCard
-                  title="Pagos Municipales y Caja"
-                  description="Facturación electrónica Hacienda, cobro por medio de pago y aplicación."
-                  to="/pagos"
-                  icon={<Receipt className="h-5 w-5" />}
-                  badge="WF-12"
-                />
-                <QuickModuleCard
-                  title="Tributos, Deudas y Mora"
-                  description="Cargos tributarios, recálculo de intereses en BD y estado de cuenta."
-                  to="/tributos"
-                  icon={<Scale className="h-5 w-5" />}
-                  badge="Tributos"
-                />
-              </>
-            )}
-            {hasRole(MODULE_PERMISSIONS.REPORTES) && (
-              <QuickModuleCard
-                title="Análisis Tributario y Reportes"
-                description="Recaudación por distrito y tributo, cartera morosa y eficiencia SLA."
-                to="/reportes"
-                icon={<FileSpreadsheet className="h-5 w-5" />}
-                badge="WF-13"
-              />
-            )}
-            {hasRole(MODULE_PERMISSIONS.AUDITORIA) && (
-              <QuickModuleCard
-                title="Auditoría Forense (Audit Log)"
-                description="Bitácora de eventos, filtros por tabla/usuario y comparativa de cambios."
-                to="/auditoria"
-                icon={<ShieldCheck className="h-5 w-5" />}
-                badge="WF-5"
-              />
-            )}
-            {hasRole([ROLES.ADMIN]) && (
-              <>
-                <QuickModuleCard
-                  title="Usuarios y Roles (RBAC)"
-                  description="Administración de funcionarios municipales, estados y asignación de roles."
-                  to="/seguridad/usuarios"
-                  icon={<UserCheck className="h-5 w-5" />}
-                  badge="WF-6"
-                />
-                <QuickModuleCard
-                  title="Centro de Seguridad y Matriz"
-                  description="Matriz de permisos por rol y módulo bajo el Principio de Mínimo Privilegio."
-                  to="/seguridad/matriz"
-                  icon={<Sliders className="h-5 w-5" />}
-                  badge="WF-7"
-                />
-              </>
-            )}
-            {hasRole(MODULE_PERMISSIONS.DBA_CONSOLA) && (
-              <>
-                <QuickModuleCard
-                  title="Consola DBA — Políticas"
-                  description="Configuración de políticas de respaldo, retención, cifrado y DBCC CHECKDB."
-                  to="/dba/politicas"
-                  icon={<Database className="h-5 w-5" />}
-                  badge="WF-3"
-                />
-                <QuickModuleCard
-                  title="Consola DBA — Recuperación"
-                  description="Historial de respaldos FULL/DIFF y simulacro de restauración ante desastres."
-                  to="/dba/respaldos"
-                  icon={<Landmark className="h-5 w-5" />}
-                  badge="WF-4"
-                />
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Audit Events if Authorized */}
-      {canAuditoria && auditoriaRecienteQuery.data && auditoriaRecienteQuery.data.length > 0 && (
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-col gap-4 border-b border-[#DCE3DE] bg-gradient-to-r from-[#F2F7F4] to-white sm:flex-row sm:items-center sm:justify-between">
+      {/* Accesos Rápidos de Consola Técnica DBA si el rol tiene permiso de Respaldos DBA */}
+      {canPerformCrud(roles, 'DbaRespaldos', 'CONSULTAR') && (
+        <Card className="border-[#BFDBFE] bg-[#EFF6FF]/40">
+          <CardContent className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#164B35] text-[#E2C982] shadow-sm">
-                <ShieldCheck className="h-5 w-5" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-[#1E3A8A] text-white">
+                <HardDrive className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle>Actividad reciente</CardTitle>
-                <CardDescription className="mt-1">
-                  Últimos eventos registrados en la bitácora de auditoría.
-                </CardDescription>
+                <h3 className="text-sm font-bold text-[#171717]">
+                  Consola de Administración de Base de Datos Activa
+                </h3>
+                <p className="text-xs text-[#4B5563]">
+                  Tiene acceso directo a Políticas de Respaldo, Simulacro de Restauración (RESTORE VERIFYONLY),
+                  Data Warehouse y gobernanza de la Matriz de Permisos.
+                </p>
               </div>
             </div>
-            <Button asChild variant="outline" size="sm" className="w-full bg-white sm:w-auto">
-              <Link to="/auditoria">
-                Ver bitácora completa <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0 sm:p-0">
-            <div className="overflow-x-auto" role="region" aria-label="Actividad reciente de auditoría" tabIndex={0}>
-              <table className="w-full min-w-[820px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#FAFCFB] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
-                    <th scope="col" className="px-6 py-3.5">Fecha y hora</th>
-                    <th scope="col" className="px-4 py-3.5">Usuario</th>
-                    <th scope="col" className="px-4 py-3.5">Acción</th>
-                    <th scope="col" className="px-4 py-3.5">Entidad afectada</th>
-                    <th scope="col" className="px-4 py-3.5">Registro</th>
-                    <th scope="col" className="px-6 py-3.5">Origen</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#DCE3DE]">
-                  {auditoriaRecienteQuery.data.slice(0, 6).map((ev) => (
-                    <tr key={ev.idAuditoria} className="group transition-colors hover:bg-[#F2F7F4]">
-                      <td className="whitespace-nowrap px-6 py-4 font-medium text-[#26352D]">
-                        {ev.fechaEvento ? formatDateTime(ev.fechaEvento) : 'Fecha no disponible'}
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2.5">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E8F0EC] text-xs font-bold text-[#164B35]">
-                            {(ev.userName || 'S').slice(0, 2).toUpperCase()}
-                          </span>
-                          <span className="font-semibold text-[#164B35]">{ev.userName || 'Sistema'}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <Badge variant={ev.tipoAccion ? 'gold' : 'outline'}>
-                          {ev.tipoAccion || 'Sin clasificar'}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-4 font-medium text-[#26352D]">
-                        {(ev.tablaAfectada || 'Sin entidad').replace(/_/g, ' ')}
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className="inline-flex rounded-lg bg-[#F2F5F3] px-2.5 py-1 font-mono text-xs font-semibold text-[#42534A]">
-                          #{ev.idRegistroAfectado ?? '—'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-[#607168]">
-                        <span className="inline-flex items-center gap-2 whitespace-nowrap">
-                          <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
-                          {ev.direccionIp === '<local machine>'
-                            ? 'Servidor local'
-                            : ev.direccionIp || 'No disponible'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" asChild>
+                <Link to="/dba/respaldos">Respaldos y DRP</Link>
+              </Button>
+              <Button asChild>
+                <Link to="/seguridad/matriz-permisos">Gobernar Matriz RBAC</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -485,41 +357,3 @@ export function DashboardPage() {
     </div>
   );
 }
-
-function QuickModuleCard({
-  title,
-  description,
-  to,
-  icon,
-}: {
-  title: string;
-  description: string;
-  to: string;
-  icon: React.ReactNode;
-  badge: string;
-}) {
-  return (
-    <Link
-      to={to}
-      className="group flex flex-col justify-between rounded-xl border border-[#DCE3DE] bg-[#F5F7F4]/60 p-4 transition-all hover:border-[#164B35] hover:bg-white hover:shadow-md"
-    >
-      <div>
-        <div className="flex items-center justify-between">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#164B35] text-[#B6944A]">
-            {icon}
-          </div>
-          <Badge variant="success">Disponible</Badge>
-        </div>
-        <h3 className="mt-3 text-sm font-bold text-[#26352D] group-hover:text-[#164B35]">
-          {title}
-        </h3>
-        <p className="mt-1 text-xs leading-relaxed text-[#5A6B61]">{description}</p>
-      </div>
-      <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-[#164B35]">
-        <span>Abrir módulo</span>
-        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-      </div>
-    </Link>
-  );
-}
-

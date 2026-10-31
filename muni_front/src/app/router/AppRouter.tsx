@@ -25,7 +25,7 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Ruta pública: Inicio de sesión institucional (Wireframe 1) */}
+        {/* Ruta pública: Inicio de sesión institucional */}
         <Route path="/login" element={<LoginPage />} />
 
         {/* Rutas protegidas bajo el layout institucional SIGEMUN */}
@@ -36,8 +36,7 @@ export function AppRouter() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/dashboard" replace />} />
-
+          <Route index element={<DashboardPage />} />
           <Route
             path="/dashboard"
             element={
@@ -74,6 +73,15 @@ export function AppRouter() {
             }
           />
 
+          {/* Trámites y Expedientes (rutas principales y alias compatibles) */}
+          <Route
+            path="/tramites/radicacion"
+            element={
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES}>
+                <RadicacionTramitePage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/tramites/radicar"
             element={
@@ -93,6 +101,14 @@ export function AppRouter() {
           />
 
           <Route
+            path="/tramites/revision"
+            element={
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES}>
+                <RevisionExpedientePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/expedientes/revision"
             element={
               <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES}>
@@ -102,6 +118,14 @@ export function AppRouter() {
           />
 
           <Route
+            path="/tramites/seguimiento"
+            element={
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES}>
+                <SeguimientoExpedientePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/expedientes/seguimiento"
             element={
               <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES}>
@@ -110,6 +134,15 @@ export function AppRouter() {
             }
           />
 
+          {/* Hacienda, Tributos y Caja */}
+          <Route
+            path="/pagos-municipales"
+            element={
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRIBUTOS_PAGOS}>
+                <PagosMunicipalesPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/pagos"
             element={
@@ -120,6 +153,14 @@ export function AppRouter() {
           />
 
           <Route
+            path="/tributos-deudas"
+            element={
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRIBUTOS_PAGOS}>
+                <TributosDeudasPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/tributos"
             element={
               <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.TRIBUTOS_PAGOS}>
@@ -128,6 +169,7 @@ export function AppRouter() {
             }
           />
 
+          {/* Data Warehouse y Auditoría Forense */}
           <Route
             path="/reportes"
             element={
@@ -145,7 +187,6 @@ export function AppRouter() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/dba/auditoria"
             element={
@@ -155,6 +196,7 @@ export function AppRouter() {
             }
           />
 
+          {/* Gobernanza y Seguridad (RBAC) */}
           <Route
             path="/seguridad/usuarios"
             element={
@@ -165,14 +207,23 @@ export function AppRouter() {
           />
 
           <Route
+            path="/seguridad/matriz-permisos"
+            element={
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.MATRIZ_PERMISOS}>
+                <MatrizPermisosPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/seguridad/matriz"
             element={
-              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.USUARIOS_ROLES}>
+              <ProtectedRoute allowedRoles={MODULE_PERMISSIONS.MATRIZ_PERMISOS}>
                 <MatrizPermisosPage />
               </ProtectedRoute>
             }
           />
 
+          {/* Consola DBA */}
           <Route
             path="/dba/politicas"
             element={
@@ -191,10 +242,9 @@ export function AppRouter() {
             }
           />
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>
   );
 }
-

@@ -8,7 +8,7 @@ namespace MunicipalidadAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = Roles.Admin)]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Dba}")]
     public class RolPermisoController : ControllerBase
     {
         private readonly ISvRolPermiso _svRolPermiso;

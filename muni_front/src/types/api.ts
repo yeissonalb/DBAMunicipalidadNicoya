@@ -20,6 +20,7 @@ export interface UsuarioTokenDto {
   idUsuario: number;
   userName: string;
   nombreCompleto?: string | null;
+  nombreFuncionario?: string | null;
   email?: string | null;
   idDepartamento: number;
   nombreDepartamento?: string | null;
@@ -47,6 +48,33 @@ export interface SpDepartamentoResultDto {
   estadoDepartamento: boolean;
 }
 
+export interface CatalogoTipoIdentificacionDto {
+  idTipoIdentificacion: number;
+  codigoTipoIdentificacion: string;
+  descripcion: string;
+}
+
+export interface CatalogoGeneroDto {
+  idGenero: number;
+  codigoGenero: string;
+}
+
+export interface CatalogoEstadoCivilDto {
+  idEstadoCivil: number;
+  codigoEstadoCivil: string;
+}
+
+export interface CatalogoActividadEconomicaDto {
+  idActividadEconomica: number;
+  codigoCiiu: string;
+  descripcion: string;
+}
+
+export interface CatalogoCargoRepresentacionDto {
+  idCargoRepresentacion: number;
+  nombreCargo: string;
+}
+
 // ----------------------------------------------------------------------------
 // 3. Usuarios (/api/usuario)
 // ----------------------------------------------------------------------------
@@ -56,6 +84,7 @@ export interface SpConsultarUsuarioResultDto {
   nombreUsuario: string;
   apellido1Usuario: string;
   apellido2Usuario: string;
+  nombreFuncionario?: string;
   emailUsuario: string;
   activo: boolean;
   fechaCreacion: string;
@@ -63,22 +92,28 @@ export interface SpConsultarUsuarioResultDto {
   nombreDepartamento: string;
 }
 
+export type SpUsuarioResultDto = SpConsultarUsuarioResultDto;
+
 export interface RegistrarUsuarioDto {
   userName: string;
-  password: string;
-  nombreUsuario: string;
-  apellido1Usuario: string;
-  apellido2Usuario: string;
-  emailUsuario: string;
+  password?: string;
+  passwordTextoPlano?: string;
+  nombreUsuario?: string;
+  apellido1Usuario?: string;
+  apellido2Usuario?: string;
+  nombreFuncionario?: string;
+  emailUsuario?: string;
   idDepartamento: number;
 }
 
 export interface ActualizarUsuarioDto {
-  nombreUsuario: string;
-  apellido1Usuario: string;
-  apellido2Usuario: string;
-  emailUsuario: string;
+  nombreUsuario?: string;
+  apellido1Usuario?: string;
+  apellido2Usuario?: string;
+  nombreFuncionario?: string;
+  emailUsuario?: string;
   idDepartamento: number;
+  activo?: boolean;
 }
 
 export interface CambiarEstadoUsuarioDto {
@@ -148,14 +183,20 @@ export interface AsignarPermisoRolDto {
 export interface VwPadronContribuyente {
   idContribuyente: number;
   tipoContribuyente: string;
-  identificacion?: string | null;
-  nombreCompletoORazonSocial?: string | null;
+  tipoPersona: string;
+  identificacion: string;
+  nombreCompletoORazonSocial: string;
   nombreFantasia?: string | null;
   correoElectronico: string;
   telefono: string;
   direccionNotificaciones: string;
+  direccionExacta: string;
+  nombreDistrito: string;
   fechaRegistro: string;
   estadoContribuyente: boolean;
+  activo: boolean;
+  actividadEconomica?: string;
+  fechaNacimientoOConstitucion?: string;
 }
 
 export interface SpConsultarContribuyenteResultDto {
@@ -166,45 +207,73 @@ export interface SpConsultarContribuyenteResultDto {
   fechaRegistro: string;
   estadoContribuyente: boolean;
   tipoPersona: string;
-  identificacion?: string | null;
-  nombreORazonSocial?: string | null;
+  identificacion: string;
+  nombreORazonSocial: string;
+  nombreCompleto?: string;
+  distrito?: string;
+  actividadEconomica?: string;
+  fechaNacimientoOConstitucion?: string;
 }
 
 export interface RegistrarContribuyenteFisicoDto {
-  cedulaIdentidad: string;
+  cedulaIdentidad?: string;
+  identificacion?: string;
   nombre: string;
-  apellido1Fisico: string;
-  apellido2Fisico: string;
-  fechaNacimiento: string;
+  apellido1Fisico?: string;
+  primerApellido?: string;
+  apellido2Fisico?: string;
+  segundoApellido?: string;
+  fechaNacimiento?: string;
+  fechaDeNacimiento?: string;
   correoElectronico: string;
   telefono: string;
-  direccionNotificaciones: string;
+  direccionNotificaciones?: string;
+  direccionExacta?: string;
+  idDistrito?: number;
+  idTipoIdentificacion?: number;
+  idGenero?: number;
+  idEstadoCivil?: number;
 }
 
 export interface RegistrarContribuyenteJuridicoDto {
-  cedulaJuridica: string;
+  cedulaJuridica?: string;
+  identificacion?: string;
   razonSocial: string;
   nombreFantasia?: string | null;
-  fechaConstitucion: string;
+  nombreComercial?: string | null;
+  fechaConstitucion?: string;
+  fechaDeConstitucion?: string;
   correoElectronico: string;
   telefono: string;
-  direccionNotificaciones: string;
+  direccionNotificaciones?: string;
+  direccionExacta?: string;
+  idDistrito?: number;
+  idTipoIdentificacion?: number;
+  idActividadEconomica?: number;
 }
 
 export interface ActualizarContribuyenteDto {
   correoElectronico: string;
   telefono: string;
-  direccionNotificaciones: string;
-  estadoContribuyente: boolean;
+  direccionNotificaciones?: string;
+  direccionExacta?: string;
+  idDistrito?: number;
+  estadoContribuyente?: boolean;
+  activo?: boolean;
 }
 
 export interface RegistrarRepresentanteLegalDto {
-  nombreRepresentante: string;
-  apellido1Representante: string;
-  apellido2Representante: string;
-  tomoFolioRegistro: string;
-  cedulaRepresentante: string;
-  fechaVencimientoPoder: string;
+  nombreRepresentante?: string;
+  apellido1Representante?: string;
+  apellido2Representante?: string;
+  tomoFolioRegistro?: string;
+  cedulaRepresentante?: string;
+  fechaVencimientoPoder?: string;
+  idPersonaJuridica?: number;
+  idPersonaFisica?: number;
+  idCargoRepresentacion?: number;
+  fechaDeInicio?: string;
+  fechaFin?: string | null;
 }
 
 // ----------------------------------------------------------------------------
@@ -214,17 +283,28 @@ export interface VwInmueblesPropietario {
   idInmueble: number;
   numeroFinca: string;
   planoCatastrado: string;
+  planoCatastro: string;
   direccionExacta: string;
   areaTerrenoM2: number;
   areaConstruccionM2: number;
+  areaMetros: number;
   valorFiscal: number;
   fechaRegistroInmueble: string;
   nombreDistrito: string;
   tipoUso: string;
+  usoSuelo: string;
+  zonaHomogenea?: string;
   idContribuyente?: number | null;
   propietario?: string | null;
+  propietarios?: string | null;
   porcentajeParticipacion?: number | null;
+  porcentajeTotalRegistrado?: number | null;
+  ultimoValorTotalAvaluado?: number | null;
+  fechaUltimoAvaluo?: string | null;
+  inmuebleActivo?: boolean;
 }
+
+export type VwCatastroInmueble = VwInmueblesPropietario;
 
 export interface SpConsultarInmuebleResultDto {
   idInmueble: number;
@@ -243,31 +323,47 @@ export interface SpInmueblesPorContribuyenteResultDto {
   idInmueble: number;
   numeroFinca: string;
   planoCatastrado: string;
+  planoCatastro: string;
   direccionExacta: string;
   valorFiscal: number;
   nombreDistrito: string;
   tipoUso: string;
+  descripcionUso: string;
+  areaMetros?: number;
   porcentajeParticipacion: number;
 }
 
 export interface RegistrarInmuebleDto {
   numeroFinca: string;
-  direccionExacta: string;
-  areaTerrenoM2: number;
-  areaConstruccionM2: number;
+  direccionExacta?: string;
+  areaTerrenoM2?: number;
+  areaConstruccionM2?: number;
+  areaMetros?: number;
   valorFiscal: number;
-  planoCatastrado: string;
-  idTipoUsoInmueble: number;
+  planoCatastrado?: string;
+  planoCatastro?: string;
+  idTipoUsoInmueble?: number;
+  idUsoSuelo?: number;
   idDistrito: number;
+  latitud?: number;
+  longitud?: number;
+  idZonaHomogenea?: number;
+  idTopografia?: number;
+  idFormaPredio?: number;
+  idUbicacionManzana?: number;
 }
 
 export interface ActualizarInmuebleDto {
-  direccionExacta: string;
-  areaTerrenoM2: number;
-  areaConstruccionM2: number;
+  direccionExacta?: string;
+  areaTerrenoM2?: number;
+  areaConstruccionM2?: number;
+  areaMetros?: number;
   valorFiscal: number;
-  planoCatastrado: string;
-  idTipoUsoInmueble: number;
+  planoCatastrado?: string;
+  idTipoUsoInmueble?: number;
+  idUsoSuelo?: number;
+  idZonaHomogenea?: number;
+  activo?: boolean;
 }
 
 export interface AsignarDerechoInmuebleDto {
@@ -286,9 +382,48 @@ export interface SpDistritoResultDto {
 
 export interface SpTipoUsoInmuebleResultDto {
   idTipoUsoInmueble: number;
+  idUsoSuelo: number;
   codigoTipoUso: string;
+  codigoUso: string;
   descripcionUso: string;
+  descripcion: string;
   permiteActividadComercial: boolean;
+}
+
+export interface CatalogoZonaHomogeneaDto {
+  idZonaHomogenea: number;
+  nombreZona: string;
+  valorBaseMetro: number;
+}
+
+export interface CatalogoTopografiaDto {
+  idTopografia: number;
+  codigoTopografia: string;
+  factorCorreccion: number;
+}
+
+export interface CatalogoFormaPredioDto {
+  idFormaPredio: number;
+  codigoForma: string;
+  factorCorreccion: number;
+}
+
+export interface CatalogoUbicacionManzanaDto {
+  idUbicacionManzana: number;
+  codigoUbicacion: string;
+  factorCorreccion: number;
+}
+
+export interface CatalogoPeritoDto {
+  idPerito: number;
+  codigoCarné: string;
+  nombreCompleto: string;
+  especialidad: string;
+}
+
+export interface CatalogoEstadoAvaluoDto {
+  idEstadoAvaluo: number;
+  codigoEstado: string;
 }
 
 // ----------------------------------------------------------------------------
@@ -298,15 +433,20 @@ export interface SpTiposTramiteResultDto {
   idTipoTramite: number;
   nombreTramite: string;
   descripcionTipo: string;
+  descripcion: string;
   diasResolucionMax: number;
+  diasSlaMaximo: number;
   idDepartamento: number;
   nombreDepartamento: string;
+  codigoDepartamento?: string;
 }
 
 export interface TipoTramiteDto {
   nombreTramite: string;
-  descripcionTipo: string;
-  diasResolucionMax: number;
+  descripcionTipo?: string;
+  descripcion?: string;
+  diasResolucionMax?: number;
+  diasSlaMaximo?: number;
   idDepartamento: number;
 }
 
@@ -326,7 +466,7 @@ export interface SpRequisitosTramiteResultDto {
 
 export interface RegistrarRequisitoDto {
   nombreRequisito: string;
-  descripcion: string;
+  descripcion?: string;
   esObligatorio: boolean;
 }
 
@@ -340,12 +480,14 @@ export interface VwTramitesSeguimiento {
   fechaCierre?: string | null;
   nombreTramite: string;
   diasResolucionMax: number;
+  diasSlaMaximo: number;
   nombreDepartamento: string;
   codigoEstado?: string | null;
   nombreEstado?: string | null;
+  estadoActual: string;
   esEstadoFinal?: boolean | null;
   idContribuyente: number;
-  contribuyente?: string | null;
+  contribuyente: string;
   funcionarioAsignado: string;
   numeroFinca?: string | null;
   diasTranscurridos?: number | null;
@@ -371,14 +513,18 @@ export interface SpConsultarTramiteResultDto {
   fechaCierre?: string | null;
   nombreTramite: string;
   diasResolucionMax: number;
+  diasSlaMaximo: number;
   funcionarioAsignado: string;
   idContribuyente: number;
+  contribuyente: string;
   numeroFinca?: string | null;
   ultimoEstado?: string | null;
+  estadoActual: string;
 }
 
 export interface SpEstadosTramiteResultDto {
   idEstadoTramite: number;
+  idEstado: number;
   codigoEstado: string;
   nombreEstado: string;
   descripcionEstado: string;
@@ -417,13 +563,18 @@ export interface ActualizarTramiteDto {
 }
 
 export interface CambiarEstadoTramiteDto {
-  codigoEstado: string;
-  observaciones: string;
+  codigoEstado?: string;
+  idEstado?: number;
+  observaciones?: string;
+  observacion?: string;
 }
 
 export interface ResolucionTramiteDto {
-  codigoEstado: 'APR' | 'RECH';
-  observaciones: string;
+  codigoEstado?: 'APR' | 'RECH';
+  observaciones?: string;
+  numeroResolucion?: string;
+  tipoResolucion?: string;
+  detalleResolucion?: string;
 }
 
 export interface ArchivoAdjuntadoDto {
@@ -497,7 +648,7 @@ export interface RegistrarDeudaMunicipalDto {
 }
 
 export interface ActualizarEstadoDeudaDto {
-  codigoEstadoDeuda: 'PEND' | 'PAG' | 'VENC' | 'ARR';
+  codigoEstadoDeuda: 'PEND' | 'PAG' | 'VENC' | 'ARR' | string;
 }
 
 export interface CalcularRecargosDto {
@@ -538,6 +689,7 @@ export interface SpEstadoCuentaResultDto {
   fechaDeVencimiento: string;
   estadoDeuda: string;
   idFactura?: number | null;
+  claveNumericaHacienda?: string | null;
   totalFactura?: number | null;
   estadoFactura?: string | null;
   totalPagadoFactura?: number | null;
@@ -847,4 +999,3 @@ export interface EjecutarBackupDto {
 export interface SimularRestauracionDto {
   rutaBackupFull: string;
 }
-

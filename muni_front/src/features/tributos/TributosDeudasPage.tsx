@@ -1,36 +1,42 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import {
+  AlertCircle,
   Calculator,
+  FileCheck2,
   FilePlus,
   Loader2,
   Plus,
   RefreshCw,
   Scale,
-  Search,
+  User,
 } from 'lucide-react';
 import {
+  auditoriaApi,
   contribuyenteApi,
   facturacionPagoApi,
   tributoDeudaApi,
 } from '@/services/api';
 import type { SpDeudasContribuyenteResultDto } from '@/types/api';
 import { PageHeader } from '@/components/common/PageHeader';
-import { EmptyState, ErrorState, LoadingState } from '@/components/common/StateFeedback';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input, Select } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Modal } from '@/components/ui/modal';
+import { EmptyState, LoadingState } from '@/components/common/StateFeedback';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input, Textarea } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Calendar } from '@/components/ui/Calendar';
+import { Badge } from '@/components/ui/Badge';
+import { Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FormField } from '@/components/forms/FormField';
 import { formatCurrencyCRC, formatDate, formatNumber } from '@/lib/utils';
 
 const registrarDeudaSchema = z.object({
-  periodoDeuda: z.string().trim().min(2, 'Periodo requerido (ej. I Trimestre 2026)').max(150),
+  periodoDeuda: z.string().trim().min(2, 'Periodo requerido (ej. II Trimestre 2026)').max(150),
   montoPrincipal: z.coerce.number().positive('Monto principal debe ser mayor a 0'),
   montoIntereses: z.coerce.number().min(0, 'No puede ser negativo'),
   montoMultas: z.coerce.number().min(0, 'No puede ser negativo'),
@@ -53,15 +59,30 @@ function generarClaveHacienda50(idDeuda: number): string {
   return base.slice(0, 50).padEnd(50, '0');
 }
 
+function getEstatusLegalLabel(codigo: string, diasMora: number | null | undefined): string {
+  if (codigo === 'PAG') return 'Cancelada / Condonada';
+  if (codigo === 'ARR') return 'Arreglo de Pago';
+  if (codigo === 'VENC') return (diasMora ?? 0) > 15 ? 'En Cobro Judicial' : 'Cobro Administrativo';
+  return 'Cobro Administrativo';
+}
+
 export function TributosDeudasPage() {
   const queryClient = useQueryClient();
   const [selectedContribuyenteId, setSelectedContribuyenteId] = useState<number>(1);
+  const [selectedDeudaId, setSelectedDeudaId] = useState<number | null>(null);
   const [openDeudaModal, setOpenDeudaModal] = useState(false);
   const [facturarDeudaTarget, setFacturarDeudaTarget] =
     useState<SpDeudasContribuyenteResultDto | null>(null);
   const [claveHacienda, setClaveHacienda] = useState('');
   const [descuentosFactura, setDescuentosFactura] = useState<string>('0');
   const [tasaInteresOpcional, setTasaInteresOpcional] = useState<string>('');
+
+  // Panel Derecho del Wireframe: Actualizar Estatus Legal (CU-PC-08)
+  const [nuevoEstatusLegal, setNuevoEstatusLegal] = useState<string>('VENC');
+  const [etiquetaLegalHumana, setEtiquetaLegalHumana] = useState<string>('En Cobro Judicial');
+  const [numeroResolucion, setNumeroResolucion] = useState<string>('RES-ALC-2026-089');
+  const [justificacionLegal, setJustificacionLegal] = useState<string>('');
+  const [openConfirmLegalDialog, setOpenConfirmLegalDialog] = useState(false);
 
   const tiposTributoQuery = useQuery({
     queryKey: ['tributos', 'tipos'],
@@ -84,11 +105,44 @@ export function TributosDeudasPage() {
     enabled: selectedContribuyenteId > 0,
   });
 
-  const estadoCuentaIndividualQuery = useQuery({
-    queryKey: ['facturacion', 'estado-cuenta-indiv', selectedContribuyenteId],
-    queryFn: () => facturacionPagoApi.estadoCuentaContribuyente(selectedContribuyenteId),
-    enabled: selectedContribuyenteId > 0,
-  });
+  const contribuyenteSeleccionado = useMemo(() => {
+    const found = (padronQuery.data ?? []).find(
+      (p) => p.idContribuyente === selectedContribuyenteId
+    );
+    if (found) return found;
+    const fromGen = (estadoCuentaGeneralQuery.data ?? []).find(
+      (c) => c.idContribuyente === selectedContribuyenteId
+    );
+    if (fromGen) {
+      return {
+        idContribuyente: fromGen.idContribuyente,
+        identificacion: fromGen.identificacion,
+        nombreCompletoORazonSocial: fromGen.contribuyente,
+      };
+    }
+    return {
+      idContribuyente: selectedContribuyenteId,
+      identificacion: '1-1234-5678',
+      nombreCompletoORazonSocial: 'Juan Pérez Rodríguez',
+    };
+  }, [padronQuery.data, estadoCuentaGeneralQuery.data, selectedContribuyenteId]);
+
+  const deudasList = deudasContribuyenteQuery.data ?? [];
+  const selectedDeuda =
+    deudasList.find((d) => d.idDeudaMunicipal === selectedDeudaId) ?? deudasList[0] ?? null;
+
+  // 3 KPIs Superiores del Wireframe: Deuda Principal, Intereses y Multas Moratorias, Saldo Total Adeudado
+  const kpiDeudaPrincipal = deudasList
+    .filter((d) => d.codigoEstadoDeuda !== 'PAG')
+    .reduce((acc, d) => acc + (d.montoPrincipal ?? 0), 0);
+
+  const kpiInteresesMultas = deudasList
+    .filter((d) => d.codigoEstadoDeuda !== 'PAG')
+    .reduce((acc, d) => acc + (d.montoIntereses ?? 0) + (d.montoMultas ?? 0), 0);
+
+  const kpiSaldoTotalAdeudado = deudasList
+    .filter((d) => d.codigoEstadoDeuda !== 'PAG')
+    .reduce((acc, d) => acc + (d.montoTotal ?? 0), 0);
 
   const deudaForm = useForm<RegistrarDeudaForm>({
     resolver: zodResolver(registrarDeudaSchema),
@@ -134,19 +188,44 @@ export function TributosDeudasPage() {
   });
 
   const cambiarEstadoDeudaMut = useMutation({
-    mutationFn: ({
-      idDeuda,
-      codigo,
-    }: {
-      idDeuda: number;
-      codigo: 'PEND' | 'PAG' | 'VENC' | 'ARR';
-    }) => tributoDeudaApi.actualizarEstadoDeuda(idDeuda, { codigoEstadoDeuda: codigo }),
+    mutationFn: async () => {
+      if (!selectedDeuda) throw new Error('Seleccione una deuda de la tabla.');
+      const res = await tributoDeudaApi.actualizarEstadoDeuda(selectedDeuda.idDeudaMunicipal, {
+        codigoEstadoDeuda: nuevoEstatusLegal as 'PEND' | 'PAG' | 'VENC' | 'ARR',
+      });
+      try {
+        await auditoriaApi.registrar({
+          tablaAfectada: 'Deuda_Municipal',
+          idRegistroAfectado: String(selectedDeuda.idDeudaMunicipal),
+          codigoAccion: 'UPDATE',
+          valoresAnteriores: JSON.stringify({
+            codigoEstadoDeuda: selectedDeuda.codigoEstadoDeuda,
+          }),
+          valoresNuevos: JSON.stringify({
+            codigoEstadoDeuda: nuevoEstatusLegal,
+            estatusLegal: etiquetaLegalHumana,
+            numeroResolucion,
+            justificacionLegal,
+          }),
+        });
+      } catch {
+        // continuar si auditoría opcional falla
+      }
+      return res;
+    },
     onSuccess: (res) => {
-      toast.success(res.message || 'Estado de deuda actualizado.');
+      toast.success(
+        `${res.message || 'Estatus legal actualizado'} (${etiquetaLegalHumana} — ${numeroResolucion})`
+      );
+      setOpenConfirmLegalDialog(false);
+      setJustificacionLegal('');
       queryClient.invalidateQueries({ queryKey: ['tributos'] });
       queryClient.invalidateQueries({ queryKey: ['facturacion'] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => {
+      toast.error(err.message);
+      setOpenConfirmLegalDialog(false);
+    },
   });
 
   const generarFacturaMut = useMutation({
@@ -167,18 +246,42 @@ export function TributosDeudasPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const handleEmitirCertificacionOficial = () => {
+    const texto = [
+      '====================================================================',
+      '        MUNICIPALIDAD DE NICOYA — CERTIFICACIÓN DE ESTADO DE CUENTA ',
+      '====================================================================',
+      `Fecha de Emisión        : ${formatDate(new Date())}`,
+      `Contribuyente           : ${contribuyenteSeleccionado.nombreCompletoORazonSocial}`,
+      `Cédula / Identificación : ${contribuyenteSeleccionado.identificacion}`,
+      `Deuda Principal         : ${formatCurrencyCRC(kpiDeudaPrincipal)}`,
+      `Intereses y Multas      : ${formatCurrencyCRC(kpiInteresesMultas)}`,
+      `Saldo Total Adeudado    : ${formatCurrencyCRC(kpiSaldoTotalAdeudado)}`,
+      '====================================================================',
+    ].join('\r\n');
+    const blob = new Blob([texto], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Certificacion_Cobro_${contribuyenteSeleccionado.identificacion}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('Certificación oficial de estado de cuenta emitida.');
+  };
+
   return (
-    <div className="flex flex-col" style={{ gap: '2rem' }}>
+    <div className="space-y-6">
       <PageHeader
-        title="Tributos, deudas y estado de cuenta"
-        subtitle="Administre cargos municipales, saldos pendientes, recargos y facturación de los contribuyentes."
+        title="Estado de Cuenta Integral y Gestión de Cobro"
+        subtitle="Taxpayer Account & Debt Status — Administración de tributos, intereses moratorios, certificaciones y estatus legal."
         badge={`${tiposTributoQuery.data?.length ?? 0} tributos activos`}
         icon={<Scale className="h-6 w-6" />}
         actions={
           <>
             <Button
-              variant="outline"
-              size="sm"
+              variant="secondary"
               onClick={() => {
                 queryClient.invalidateQueries({ queryKey: ['tributos'] });
                 queryClient.invalidateQueries({ queryKey: ['facturacion'] });
@@ -186,271 +289,375 @@ export function TributosDeudasPage() {
             >
               <RefreshCw className="h-4 w-4" /> Actualizar
             </Button>
-            <Button size="sm" onClick={() => setOpenDeudaModal(true)}>
-              <Plus className="h-4 w-4" /> Registrar deuda
+            <Button onClick={() => setOpenDeudaModal(true)}>
+              <Plus className="h-4 w-4" /> Registrar Deuda
             </Button>
           </>
         }
       />
 
-      {/* Catálogo de Tipos de Tributo (sp_consultar_tipos_tributo) */}
-      <section>
-        <div className="mb-4">
-          <p className="section-label">Catálogo tributario</p>
-          <h2 className="mt-1 text-lg font-bold text-[#26352D]">Tributos municipales</h2>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {(tiposTributoQuery.data ?? []).map((t) => (
-          <Card key={t.idTipoTributo} className="flex h-full flex-col overflow-hidden border-[#C9D9D0] hover:shadow-elevated">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <Badge variant="gold">{t.codigoTributo}</Badge>
-                <span className="text-[11px] font-semibold text-[#5A6B61]">{t.periodicidad}</span>
+      {/* BANNER SUPERIOR AZUL INSTITUCIONAL DEL CONTRIBUYENTE (Exacto al Wireframe) */}
+      <div className="rounded-[12px] border border-[#1E3A8A] bg-[#1E3A8A] p-5 text-white shadow-card">
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white">
+                <User className="h-5 w-5" />
               </div>
-              <CardTitle className="mt-3 min-h-10 text-sm leading-snug">{t.nombreTributo}</CardTitle>
+              <div>
+                <p className="text-xs font-medium text-blue-200">Cédula:</p>
+                <p className="font-mono text-base font-bold text-white">
+                  {contribuyenteSeleccionado.identificacion}
+                </p>
+              </div>
+            </div>
+
+            <div className="hidden h-8 w-px bg-white/20 sm:block" />
+
+            <div>
+              <p className="text-xs font-medium text-blue-200">Contribuyente:</p>
+              <p className="text-base font-bold text-white">
+                {contribuyenteSeleccionado.nombreCompletoORazonSocial}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 rounded-[10px] bg-white/10 px-3 py-1.5 text-xs">
+              <span className="text-blue-100">Deuda:</span>
+              <span className="inline-flex items-center gap-1 rounded-[6px] bg-[#FEF2F2] px-2.5 py-0.5 font-bold text-[#DC2626]">
+                <AlertCircle className="h-3.5 w-3.5" />
+                {kpiSaldoTotalAdeudado > 0 ? 'En Cobro Administrativo' : 'Al Día'}
+              </span>
+            </div>
+
+            <div className="w-64 text-[#171717]">
+              <Select
+                value={selectedContribuyenteId}
+                onChange={(e) => {
+                  setSelectedContribuyenteId(Number(e.target.value));
+                  setSelectedDeudaId(null);
+                }}
+              >
+                {(padronQuery.data ?? []).map((p) => (
+                  <option key={p.idContribuyente} value={p.idContribuyente}>
+                    #{p.idContribuyente} — {p.nombreCompletoORazonSocial}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3 TARJETAS KPI DEL WIREFRAME: DEUDA PRINCIPAL | INTERESES Y MULTAS | SALDO TOTAL ADEUDADO */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+        <Card className="text-center">
+          <CardContent className="pt-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#4B5563]">
+              Deuda Principal
+            </p>
+            <p className="mt-2 text-3xl font-extrabold text-[#171717]">
+              {formatCurrencyCRC(kpiDeudaPrincipal)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="text-center">
+          <CardContent className="pt-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#4B5563]">
+              Intereses y Multas Moratorias
+            </p>
+            <p className="mt-2 text-3xl font-extrabold text-[#B45309]">
+              {formatCurrencyCRC(kpiInteresesMultas)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="text-center">
+          <CardContent className="pt-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#4B5563]">
+              Saldo Total Adeudado
+            </p>
+            <p className="mt-2 text-3xl font-extrabold text-[#1E3A8A]">
+              {formatCurrencyCRC(kpiSaldoTotalAdeudado)}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* LAYOUT DE 2 COLUMNAS DEL WIREFRAME: IZQUIERDA TABLA DE DEUDAS (8 COLS) + DERECHA PANEL ESTATUS LEGAL (4 COLS) */}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        {/* Columna Izquierda: Tabla de Obligaciones y Certificación Oficial */}
+        <div className="space-y-6 xl:col-span-8">
+          <Card>
+            <CardHeader className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+              <div>
+                <CardTitle>Obligaciones y Saldos por Periodo</CardTitle>
+                <CardDescription>
+                  Seleccione una obligación para actualizar su estatus legal en el panel derecho o
+                  emitir factura.
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="w-40">
+                  <Input
+                    type="number"
+                    step="0.001"
+                    placeholder="Tasa opc. (0.02)"
+                    value={tasaInteresOpcional}
+                    onChange={(e) => setTasaInteresOpcional(e.target.value)}
+                  />
+                </div>
+                <Button onClick={handleEmitirCertificacionOficial}>
+                  <FileCheck2 className="h-4 w-4" /> Emitir Certificación Oficial
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="mt-auto space-y-1.5 text-xs text-[#5A6B61]">
-              <p>
-                <strong>Fórmula:</strong> {t.formulaCalculo}
-              </p>
-              <p>
-                <strong>Tasa Base:</strong> {formatNumber(t.tasaBase, 4)}
-              </p>
-              <p className="text-[11px] text-[#164B35]">{t.nombreDepartamento}</p>
+
+            <CardContent className="p-0">
+              {deudasContribuyenteQuery.isLoading ? (
+                <div className="p-6">
+                  <LoadingState message="Consultando deudas del contribuyente..." />
+                </div>
+              ) : deudasList.length === 0 ? (
+                <div className="p-6">
+                  <EmptyState title="Este contribuyente no registra deudas municipales" />
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC] font-bold uppercase text-[#4B5563]">
+                        <th className="px-3.5 py-3">Periodo</th>
+                        <th className="px-3.5 py-3">Tributo</th>
+                        <th className="px-3.5 py-3">Finca</th>
+                        <th className="px-3.5 py-3">Vencimiento</th>
+                        <th className="px-3.5 py-3">Días de Mora</th>
+                        <th className="px-3.5 py-3">Saldo Pendiente</th>
+                        <th className="px-3.5 py-3">Estatus Legal</th>
+                        <th className="px-3.5 py-3 text-right">Operación</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E7EB]">
+                      {deudasList.map((d) => {
+                        const isSelected = selectedDeuda?.idDeudaMunicipal === d.idDeudaMunicipal;
+                        const legalLabel = getEstatusLegalLabel(
+                          d.codigoEstadoDeuda,
+                          d.diasMora
+                        );
+                        return (
+                          <tr
+                            key={d.idDeudaMunicipal}
+                            onClick={() => {
+                              setSelectedDeudaId(d.idDeudaMunicipal);
+                              setNuevoEstatusLegal(d.codigoEstadoDeuda);
+                            }}
+                            className={`cursor-pointer transition-colors ${
+                              isSelected
+                                ? 'bg-[#EFF6FF] shadow-[inset_3px_0_0_#1D4ED8]'
+                                : 'hover:bg-[#F8FAFC]'
+                            }`}
+                          >
+                            <td className="px-3.5 py-3 font-mono font-semibold text-[#171717]">
+                              {d.periodoDeuda}
+                            </td>
+                            <td className="px-3.5 py-3 font-semibold text-[#171717]">
+                              {d.nombreTributo}
+                            </td>
+                            <td className="px-3.5 py-3 font-mono text-[#1E3A8A]">
+                              {d.numeroFinca}
+                            </td>
+                            <td className="px-3.5 py-3 whitespace-nowrap">
+                              {formatDate(d.fechaDeVencimiento)}
+                            </td>
+                            <td className="px-3.5 py-3 font-bold text-[#DC2626]">
+                              {d.diasMora ?? 0}
+                            </td>
+                            <td className="px-3.5 py-3 font-bold text-[#171717]">
+                              {formatCurrencyCRC(d.montoTotal)}
+                            </td>
+                            <td className="px-3.5 py-3">
+                              <Badge
+                                variant={
+                                  d.codigoEstadoDeuda === 'PAG'
+                                    ? 'success'
+                                    : d.codigoEstadoDeuda === 'ARR'
+                                    ? 'blue'
+                                    : d.codigoEstadoDeuda === 'VENC'
+                                    ? 'danger'
+                                    : 'warning'
+                                }
+                              >
+                                {legalLabel} ({d.codigoEstadoDeuda})
+                              </Badge>
+                            </td>
+                            <td
+                              className="px-3.5 py-3 text-right whitespace-nowrap"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="inline-flex items-center gap-1.5">
+                                <Button
+                                  variant="secondary"
+                                  onClick={() => recalcularMut.mutate(d.idDeudaMunicipal)}
+                                  disabled={recalcularMut.isPending}
+                                  title="Recalcular intereses moratorios"
+                                >
+                                  <Calculator className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  onClick={() => {
+                                    setFacturarDeudaTarget(d);
+                                    setClaveHacienda(generarClaveHacienda50(d.idDeudaMunicipal));
+                                    setDescuentosFactura('0');
+                                  }}
+                                  title="Emitir factura electrónica Hacienda"
+                                >
+                                  <FilePlus className="h-3.5 w-3.5" /> Facturar
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
-        ))}
+
+          {/* Catálogo de Tipos de Tributo */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Catálogo Oficial de Tributos Municipales</CardTitle>
+              <CardDescription>
+                Tasas base, fórmulas de cálculo y periodicidad definidas en SQL Server
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {(tiposTributoQuery.data ?? []).map((t) => (
+                  <div
+                    key={t.idTipoTributo}
+                    className="rounded-[10px] border border-[#E5E7EB] bg-[#F8FAFC] p-3.5 text-xs space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <Badge variant="blue">{t.codigoTributo}</Badge>
+                      <span className="font-semibold text-[#6B7280]">{t.periodicidad}</span>
+                    </div>
+                    <p className="font-bold text-[#171717]">{t.nombreTributo}</p>
+                    <p className="text-[#4B5563]">
+                      <strong>Tasa Base:</strong> {formatNumber(t.tasaBase, 4)} ·{' '}
+                      {t.nombreDepartamento}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </section>
 
-      {/* Estado de Cuenta Consolidado General (vw_estado_cuenta_contribuyente) */}
-      <Card className="overflow-hidden">
-        <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
-          <CardTitle>Estado de cuenta consolidado</CardTitle>
-          <CardDescription>
-            Haga clic en un contribuyente para inspeccionar el desglose de sus deudas, intereses y
-            facturas abajo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0 sm:p-0">
-          {estadoCuentaGeneralQuery.isLoading ? (
-            <LoadingState message="Consultando estado de cuenta general..." />
-          ) : estadoCuentaGeneralQuery.isError ? (
-            <ErrorState
-              error={estadoCuentaGeneralQuery.error}
-              onRetry={() => estadoCuentaGeneralQuery.refetch()}
-            />
-          ) : (
-            <div className="overflow-x-auto" role="region" aria-label="Estado de cuenta consolidado" tabIndex={0}>
-              <table className="w-full min-w-[1100px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
-                    <th className="px-3 py-2.5">ID</th>
-                    <th className="px-3 py-2.5">Contribuyente</th>
-                    <th className="px-3 py-2.5">Fincas</th>
-                    <th className="px-3 py-2.5">Deudas Pend./Venc.</th>
-                    <th className="px-3 py-2.5">Total Deudas</th>
-                    <th className="px-3 py-2.5">Saldo Pendiente</th>
-                    <th className="px-3 py-2.5">Total Facturado</th>
-                    <th className="px-3 py-2.5">Total Pagado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#DCE3DE]">
-                  {(estadoCuentaGeneralQuery.data ?? []).map((c) => {
-                    const isSelected = c.idContribuyente === selectedContribuyenteId;
-                    return (
-                      <tr
-                        key={c.idContribuyente}
-                        onClick={() => setSelectedContribuyenteId(c.idContribuyente)}
-                        className={`cursor-pointer transition-colors ${
-                          isSelected ? 'bg-[#E8F0EC] shadow-[inset_4px_0_0_#164B35]' : 'even:bg-[#FAFCFB] hover:bg-[#F5F7F4]'
-                        }`}
-                      >
-                        <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">
-                          #{c.idContribuyente}
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <p className="font-semibold text-[#26352D]">{c.contribuyente}</p>
-                          <p className="font-mono text-[11px] text-[#5A6B61]">
-                            {c.identificacion}
-                          </p>
-                        </td>
-                        <td className="px-3 py-2.5">{c.cantidadInmuebles ?? 0}</td>
-                        <td className="px-3 py-2.5">
-                          <Badge
-                            variant={
-                              (c.deudasPendientesOVencidas ?? 0) > 0 ? 'warning' : 'success'
-                            }
-                          >
-                            {c.deudasPendientesOVencidas ?? 0} de {c.totalDeudasRegistradas ?? 0}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-2.5 font-medium">
-                          {formatCurrencyCRC(c.montoTotalDeudas)}
-                        </td>
-                        <td className="px-3 py-2.5 font-bold text-amber-800">
-                          {formatCurrencyCRC(c.montoPendienteDeuda)}
-                        </td>
-                        <td className="px-3 py-2.5">{formatCurrencyCRC(c.totalFacturado)}</td>
-                        <td className="px-3 py-2.5 font-semibold text-emerald-800">
-                          {formatCurrencyCRC(c.totalPagadoHistorico)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+        {/* Columna Derecha (4 cols): Actualizar Estatus Legal (CU-PC-08 del Wireframe) */}
+        <div className="xl:col-span-4">
+          <Card className="sticky top-20">
+            <CardHeader>
+              <CardTitle>Actualizar Estatus Legal</CardTitle>
+              <CardDescription>
+                CU-PC-08 · Deuda seleccionada:{' '}
+                <strong>
+                  {selectedDeuda
+                    ? `#${selectedDeuda.idDeudaMunicipal} (${selectedDeuda.nombreTributo})`
+                    : 'Ninguna'}
+                </strong>
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <FormField label="Nuevo Estado" required>
+                <Select
+                  value={`${nuevoEstatusLegal}::${etiquetaLegalHumana}`}
+                  onChange={(e) => {
+                    const [code, label] = e.target.value.split('::');
+                    setNuevoEstatusLegal(code);
+                    setEtiquetaLegalHumana(label);
+                  }}
+                >
+                  <option value="VENC::En Cobro Judicial">En Cobro Judicial (VENC)</option>
+                  <option value="PEND::Cobro Administrativo">Cobro Administrativo (PEND)</option>
+                  <option value="ARR::Arreglo de Pago">Arreglo de Pago (ARR)</option>
+                  <option value="PAG::Prescrita">Prescrita (PAG)</option>
+                  <option value="PAG::Condonada">Condonada (PAG)</option>
+                </Select>
+              </FormField>
+
+              <FormField label="Número de Resolución" required>
+                <Input
+                  placeholder="Ej. RES-ALC-2026-089"
+                  value={numeroResolucion}
+                  onChange={(e) => setNumeroResolucion(e.target.value)}
+                />
+              </FormField>
+
+              <FormField label="Justificación legal" required>
+                <Textarea
+                  placeholder="Indique el fundamento legal o administrativo del cambio..."
+                  value={justificacionLegal}
+                  onChange={(e) => setJustificacionLegal(e.target.value)}
+                />
+              </FormField>
+
+              <Button
+                className="w-full"
+                disabled={
+                  !selectedDeuda ||
+                  !numeroResolucion.trim() ||
+                  !justificacionLegal.trim() ||
+                  cambiarEstadoDeudaMut.isPending
+                }
+                onClick={() => setOpenConfirmLegalDialog(true)}
+              >
+                Confirmar Cambio Legal
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* DIÁLOGO DE 3 ADVERTENCIAS DE SEGURIDAD PARA CAMBIO DE ESTATUS LEGAL */}
+      <ConfirmDialog
+        open={openConfirmLegalDialog}
+        onClose={() => setOpenConfirmLegalDialog(false)}
+        multiStepSecurity
+        title="Confirmación de Seguridad — Cambio de Estatus Legal de Deuda"
+        confirmLabel="Confirmar Cambio Legal en SQL Server"
+        isPending={cambiarEstadoDeudaMut.isPending}
+        onConfirm={() => cambiarEstadoDeudaMut.mutate()}
+        impactSummary={
+          selectedDeuda && (
+            <div className="space-y-1">
+              <p>
+                <strong>Deuda Municipal:</strong> #{selectedDeuda.idDeudaMunicipal} —{' '}
+                {selectedDeuda.nombreTributo} ({selectedDeuda.periodoDeuda})
+              </p>
+              <p>
+                <strong>Nuevo Estatus Legal:</strong> {etiquetaLegalHumana} (Código BD:{' '}
+                {nuevoEstatusLegal})
+              </p>
+              <p>
+                <strong>Resolución:</strong> {numeroResolucion}
+              </p>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          )
+        }
+      />
 
-      {/* Deudas del Contribuyente Seleccionado + Recálculo BD */}
-      <Card className="overflow-hidden border-[#D7C28E]">
-        <CardHeader className="flex flex-col gap-4 border-b border-[#E9DFC4] bg-[#FBF7EE] sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle>
-              Deudas Municipales del Contribuyente #{selectedContribuyenteId}
-            </CardTitle>
-            <CardDescription>Consulte cargos, recalcule recargos autorizados y genere facturas.</CardDescription>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Select
-              value={selectedContribuyenteId}
-              onChange={(e) => setSelectedContribuyenteId(Number(e.target.value))}
-              className="w-64"
-            >
-              {(padronQuery.data ?? []).map((p) => (
-                <option key={p.idContribuyente} value={p.idContribuyente}>
-                  #{p.idContribuyente} — {p.nombreCompletoORazonSocial}
-                </option>
-              ))}
-            </Select>
-            <Input
-              type="number"
-              step="0.001"
-              placeholder="Tasa mensual opc. (ej. 0.02)"
-              value={tasaInteresOpcional}
-              onChange={(e) => setTasaInteresOpcional(e.target.value)}
-              className="w-48"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="pt-6 sm:pt-6">
-          {deudasContribuyenteQuery.isLoading ? (
-            <LoadingState message="Consultando deudas del contribuyente..." />
-          ) : !deudasContribuyenteQuery.data || deudasContribuyenteQuery.data.length === 0 ? (
-            <EmptyState title="Este contribuyente no registra deudas municipales" />
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-[#DCE3DE]" role="region" aria-label="Deudas del contribuyente" tabIndex={0}>
-              <table className="w-full min-w-[1250px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-[#DCE3DE] bg-[#F4F7F5] text-[11px] font-bold uppercase tracking-[0.08em] text-[#607168]">
-                    <th className="px-3 py-2.5">Deuda ID</th>
-                    <th className="px-3 py-2.5">Tributo / Periodo</th>
-                    <th className="px-3 py-2.5">Finca</th>
-                    <th className="px-3 py-2.5">Vencimiento / Mora</th>
-                    <th className="px-3 py-2.5">Principal</th>
-                    <th className="px-3 py-2.5">Intereses</th>
-                    <th className="px-3 py-2.5">Multas</th>
-                    <th className="px-3 py-2.5">Monto Total (BD)</th>
-                    <th className="px-3 py-2.5">Estado</th>
-                    <th className="px-3 py-2.5 text-right">Acciones BD</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#DCE3DE]">
-                  {deudasContribuyenteQuery.data.map((d) => (
-                    <tr key={d.idDeudaMunicipal} className="even:bg-[#FAFCFB] transition-colors hover:bg-[#E8F0EC]/55">
-                      <td className="px-3 py-2.5 font-mono font-bold text-[#164B35]">
-                        #{d.idDeudaMunicipal}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <p className="font-semibold text-[#26352D]">{d.nombreTributo}</p>
-                        <p className="text-[#5A6B61]">{d.periodoDeuda}</p>
-                      </td>
-                      <td className="px-3 py-2.5 font-mono">{d.numeroFinca}</td>
-                      <td className="px-3 py-2.5">
-                        <p>{formatDate(d.fechaDeVencimiento)}</p>
-                        {(d.diasMora ?? 0) > 0 && (
-                          <span className="font-bold text-red-600">{d.diasMora} días mora</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2.5">{formatCurrencyCRC(d.montoPrincipal)}</td>
-                      <td className="px-3 py-2.5 text-amber-800">
-                        {formatCurrencyCRC(d.montoIntereses)}
-                      </td>
-                      <td className="px-3 py-2.5 text-red-700">
-                        {formatCurrencyCRC(d.montoMultas)}
-                      </td>
-                      <td className="px-3 py-2.5 font-bold text-[#164B35]">
-                        {formatCurrencyCRC(d.montoTotal)}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <Select
-                          value={d.codigoEstadoDeuda}
-                          onChange={(e) =>
-                            cambiarEstadoDeudaMut.mutate({
-                              idDeuda: d.idDeudaMunicipal,
-                              codigo: e.target.value as 'PEND' | 'PAG' | 'VENC' | 'ARR',
-                            })
-                          }
-                          className="h-8 text-xs w-28"
-                        >
-                          <option value="PEND">PEND</option>
-                          <option value="VENC">VENC</option>
-                          <option value="ARR">ARR</option>
-                          <option value="PAG">PAG</option>
-                        </Select>
-                      </td>
-                      <td className="px-3 py-2.5 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1.5">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => recalcularMut.mutate(d.idDeudaMunicipal)}
-                            disabled={recalcularMut.isPending}
-                            title="Recalcular intereses y recargos"
-                          >
-                            <Calculator className="h-3.5 w-3.5" /> Recalcular
-                          </Button>
-                          <Button
-                            variant="gold"
-                            size="sm"
-                            onClick={() => {
-                              setFacturarDeudaTarget(d);
-                              setClaveHacienda(generarClaveHacienda50(d.idDeudaMunicipal));
-                              setDescuentosFactura('0');
-                            }}
-                            title="Emitir factura electrónica"
-                          >
-                            <FilePlus className="h-3.5 w-3.5" /> Facturar
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Resumen Estado de Cuenta Individual (sp_consultar_estado_cuenta) */}
-          {estadoCuentaIndividualQuery.data && estadoCuentaIndividualQuery.data.length > 0 && (
-            <div className="mt-4 rounded-lg border border-[#DCE3DE] bg-[#F5F7F4] p-3 text-xs text-[#5A6B61]">
-              <Search className="mr-1.5 inline h-3.5 w-3.5 text-[#164B35]" />
-              {estadoCuentaIndividualQuery.data.length} registro(s) relacionados entre deudas y
-              facturas para este contribuyente.
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* MODAL: REGISTRAR NUEVA DEUDA MUNICIPAL (CU-PC-02) */}
+      {/* MODAL: REGISTRAR NUEVA DEUDA MUNICIPAL */}
       <Modal
         open={openDeudaModal}
         onClose={() => setOpenDeudaModal(false)}
-        title="Registrar nueva deuda municipal"
-        description="Complete los datos del cargo y su periodo fiscal."
+        title="Registrar Nueva Deuda Municipal"
+        description="Complete los datos del cargo y su fecha de vencimiento (dd/MM/yyyy)."
         maxWidth="max-w-xl"
       >
         <form
@@ -489,11 +696,16 @@ export function TributosDeudasPage() {
           </FormField>
 
           <FormField
-            label="Fecha de Vencimiento"
+            label="Fecha de Vencimiento (dd/MM/yyyy)"
             required
             error={deudaForm.formState.errors.fechaDeVencimiento?.message}
           >
-            <Input type="date" {...deudaForm.register('fechaDeVencimiento')} />
+            <Calendar
+              value={deudaForm.watch('fechaDeVencimiento')}
+              onChange={(iso) =>
+                deudaForm.setValue('fechaDeVencimiento', iso, { shouldValidate: true })
+              }
+            />
           </FormField>
 
           <FormField
@@ -531,7 +743,7 @@ export function TributosDeudasPage() {
           </FormField>
 
           <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setOpenDeudaModal(false)}>
+            <Button type="button" variant="secondary" onClick={() => setOpenDeudaModal(false)}>
               Cancelar
             </Button>
             <Button type="submit" disabled={registrarDeudaMut.isPending}>
@@ -541,7 +753,7 @@ export function TributosDeudasPage() {
         </form>
       </Modal>
 
-      {/* MODAL: GENERAR FACTURA ELECTRÓNICA (CU-PC-06) */}
+      {/* MODAL: GENERAR FACTURA ELECTRÓNICA */}
       <Modal
         open={Boolean(facturarDeudaTarget)}
         onClose={() => setFacturarDeudaTarget(null)}
@@ -550,7 +762,7 @@ export function TributosDeudasPage() {
       >
         {facturarDeudaTarget && (
           <div className="space-y-4">
-            <div className="rounded-lg bg-[#F5F7F4] p-3 text-xs space-y-1">
+            <div className="rounded-[10px] border border-[#E5E7EB] bg-[#F8FAFC] p-3.5 text-xs space-y-1">
               <p>
                 <strong>Tributo:</strong> {facturarDeudaTarget.nombreTributo} (
                 {facturarDeudaTarget.periodoDeuda})
@@ -560,7 +772,7 @@ export function TributosDeudasPage() {
               </p>
               <p>
                 <strong>Monto total:</strong>{' '}
-                <span className="font-bold text-[#164B35]">
+                <span className="font-bold text-[#1E3A8A]">
                   {formatCurrencyCRC(facturarDeudaTarget.montoTotal)}
                 </span>
               </p>
@@ -586,7 +798,7 @@ export function TributosDeudasPage() {
             </FormField>
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setFacturarDeudaTarget(null)}>
+              <Button variant="secondary" onClick={() => setFacturarDeudaTarget(null)}>
                 Cancelar
               </Button>
               <Button
@@ -598,7 +810,7 @@ export function TributosDeudasPage() {
                     <Loader2 className="h-4 w-4 animate-spin" /> Generando Factura...
                   </>
                 ) : (
-                  'Emitir factura'
+                  'Emitir Factura'
                 )}
               </Button>
             </div>
@@ -608,4 +820,3 @@ export function TributosDeudasPage() {
     </div>
   );
 }
-

@@ -1,5 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
-import type { BaseResponse } from '@/types/api';
+import type { BaseResponse, UsuarioTokenDto } from '@/types/api';
 
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5080/api';
 export const API_BASE_URL = rawBaseUrl.replace(/\/+$/, '');
@@ -10,16 +10,7 @@ export const SESSION_STORAGE_KEY = 'sigemun_auth_session_v1';
 export interface StoredSession {
   token: string;
   expiraUtc: string;
-  usuario: {
-    idUsuario: number;
-    userName: string;
-    nombreCompleto?: string | null;
-    email?: string | null;
-    idDepartamento: number;
-    nombreDepartamento?: string | null;
-    rol: string;
-    roles: string[];
-  };
+  usuario: UsuarioTokenDto;
 }
 
 export function getStoredSession(): StoredSession | null {
@@ -96,7 +87,6 @@ httpClient.interceptors.response.use(
     const { status, data } = error.response;
 
     if (status === 401) {
-      // Si no es el intento de login mismo, limpiar sesión y notificar expiración
       const isLoginRequest = error.config?.url?.includes('/auth/login');
       if (!isLoginRequest) {
         setStoredSession(null);
@@ -112,7 +102,6 @@ httpClient.interceptors.response.use(
       if ('sqlErrorCode' in data.data && typeof data.data.sqlErrorCode === 'number') {
         sqlErrorCode = data.data.sqlErrorCode;
       } else if (!Array.isArray(data.data)) {
-        // ModelState dictionary: Record<string, string[]>
         const fieldMessages: string[] = [];
         const map: Record<string, string[]> = {};
         for (const [key, val] of Object.entries(data.data)) {
@@ -158,4 +147,3 @@ export async function unwrapFullResponse<T>(
   }
   return response.data;
 }
-

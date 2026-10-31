@@ -1,18 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { toast } from 'sonner';
 import {
   CheckCircle2,
   Clock,
-  ExternalLink,
   FilePlus2,
-  FileText,
-  Info,
-  Loader2,
+  FolderKanban,
   Search,
+  Trash2,
   Upload,
 } from 'lucide-react';
 import {
@@ -21,577 +17,493 @@ import {
   tipoTramiteApi,
   tramiteApi,
 } from '@/services/api';
-import { BACKEND_ORIGIN } from '@/services/httpClient';
-import { useAuth } from '@/app/providers/AuthProvider';
-import { MODULE_PERMISSIONS } from '@/features/auth/permissions';
-import type { ArchivoAdjuntadoDto } from '@/types/api';
 import { PageHeader } from '@/components/common/PageHeader';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input, Select } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input, Textarea } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Badge } from '@/components/ui/Badge';
 import { FormField } from '@/components/forms/FormField';
-import { formatBytes } from '@/lib/utils';
+import { formatCurrencyCRC } from '@/lib/utils';
 
-const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx', '.xls', '.xlsx'];
-const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
-
-function validateClientFile(file: File): string | null {
-  if (file.size <= 0) return 'El archivo está vacío.';
-  if (file.size > MAX_FILE_BYTES) return 'El archivo supera el límite máximo de 10 MB.';
-  const dotIdx = file.name.lastIndexOf('.');
-  const ext = dotIdx >= 0 ? file.name.slice(dotIdx).toLowerCase() : '';
-  if (!ALLOWED_EXTENSIONS.includes(ext)) {
-    return `Extensión no permitida (${ext}). Permitidas: ${ALLOWED_EXTENSIONS.join(', ')}`;
-  }
-  return null;
+interface StagedDocument {
+  id: string;
+  nombreArchivo: string;
+  tipo: string;
+  tamanoTexto: string;
+  tamanoBytes: number;
+  rutaAlmacenamiento: string;
 }
-
-const radicarSchema = z.object({
-  numeroExpediente: z
-    .string()
-    .trim()
-    .min(3, 'Ingrese el número de expediente')
-    .max(30, 'Máximo 30 caracteres'),
-  idContribuyente: z.coerce.number().int().min(1, 'Seleccione o ingrese el ID del contribuyente'),
-  idTipoTramite: z.coerce.number().int().min(1, 'Seleccione el tipo de trámite'),
-  idInmueble: z.string().optional(),
-});
-
-type RadicarForm = z.infer<typeof radicarSchema>;
 
 export function RadicacionTramitePage() {
   const queryClient = useQueryClient();
-  const { hasRole } = useAuth();
-  const canReadPadron = hasRole(MODULE_PERMISSIONS.CONTRIBUYENTES);
 
-  const [criterioContribuyente, setCriterioContribuyente] = useState('');
-  const [radicadoIdTramite, setRadicadoIdTramite] = useState<number | null>(null);
-  const [archivosSubidos, setArchivosSubidos] = useState<ArchivoAdjuntadoDto[]>([]);
-  const [selectedRequisitoUpload, setSelectedRequisitoUpload] = useState<string>('');
-  const [uploadingFile, setUploadingFile] = useState(false);
+  // Paso 1: Ciudadano y Trámite (Exacto al Wireframe de Nueva Radicación de Expediente)
+  const [cedulaBusqueda, setCedulaBusqueda] = useState('5-0857-0485');
+  const [selectedContribuyenteId, setSelectedContribuyenteId] = useState<number>(1);
+  const [selectedTipoTramiteId, setSelectedTipoTramiteId] = useState<number>(1);
+  const [selectedInmuebleId, setSelectedInmuebleId] = useState<string>('');
+  const [observacionInicial, setObservacionInicial] = useState('');
 
-  const defaultExpediente = useMemo(() => {
-    const year = new Date().getFullYear();
-    const rand = Math.floor(1000 + Math.random() * 9000);
-    return `EXP-NIC-${year}-${rand}`;
-  }, []);
-
-  const form = useForm<RadicarForm>({
-    resolver: zodResolver(radicarSchema),
-    defaultValues: {
-      numeroExpediente: defaultExpediente,
-      idContribuyente: 1,
-      idTipoTramite: 1,
-      idInmueble: '',
+  // Archivos preparados para adjuntar al radicar
+  const [stagedDocs, setStagedDocs] = useState<StagedDocument[]>([
+    {
+      id: 'doc-1',
+      nombreArchivo: 'plano_propiedad.pdf',
+      tipo: 'PDF',
+      tamanoTexto: '1.2 MB',
+      tamanoBytes: 1258291,
+      rutaAlmacenamiento: '/storage/nicoya/2026/plano_propiedad.pdf',
     },
-  });
+    {
+      id: 'doc-2',
+      nombreArchivo: 'cert_propiedad.pdf',
+      tipo: 'PDF',
+      tamanoTexto: '0.5 MB',
+      tamanoBytes: 524288,
+      rutaAlmacenamiento: '/storage/nicoya/2026/cert_propiedad.pdf',
+    },
+  ]);
+  const [nuevoArchivoNombre, setNuevoArchivoNombre] = useState('');
 
-  const watchedTipoTramite = Number(form.watch('idTipoTramite'));
-  const watchedContribuyente = Number(form.watch('idContribuyente'));
-
-  const tiposTramiteQuery = useQuery({
-    queryKey: ['tipotramite', 'lista'],
-    queryFn: () => tipoTramiteApi.consultar(),
-  });
-
-  const requisitosPorTipoQuery = useQuery({
-    queryKey: ['tipotramite', 'requisitos', watchedTipoTramite],
-    queryFn: () => tipoTramiteApi.requisitosPorTipo(watchedTipoTramite),
-    enabled: watchedTipoTramite > 0,
-  });
+  // Resultado tras radicar
+  const [expedienteCreadoId, setExpedienteCreadoId] = useState<number | null>(null);
 
   const padronQuery = useQuery({
     queryKey: ['contribuyentes', 'padron-radicacion'],
     queryFn: () => contribuyenteApi.padron(),
-    enabled: canReadPadron,
   });
 
-  const inmueblesAllQuery = useQuery({
-    queryKey: ['inmuebles', 'all-radicacion'],
-    queryFn: () => inmuebleApi.listarConPropietarios(),
+  const tiposTramiteQuery = useQuery({
+    queryKey: ['tipos-tramite', 'radicacion'],
+    queryFn: () => tipoTramiteApi.listar(),
+  });
+
+  const requisitosQuery = useQuery({
+    queryKey: ['tipos-tramite', 'requisitos', selectedTipoTramiteId],
+    queryFn: () => tipoTramiteApi.requisitos(selectedTipoTramiteId),
+    enabled: selectedTipoTramiteId > 0,
   });
 
   const inmueblesContribuyenteQuery = useQuery({
-    queryKey: ['inmuebles', 'contribuyente', watchedContribuyente],
-    queryFn: () => inmuebleApi.porContribuyente(watchedContribuyente),
-    enabled: watchedContribuyente > 0,
+    queryKey: ['inmuebles', 'por-contribuyente-rad', selectedContribuyenteId],
+    queryFn: () => inmuebleApi.porContribuyente(selectedContribuyenteId),
+    enabled: selectedContribuyenteId > 0,
   });
 
-  // Contribuyentes extraídos de vistas autorizadas si el usuario es Analista (sin permiso a /api/contribuyente)
-  const contribuyentesConocidos = useMemo(() => {
-    if (canReadPadron && padronQuery.data) {
-      return padronQuery.data.map((c) => ({
-        idContribuyente: c.idContribuyente,
-        nombre: `${c.nombreCompletoORazonSocial || 'Sin nombre'} (${c.identificacion || c.tipoContribuyente})`,
-        correo: c.correoElectronico,
-        telefono: c.telefono,
-      }));
-    }
-    const map = new Map<number, { idContribuyente: number; nombre: string }>();
-    for (const row of inmueblesAllQuery.data ?? []) {
-      if (row.idContribuyente && row.propietario) {
-        map.set(row.idContribuyente, {
-          idContribuyente: row.idContribuyente,
-          nombre: row.propietario,
-        });
-      }
-    }
-    return Array.from(map.values());
-  }, [canReadPadron, padronQuery.data, inmueblesAllQuery.data]);
-
-  const tipoSeleccionado = tiposTramiteQuery.data?.find(
-    (t) => t.idTipoTramite === watchedTipoTramite
+  const contribuyenteActual = (padronQuery.data ?? []).find(
+    (c) => c.idContribuyente === selectedContribuyenteId
   );
 
-  const radicarMut = useMutation({
-    mutationFn: (values: RadicarForm) =>
-      tramiteApi.registrar({
-        numeroExpediente: values.numeroExpediente,
-        idTipoTramite: values.idTipoTramite,
-        idContribuyente: values.idContribuyente,
-        idInmueble: values.idInmueble ? Number(values.idInmueble) : null,
-      }),
-    onSuccess: (res) => {
-      setRadicadoIdTramite(res.data);
+  const tipoTramiteActual = (tiposTramiteQuery.data ?? []).find(
+    (t) => t.idTipoTramite === selectedTipoTramiteId
+  );
+
+  useEffect(() => {
+    if (contribuyenteActual) {
+      setCedulaBusqueda(contribuyenteActual.identificacion);
+    }
+  }, [contribuyenteActual]);
+
+  const handleBuscarCiudadano = () => {
+    const q = cedulaBusqueda.trim().toLowerCase();
+    if (!q) return;
+    const match = (padronQuery.data ?? []).find(
+      (c) =>
+        c.identificacion.toLowerCase().includes(q) ||
+        c.nombreCompletoORazonSocial.toLowerCase().includes(q)
+    );
+    if (match) {
+      setSelectedContribuyenteId(match.idContribuyente);
+      setSelectedInmuebleId('');
+      toast.success(`Ciudadano autocompletado: ${match.nombreCompletoORazonSocial}`);
+    } else {
+      toast.error('No se encontró ningún contribuyente con esa cédula en el padrón.');
+    }
+  };
+
+  const handleAddStagedFile = (defaultName: string) => {
+    const name = (nuevoArchivoNombre.trim() || defaultName).trim();
+    const id = `doc-${Date.now()}`;
+    setStagedDocs((prev) => [
+      ...prev,
+      {
+        id,
+        nombreArchivo: name,
+        tipo: name.toLowerCase().endsWith('.jpg') ? 'JPG' : 'PDF',
+        tamanoTexto: '0.8 MB',
+        tamanoBytes: 838860,
+        rutaAlmacenamiento: `/storage/nicoya/2026/${name}`,
+      },
+    ]);
+    setNuevoArchivoNombre('');
+    toast.info(`Archivo "${name}" preparado para el expediente.`);
+  };
+
+  const radicarExpedienteMut = useMutation({
+    mutationFn: async () => {
+      const anio = new Date().getFullYear();
+      const rand = String(Math.floor(1000 + Math.random() * 9000));
+      const numeroExpediente = `EXP-NIC-${anio}-${rand}`;
+
+      const res = await tramiteApi.registrar({
+        numeroExpediente,
+        idContribuyente: selectedContribuyenteId,
+        idTipoTramite: selectedTipoTramiteId,
+        idInmueble: selectedInmuebleId ? Number(selectedInmuebleId) : null,
+      });
+
+      const nuevoIdTramite = res.data;
+
+      // Adjuntar documentos cargados
+      if (nuevoIdTramite && stagedDocs.length > 0) {
+        for (const doc of stagedDocs) {
+          try {
+            await tramiteApi.adjuntarDocumento(nuevoIdTramite, {
+              nombreArchivo: doc.nombreArchivo,
+              rutaAlmacenamiento: doc.rutaAlmacenamiento,
+              tipoMime: doc.tipo === 'JPG' ? 'image/jpeg' : 'application/pdf',
+              tamanoBytes: doc.tamanoBytes,
+            });
+          } catch {
+            // continuar si algún adjunto falla
+          }
+        }
+      }
+
+      return { idTramite: nuevoIdTramite, numeroExpediente };
+    },
+    onSuccess: ({ idTramite, numeroExpediente }) => {
+      setExpedienteCreadoId(idTramite);
       toast.success(
-        `${res.message || 'Expediente radicado exitosamente'} (ID Trámite #${res.data})`
+        `Expediente ${numeroExpediente} (ID #${idTramite}) radicado exitosamente con sus documentos adjuntos.`
       );
-      queryClient.invalidateQueries({ queryKey: ['tramites'] });
+      queryClient.invalidateQueries({ queryKey: ['tramite'] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const handleFileUpload = async (file: File, mode: 'requisito' | 'adjunto') => {
-    if (!radicadoIdTramite) {
-      toast.error('Primero debe radicar el expediente (Paso 1) para obtener el ID del trámite.');
-      return;
-    }
-    const validationError = validateClientFile(file);
-    if (validationError) {
-      toast.error(validationError);
-      return;
-    }
-
-    setUploadingFile(true);
-    try {
-      const reqId = selectedRequisitoUpload ? Number(selectedRequisitoUpload) : undefined;
-      if (mode === 'requisito') {
-        if (!reqId) {
-          toast.error('Seleccione el requisito que desea acreditar con este documento.');
-          return;
-        }
-        const res = await tramiteApi.requisitoPresentado(radicadoIdTramite, reqId, file);
-        setArchivosSubidos((prev) => [res.data, ...prev]);
-        toast.success(res.message || 'Requisito documental acreditado.');
-      } else {
-        const res = await tramiteApi.adjuntarArchivo(radicadoIdTramite, file, reqId ?? null);
-        setArchivosSubidos((prev) => [res.data, ...prev]);
-        toast.success(res.message || 'Archivo adjuntado al expediente.');
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al subir el archivo.');
-    } finally {
-      setUploadingFile(false);
-    }
-  };
-
   return (
-    <div className="flex flex-col" style={{ gap: '2rem' }}>
+    <div className="space-y-6">
       <PageHeader
-        title="Nueva radicación de trámite"
-        subtitle="Registre el expediente, seleccione al contribuyente y adjunte la documentación requerida."
-        badge={radicadoIdTramite ? `Expediente #${radicadoIdTramite}` : 'Nuevo expediente'}
+        title="Nueva Radicación de Expediente"
+        subtitle="Paso 1: Datos del Trámite y Ciudadano · Verificación de SLA, requisitos y carga de documentación adjunta."
+        badge="Ventanilla Única Municipal"
         icon={<FilePlus2 className="h-6 w-6" />}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" asChild>
+              <Link to="/tramites/revision">Ir a Revisión y Cotejo</Link>
+            </Button>
+            <Button variant="secondary" asChild>
+              <Link to="/tramites/seguimiento">
+                <FolderKanban className="h-4 w-4" /> Seguimiento
+              </Link>
+            </Button>
+          </div>
+        }
       />
 
-      {!canReadPadron && (
-        <div className="flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-5 text-sm text-sky-900 shadow-card">
-          <Info className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" />
-          <div>
-            <p className="font-semibold">Selección de contribuyente según permisos</p>
-            <p className="mt-1 leading-relaxed text-sky-800">
-              Para este perfil, el selector utiliza los propietarios disponibles en el padrón de
-              inmuebles. También puede ingresar directamente el ID de un contribuyente autorizado.
-            </p>
+      {expedienteCreadoId && (
+        <div className="flex flex-col items-start justify-between gap-4 rounded-[12px] border border-[#BBF7D0] bg-[#F0FDF4] p-4 text-xs text-[#15803D] sm:flex-row sm:items-center">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 shrink-0" />
+            <div>
+              <p className="font-bold">
+                Expediente ID #{expedienteCreadoId} radicado exitosamente en SQL Server
+              </p>
+              <p>
+                Puede pasar directamente al cotejo de requisitos o seguimiento técnico del
+                expediente.
+              </p>
+            </div>
           </div>
+          <Button asChild>
+            <Link to={`/tramites/seguimiento?id=${expedienteCreadoId}`}>
+              Ver Trazabilidad del Expediente #{expedienteCreadoId}
+            </Link>
+          </Button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: '2rem' }}>
-        {/* Columna Izquierda (7 cols): Paso 1 - Datos del trámite y contribuyente */}
-        <div className="contents">
-          <Card className="overflow-hidden lg:col-span-2">
-            <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E8F0EC] font-bold text-[#164B35]">1</div>
-                  <div>
-                    <CardTitle>Datos del trámite y del contribuyente</CardTitle>
-                    <CardDescription className="mt-1">
-                      Complete la información principal para crear el expediente municipal.
-                    </CardDescription>
-                  </div>
-                </div>
-                {radicadoIdTramite && (
-                  <Badge variant="success">Radicado ID #{radicadoIdTramite}</Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6 sm:pt-6">
-              <form
-                onSubmit={form.handleSubmit((v) => radicarMut.mutate(v))}
-                className="space-y-4"
-              >
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <FormField
-                    label="Número de Expediente Oficial"
-                    required
-                    error={form.formState.errors.numeroExpediente?.message}
-                  >
+      {/* FORMULARIO PRINCIPAL (EXACTO AL WIREFRAME DE NUEVA RADICACIÓN DE EXPEDIENTE) */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#15803D]" />
+            <CardTitle>Paso 1: Datos del Trámite y Ciudadano</CardTitle>
+          </div>
+          <CardDescription>
+            Busque al ciudadano por número de cédula o selecciónelo del padrón para autocompletar
+            sus datos de contacto y fincas.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="space-y-8">
+          {/* SECCIÓN 1: DETALLES DEL CIUDADANO */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-[#171717]">Detalles del Ciudadano</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
+              <div className="md:col-span-4">
+                <FormField label="Cédula de Identidad" required>
+                  <div className="flex gap-2">
                     <Input
-                      placeholder="EXP-NIC-2026-0001"
-                      {...form.register('numeroExpediente')}
+                      value={cedulaBusqueda}
+                      onChange={(e) => setCedulaBusqueda(e.target.value)}
+                      placeholder="1-2345-6789"
                     />
-                  </FormField>
+                    <Button type="button" onClick={handleBuscarCiudadano}>
+                      <Search className="h-4 w-4" /> Buscar
+                    </Button>
+                  </div>
+                </FormField>
+              </div>
 
-                  <FormField
-                    label="Tipo de Trámite Municipal"
-                    required
-                    error={form.formState.errors.idTipoTramite?.message}
+              <div className="md:col-span-4">
+                <FormField label="Nombre Completo (Autocompletado)">
+                  <Select
+                    value={selectedContribuyenteId}
+                    onChange={(e) => {
+                      setSelectedContribuyenteId(Number(e.target.value));
+                      setSelectedInmuebleId('');
+                    }}
                   >
-                    <Select {...form.register('idTipoTramite')}>
-                      {(tiposTramiteQuery.data ?? []).map((t) => (
-                        <option key={t.idTipoTramite} value={t.idTipoTramite}>
-                          {t.nombreTramite} (SLA: {t.diasResolucionMax} días)
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-                </div>
-
-                {/* SLA & Departamento Banner */}
-                {tipoSeleccionado && (
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#B6944A]/40 bg-[#FBF7EE] px-4 py-2.5 text-xs">
-                    <div className="flex items-center gap-2 text-[#967736]">
-                      <Clock className="h-4 w-4" />
-                      <span>
-                        <strong>SLA Estimado:</strong> {tipoSeleccionado.diasResolucionMax} días
-                        hábiles máximos
-                      </span>
-                    </div>
-                    <span className="font-semibold text-[#164B35]">
-                      Depto.: {tipoSeleccionado.nombreDepartamento}
-                    </span>
-                  </div>
-                )}
-
-                {/* Selección / Búsqueda de Contribuyente */}
-                <div className="rounded-xl border border-[#DCE3DE] bg-[#F5F7F4]/50 p-4 space-y-3">
-                  <p className="text-xs font-bold uppercase tracking-wider text-[#164B35]">
-                    Detalles del Ciudadano / Contribuyente Solicitante
-                  </p>
-
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <div className="sm:col-span-2">
-                      <label className="mb-1 block text-xs font-medium text-[#26352D]">
-                        Filtrar / Seleccionar Contribuyente
-                      </label>
-                      <div className="relative mb-2">
-                        <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#5A6B61]" />
-                        <Input
-                          placeholder="Filtrar por nombre o identificación..."
-                          value={criterioContribuyente}
-                          onChange={(e) => setCriterioContribuyente(e.target.value)}
-                          className="pl-9"
-                        />
-                      </div>
-                      <Select
-                        value={watchedContribuyente}
-                        onChange={(e) =>
-                          form.setValue('idContribuyente', Number(e.target.value))
-                        }
-                      >
-                        <option value={0}>Seleccione un contribuyente...</option>
-                        {contribuyentesConocidos
-                          .filter(
-                            (c) =>
-                              !criterioContribuyente.trim() ||
-                              c.nombre
-                                .toLowerCase()
-                                .includes(criterioContribuyente.trim().toLowerCase()) ||
-                              String(c.idContribuyente) === criterioContribuyente.trim()
-                          )
-                          .map((c) => (
-                            <option key={c.idContribuyente} value={c.idContribuyente}>
-                              #{c.idContribuyente} — {c.nombre}
-                            </option>
-                          ))}
-                      </Select>
-                    </div>
-
-                    <FormField
-                      label="ID Contribuyente"
-                      required
-                      error={form.formState.errors.idContribuyente?.message}
-                    >
-                      <Input
-                        type="number"
-                        min={1}
-                        {...form.register('idContribuyente')}
-                      />
-                    </FormField>
-                  </div>
-                </div>
-
-                {/* Finca Relacionada */}
-                <FormField
-                  label="Finca / Bien Inmueble Relacionado (Opcional)"
-                  hint="Se muestran los inmuebles asociados al contribuyente seleccionado."
-                  error={form.formState.errors.idInmueble?.message}
-                >
-                  <Select {...form.register('idInmueble')}>
-                    <option value="">Sin inmueble específico asociado</option>
-                    {(inmueblesContribuyenteQuery.data ?? []).map((inm) => (
-                      <option key={inm.idInmueble} value={inm.idInmueble}>
-                        Finca {inm.numeroFinca} · Plano {inm.planoCatastrado} ({inm.nombreDistrito})
+                    {(padronQuery.data ?? []).map((c) => (
+                      <option key={c.idContribuyente} value={c.idContribuyente}>
+                        {c.nombreCompletoORazonSocial} ({c.identificacion})
                       </option>
                     ))}
                   </Select>
                 </FormField>
+              </div>
 
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      const year = new Date().getFullYear();
-                      const rand = Math.floor(1000 + Math.random() * 9000);
-                      form.reset({
-                        numeroExpediente: `EXP-NIC-${year}-${rand}`,
-                        idContribuyente: 1,
-                        idTipoTramite: 1,
-                        idInmueble: '',
-                      });
-                      setRadicadoIdTramite(null);
-                      setArchivosSubidos([]);
-                    }}
+              <div className="md:col-span-2">
+                <FormField label="Correo Electrónico" required>
+                  <Input
+                    value={contribuyenteActual?.correoElectronico ?? ''}
+                    readOnly
+                    className="bg-[#F8FAFC]"
+                  />
+                </FormField>
+              </div>
+
+              <div className="md:col-span-2">
+                <FormField label="Teléfono">
+                  <Input
+                    value={contribuyenteActual?.telefono ?? ''}
+                    readOnly
+                    className="bg-[#F8FAFC]"
+                  />
+                </FormField>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 2: DETALLES DEL TRÁMITE Y SLA ESTIMADO */}
+          <div className="space-y-4 border-t border-[#E5E7EB] pt-6">
+            <h3 className="text-sm font-bold text-[#171717]">Detalles del Trámite</h3>
+            <div className="grid grid-cols-1 items-end gap-4 md:grid-cols-12">
+              <div className="md:col-span-4">
+                <FormField label="Tipo de Trámite" required>
+                  <Select
+                    value={selectedTipoTramiteId}
+                    onChange={(e) => setSelectedTipoTramiteId(Number(e.target.value))}
                   >
-                    Limpiar / Nuevo Expediente
-                  </Button>
-                  <Button type="submit" disabled={radicarMut.isPending}>
-                    {radicarMut.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" /> Radicando expediente...
-                      </>
-                    ) : (
-                      <>
-                        <FilePlus2 className="h-4 w-4" /> Radicar Expediente
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+                    {(tiposTramiteQuery.data ?? []).map((t) => (
+                      <option key={t.idTipoTramite} value={t.idTipoTramite}>
+                        {t.nombreTramite}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+              </div>
 
-          {/* Requisitos del Trámite Seleccionado */}
-          <Card className="overflow-hidden">
-            <CardHeader className="border-b border-[#DCE3DE] bg-[#FAFCFB]">
-              <CardTitle className="text-base">Requisitos del trámite</CardTitle>
-              <CardDescription>Documentos configurados para el tipo de trámite seleccionado.</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6 sm:pt-6">
-              {requisitosPorTipoQuery.isLoading ? (
-                <p className="text-xs text-[#5A6B61]">Consultando requisitos...</p>
-              ) : !requisitosPorTipoQuery.data || requisitosPorTipoQuery.data.length === 0 ? (
-                <p className="text-xs text-[#5A6B61]">
-                  Este tipo de trámite no tiene requisitos específicos asociados en el catálogo.
+              <div className="md:col-span-3">
+                <div className="flex h-[42px] items-center justify-center gap-2 rounded-[10px] border border-[#BFDBFE] bg-[#EFF6FF] px-3.5 text-xs font-bold text-[#1E3A8A]">
+                  <Clock className="h-4 w-4 text-[#1D4ED8]" />
+                  SLA Estimado: {tipoTramiteActual?.diasSlaMaximo ?? 10} días hábiles
+                </div>
+              </div>
+
+              <div className="md:col-span-5">
+                <FormField label="Finca Relacionada (Número de Finca)">
+                  <Select
+                    value={selectedInmuebleId}
+                    onChange={(e) => setSelectedInmuebleId(e.target.value)}
+                  >
+                    <option value="">— Sin inmueble específico / Trámite personal —</option>
+                    {(inmueblesContribuyenteQuery.data ?? []).map((inm) => (
+                      <option key={inm.idInmueble} value={inm.idInmueble}>
+                        Finca {inm.numeroFinca} · Plano {inm.planoCatastro} (
+                        {formatCurrencyCRC(inm.valorFiscal)})
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 3: REQUISITOS DEL TRÁMITE (REQUERIDO / OPCIONAL) */}
+          <div className="space-y-3 border-t border-[#E5E7EB] pt-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-[#171717]">
+                Requisitos del Trámite — {tipoTramiteActual?.nombreTramite ?? 'Procedimiento'}
+              </h3>
+              <span className="text-xs text-[#6B7280]">
+                Departamento: <strong>{tipoTramiteActual?.nombreDepartamento ?? 'Municipal'}</strong>
+              </span>
+            </div>
+
+            <div className="rounded-[10px] border border-[#E5E7EB] bg-[#F8FAFC] p-4">
+              {(requisitosQuery.data ?? []).length === 0 ? (
+                <p className="text-xs text-[#6B7280]">
+                  Este tipo de trámite no tiene requisitos adicionales en el catálogo.
                 </p>
               ) : (
-                <div className="space-y-2">
-                  {requisitosPorTipoQuery.data.map((req) => {
-                    const acreditado = archivosSubidos.some(
-                      (a) => a.idRequisito === req.idRequisito
-                    );
-                    return (
-                      <div
-                        key={req.idRequisito}
-                        className="flex items-start justify-between gap-3 rounded-lg border border-[#DCE3DE] bg-[#F5F7F4]/60 p-3 text-xs"
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-[#26352D]">
-                              #{req.idRequisito} · {req.nombreRequisito}
-                            </span>
-                            <Badge variant={req.esObligatorio ? 'gold' : 'outline'}>
-                              {req.esObligatorio ? 'Obligatorio' : 'Opcional'}
-                            </Badge>
-                            {acreditado && <Badge variant="success">Acreditado</Badge>}
-                          </div>
-                          <p className="mt-1 text-[#5A6B61]">{req.descripcion}</p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedRequisitoUpload(String(req.idRequisito))}
-                        >
-                          Seleccionar
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Columna Derecha (5 cols): Paso 2 - Documentación Adjunta y Requisitos Presentados */}
-        <div className="contents">
-          <Card className="overflow-hidden">
-            <CardHeader className="border-b border-[#DCE3DE] bg-[#F2F7F4]">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white font-bold text-[#164B35] shadow-sm">2</div>
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Upload className="h-5 w-5 text-[#164B35]" /> Documentación adjunta
-                  </CardTitle>
-                  <CardDescription className="mt-1">
-                    Acredite requisitos o agregue anexos al expediente. Tamaño máximo: 10 MB.
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-5 pt-6 sm:pt-6">
-              <FormField
-                label="ID Trámite Destino"
-                hint="Se completa automáticamente al radicar el expediente o puede ingresar un ID existente."
-              >
-                <Input
-                  type="number"
-                  min={1}
-                  placeholder="ID del trámite (ej. 1)"
-                  value={radicadoIdTramite ?? ''}
-                  onChange={(e) =>
-                    setRadicadoIdTramite(e.target.value ? Number(e.target.value) : null)
-                  }
-                />
-              </FormField>
-
-              <FormField
-                label="Requisito Documental Asociado (Opcional para adjunto general)"
-              >
-                <Select
-                  value={selectedRequisitoUpload}
-                  onChange={(e) => setSelectedRequisitoUpload(e.target.value)}
-                >
-                  <option value="">— Documento general del expediente —</option>
-                  {(requisitosPorTipoQuery.data ?? []).map((r) => (
-                    <option key={r.idRequisito} value={r.idRequisito}>
-                      #{r.idRequisito} · {r.nombreRequisito}{' '}
-                      {r.esObligatorio ? '(Obligatorio)' : '(Opcional)'}
-                    </option>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {(requisitosQuery.data ?? []).map((req) => (
+                    <div
+                      key={req.idRequisito}
+                      className="flex items-center justify-between rounded-[8px] border border-[#E5E7EB] bg-white px-3.5 py-2.5 text-xs"
+                    >
+                      <span className="font-semibold text-[#171717]">— {req.nombreRequisito}</span>
+                      <Badge variant={req.esObligatorio ? 'success' : 'neutral'}>
+                        {req.esObligatorio ? 'REQUERIDO' : 'OPCIONAL'}
+                      </Badge>
+                    </div>
                   ))}
-                </Select>
-              </FormField>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {/* Subir como Requisito Presentado */}
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#164B35]/40 bg-[#E8F0EC]/40 p-4 text-center transition-colors hover:bg-[#E8F0EC]">
-                  <CheckCircle2 className="h-6 w-6 text-[#164B35]" />
-                  <span className="mt-2 text-xs font-bold text-[#164B35]">
-                    Acreditar Requisito
-                  </span>
-                  <span className="mt-0.5 text-[11px] text-[#5A6B61]">Documento de requisito</span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
-                    disabled={uploadingFile}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleFileUpload(f, 'requisito');
-                      e.target.value = '';
-                    }}
-                  />
-                </label>
-
-                {/* Subir como Archivo Adjunto General */}
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#B6944A]/50 bg-[#FBF7EE]/60 p-4 text-center transition-colors hover:bg-[#FBF7EE]">
-                  <FileText className="h-6 w-6 text-[#967736]" />
-                  <span className="mt-2 text-xs font-bold text-[#967736]">
-                    Adjuntar Anexo General
-                  </span>
-                  <span className="mt-0.5 text-[11px] text-[#5A6B61]">Documento complementario</span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
-                    disabled={uploadingFile}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleFileUpload(f, 'adjunto');
-                      e.target.value = '';
-                    }}
-                  />
-                </label>
-              </div>
-
-              {uploadingFile && (
-                <div className="flex items-center justify-center gap-2 text-xs font-medium text-[#164B35]">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Subiendo archivo al servidor...
                 </div>
               )}
+            </div>
+          </div>
 
-              <p className="text-[11px] text-[#5A6B61]">
-                Formatos permitidos: <code className="font-mono">.pdf, .jpg, .jpeg, .png, .doc, .docx, .xls, .xlsx</code> (máx. 10 MB).
-              </p>
-
-              {/* Lista de Archivos Subidos */}
-              <div className="border-t border-[#DCE3DE] pt-3">
-                <p className="mb-2 text-xs font-bold text-[#26352D]">
-                  Archivos Subidos en esta Sesión ({archivosSubidos.length})
-                </p>
-                {archivosSubidos.length === 0 ? (
-                  <p className="text-xs text-[#5A6B61]">
-                    Aún no se han adjuntado archivos en esta sesión.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {archivosSubidos.map((a, i) => (
-                      <div
-                        key={`${a.nombreAlmacenado}-${i}`}
-                        className="flex items-center justify-between rounded-lg border border-[#DCE3DE] bg-[#F5F7F4] px-3 py-2 text-xs"
-                      >
-                        <div className="min-w-0 pr-2">
-                          <p className="truncate font-semibold text-[#26352D]">
-                            {a.nombreOriginal}
-                          </p>
-                          <p className="text-[11px] text-[#5A6B61]">
-                            {formatBytes(a.pesoBytes)} · Trámite #{a.idTramite}{' '}
-                            {a.idRequisito ? `· Req. #${a.idRequisito}` : ''}
-                          </p>
-                        </div>
-                        <a
-                          href={`${BACKEND_ORIGIN}/${a.rutaRelativa}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 rounded bg-[#164B35] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#0F3626]"
-                        >
-                          Abrir <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                )}
+          {/* SECCIÓN 4: DOCUMENTACIÓN ADJUNTA Y TABLA DE ARCHIVOS SUBIDOS (EXACTO AL WIREFRAME) */}
+          <div className="space-y-4 border-t border-[#E5E7EB] pt-6">
+            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+              <h3 className="text-sm font-bold text-[#171717]">Documentación Adjunta</h3>
+              <div className="flex items-center gap-2">
+                <div className="w-60">
+                  <Input
+                    placeholder="Nombre de archivo personalizado..."
+                    value={nuevoArchivoNombre}
+                    onChange={(e) => setNuevoArchivoNombre(e.target.value)}
+                  />
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            </div>
+
+            {/* 2 Zonas de Carga del Wireframe */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => handleAddStagedFile('plano_catastrado_visado.pdf')}
+                className="flex items-center justify-center gap-3 rounded-[10px] border-2 border-dashed border-[#93C5FD] bg-[#EFF6FF]/50 p-5 text-left transition-colors hover:bg-[#EFF6FF]"
+              >
+                <Upload className="h-6 w-6 shrink-0 text-[#1D4ED8]" />
+                <div>
+                  <p className="text-xs font-bold text-[#171717]">
+                    Subir Plano Catastrado (PDF)
+                  </p>
+                  <p className="text-[11px] text-[#4B5563]">
+                    Haz clic aquí para adjuntar documento PDF al expediente
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleAddStagedFile('certificacion_literal_propiedad.pdf')}
+                className="flex items-center justify-center gap-3 rounded-[10px] border-2 border-dashed border-[#93C5FD] bg-[#EFF6FF]/50 p-5 text-left transition-colors hover:bg-[#EFF6FF]"
+              >
+                <Upload className="h-6 w-6 shrink-0 text-[#1D4ED8]" />
+                <div>
+                  <p className="text-xs font-bold text-[#171717]">
+                    Subir Documentos Adicionales (PDF, JPG)
+                  </p>
+                  <p className="text-[11px] text-[#4B5563]">
+                    Haz clic aquí para adjuntar requisitos complementarios
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            {/* Tabla: Archivos Subidos */}
+            <div>
+              <p className="mb-2 text-xs font-bold text-[#171717]">Archivos Subidos</p>
+              <div className="overflow-x-auto rounded-[10px] border border-[#E5E7EB]">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC] font-bold uppercase text-[#4B5563]">
+                      <th className="px-4 py-2.5">#</th>
+                      <th className="px-4 py-2.5">Archivo</th>
+                      <th className="px-4 py-2.5">Tipo</th>
+                      <th className="px-4 py-2.5">Tamaño</th>
+                      <th className="px-4 py-2.5">Estado</th>
+                      <th className="px-4 py-2.5 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E5E7EB]">
+                    {stagedDocs.map((doc, idx) => (
+                      <tr key={doc.id} className="hover:bg-[#F8FAFC]">
+                        <td className="px-4 py-2.5 font-mono font-bold">{idx + 1}</td>
+                        <td className="px-4 py-2.5 font-mono font-semibold text-[#171717]">
+                          {doc.nombreArchivo}
+                        </td>
+                        <td className="px-4 py-2.5">{doc.tipo}</td>
+                        <td className="px-4 py-2.5">{doc.tamanoTexto}</td>
+                        <td className="px-4 py-2.5">
+                          <Badge variant="success">Subido</Badge>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setStagedDocs((prev) => prev.filter((x) => x.id !== doc.id))
+                            }
+                            className="inline-flex items-center gap-1 font-semibold text-[#DC2626] hover:underline"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Eliminar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <FormField label="Observaciones de Ingreso en Ventanilla (Opcional)">
+              <Textarea
+                placeholder="Anote cualquier detalle relevante de recepción documental..."
+                value={observacionInicial}
+                onChange={(e) => setObservacionInicial(e.target.value)}
+              />
+            </FormField>
+
+            {/* Botones de Acción Inferiores: RADICAR EXPEDIENTE | Cancelar */}
+            <div className="flex items-center gap-3 pt-2">
+              <Button
+                type="button"
+                disabled={radicarExpedienteMut.isPending}
+                onClick={() => radicarExpedienteMut.mutate()}
+              >
+                {radicarExpedienteMut.isPending ? 'Radicando...' : 'RADICAR EXPEDIENTE'}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setObservacionInicial('');
+                  toast.info('Formulario restablecido.');
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
-

@@ -1,310 +1,259 @@
-import React, { useState } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import * as React from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Building2,
-  ChevronLeft,
-  ChevronRight,
   ClipboardCheck,
   Database,
-  FileCheck2,
-  FilePlus2,
   FileSpreadsheet,
+  FileText,
   FolderKanban,
   Globe,
-  Landmark,
+  HardDrive,
   LayoutDashboard,
+  Lock,
   LogOut,
   Menu,
   Receipt,
   Scale,
   ShieldCheck,
-  Sliders,
-  UserCheck,
   Users,
   X,
 } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
-import { MODULE_PERMISSIONS } from '@/features/auth/permissions';
+import { canPerformCrud, type CrudModuleKey } from '@/features/auth/permissions';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 
 interface NavItem {
   label: string;
   to: string;
   icon: React.ReactNode;
-  allowedRoles: readonly string[];
+  moduleKey?: CrudModuleKey;
+  section: string;
 }
 
-interface NavGroup {
-  groupTitle: string;
-  items: NavItem[];
-}
-
-const NAV_GROUPS: NavGroup[] = [
+const NAV_ITEMS: NavItem[] = [
   {
-    groupTitle: 'General y Atención',
-    items: [
-      {
-        label: 'Inicio / Panel General',
-        to: '/dashboard',
-        icon: <LayoutDashboard className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.DASHBOARD,
-      },
-      {
-        label: 'Portal Ciudadano',
-        to: '/portal-ciudadano',
-        icon: <Globe className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.PORTAL_CIUDADANO,
-      },
-    ],
+    section: 'Resumen Institucional',
+    label: 'Panel Principal',
+    to: '/',
+    icon: <LayoutDashboard className="h-4 w-4" />,
   },
   {
-    groupTitle: 'Gestión Territorial y Padrón',
-    items: [
-      {
-        label: 'Padrón de Contribuyentes',
-        to: '/contribuyentes',
-        icon: <Users className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.CONTRIBUYENTES,
-      },
-      {
-        label: 'Bienes Inmuebles y Fincas',
-        to: '/inmuebles',
-        icon: <Building2 className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.INMUEBLES,
-      },
-    ],
+    section: 'Catastro y Ciudadanos',
+    label: 'Padrón de Contribuyentes',
+    to: '/contribuyentes',
+    icon: <Users className="h-4 w-4" />,
+    moduleKey: 'Contribuyentes',
   },
   {
-    groupTitle: 'Plataforma de Trámites',
-    items: [
-      {
-        label: 'Radicación de Trámites',
-        to: '/tramites/radicar',
-        icon: <FilePlus2 className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES,
-      },
-      {
-        label: 'Revisión y Resolución',
-        to: '/expedientes/revision',
-        icon: <ClipboardCheck className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES,
-      },
-      {
-        label: 'Seguimiento de Expedientes',
-        to: '/expedientes/seguimiento',
-        icon: <FolderKanban className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES,
-      },
-      {
-        label: 'Catálogo y Requisitos',
-        to: '/tramites/catalogo',
-        icon: <FileCheck2 className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.TRAMITES_EXPEDIENTES,
-      },
-    ],
+    section: 'Catastro y Ciudadanos',
+    label: 'Bienes Inmuebles',
+    to: '/inmuebles',
+    icon: <Building2 className="h-4 w-4" />,
+    moduleKey: 'Inmuebles',
   },
   {
-    groupTitle: 'Hacienda y Recaudación',
-    items: [
-      {
-        label: 'Pagos y Facturación',
-        to: '/pagos',
-        icon: <Receipt className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.TRIBUTOS_PAGOS,
-      },
-      {
-        label: 'Tributos y Deudas',
-        to: '/tributos',
-        icon: <Scale className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.TRIBUTOS_PAGOS,
-      },
-    ],
+    section: 'Gestión de Trámites',
+    label: 'Radicación de Expediente',
+    to: '/tramites/radicacion',
+    icon: <FileText className="h-4 w-4" />,
+    moduleKey: 'TramitesRadicacion',
   },
   {
-    groupTitle: 'Control, Auditoría y BI',
-    items: [
-      {
-        label: 'Análisis Tributario y Reportes',
-        to: '/reportes',
-        icon: <FileSpreadsheet className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.REPORTES,
-      },
-      {
-        label: 'Auditoría Forense (Audit Log)',
-        to: '/auditoria',
-        icon: <ShieldCheck className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.AUDITORIA,
-      },
-    ],
+    section: 'Gestión de Trámites',
+    label: 'Revisión y Cotejo',
+    to: '/tramites/revision',
+    icon: <ClipboardCheck className="h-4 w-4" />,
+    moduleKey: 'ExpedientesRevision',
   },
   {
-    groupTitle: 'Seguridad RBAC (Admin)',
-    items: [
-      {
-        label: 'Usuarios y Roles',
-        to: '/seguridad/usuarios',
-        icon: <UserCheck className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.USUARIOS_ROLES,
-      },
-      {
-        label: 'Centro de Seguridad y Matriz',
-        to: '/seguridad/matriz',
-        icon: <Sliders className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.USUARIOS_ROLES,
-      },
-    ],
+    section: 'Gestión de Trámites',
+    label: 'Seguimiento y Trazabilidad',
+    to: '/tramites/seguimiento',
+    icon: <FolderKanban className="h-4 w-4" />,
+    moduleKey: 'ExpedientesSeguimiento',
   },
   {
-    groupTitle: 'Consola Técnica DBA',
-    items: [
-      {
-        label: 'Políticas de Respaldo',
-        to: '/dba/politicas',
-        icon: <Database className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.DBA_CONSOLA,
-      },
-      {
-        label: 'Respaldos y Recuperación',
-        to: '/dba/respaldos',
-        icon: <Landmark className="h-4 w-4" />,
-        allowedRoles: MODULE_PERMISSIONS.DBA_CONSOLA,
-      },
-    ],
+    section: 'Gestión de Trámites',
+    label: 'Catálogo de Trámites y SLA',
+    to: '/tramites/catalogo',
+    icon: <FileSpreadsheet className="h-4 w-4" />,
+    moduleKey: 'CatalogoTramites',
+  },
+  {
+    section: 'Hacienda y Recaudación',
+    label: 'Estado de Cuenta y Cobro',
+    to: '/tributos-deudas',
+    icon: <Scale className="h-4 w-4" />,
+    moduleKey: 'TributosDeudas',
+  },
+  {
+    section: 'Hacienda y Recaudación',
+    label: 'Caja y Facturación',
+    to: '/pagos-municipales',
+    icon: <Receipt className="h-4 w-4" />,
+    moduleKey: 'FacturacionPagos',
+  },
+  {
+    section: 'Gobernanza y Seguridad (RBAC)',
+    label: 'Usuarios y Roles',
+    to: '/seguridad/usuarios',
+    icon: <Users className="h-4 w-4" />,
+    moduleKey: 'UsuariosRoles',
+  },
+  {
+    section: 'Gobernanza y Seguridad (RBAC)',
+    label: 'Matriz de Permisos (RBAC)',
+    to: '/seguridad/matriz-permisos',
+    icon: <Lock className="h-4 w-4" />,
+    moduleKey: 'MatrizPermisos',
+  },
+  {
+    section: 'Consola DBA y Auditoría',
+    label: 'Data Warehouse y Analítica',
+    to: '/reportes',
+    icon: <FileSpreadsheet className="h-4 w-4" />,
+    moduleKey: 'ReportesDwh',
+  },
+  {
+    section: 'Consola DBA y Auditoría',
+    label: 'Auditoría Forense',
+    to: '/auditoria',
+    icon: <ShieldCheck className="h-4 w-4" />,
+    moduleKey: 'AuditoriaForense',
+  },
+  {
+    section: 'Consola DBA y Auditoría',
+    label: 'Políticas de Respaldo SQL',
+    to: '/dba/politicas',
+    icon: <Database className="h-4 w-4" />,
+    moduleKey: 'DbaPoliticas',
+  },
+  {
+    section: 'Consola DBA y Auditoría',
+    label: 'Respaldos y Recuperación',
+    to: '/dba/respaldos',
+    icon: <HardDrive className="h-4 w-4" />,
+    moduleKey: 'DbaRespaldos',
+  },
+  {
+    section: 'Atención Ciudadana',
+    label: 'Portal Ciudadano en Línea',
+    to: '/portal-ciudadano',
+    icon: <Globe className="h-4 w-4" />,
+    moduleKey: 'PortalCiudadano',
   },
 ];
 
-const ROUTE_TITLES: Record<string, string> = {
-  '/dashboard': 'Panel General Institucional',
-  '/portal-ciudadano': 'Portal Ciudadano en Línea',
-  '/contribuyentes': 'Padrón de Contribuyentes',
-  '/inmuebles': 'Padrón de Bienes Inmuebles y Derechos',
-  '/tramites/radicar': 'Radicación de Trámites Municipales',
-  '/expedientes/revision': 'Revisión y Resolución de Expedientes',
-  '/expedientes/seguimiento': 'Seguimiento y Trazabilidad de Expedientes',
-  '/tramites/catalogo': 'Catálogo de Tipos de Trámite y Requisitos',
-  '/pagos': 'Pagos Municipales y Facturación Electrónica',
-  '/tributos': 'Gestión de Tributos, Deudas y Estado de Cuenta',
-  '/reportes': 'Análisis Tributario y Reportes de Gestión',
-  '/auditoria': 'Bitácora y Auditoría Forense del Sistema',
-  '/seguridad/usuarios': 'Administración de Usuarios y Roles (RBAC)',
-  '/seguridad/matriz': 'Centro de Seguridad y Matriz de Permisos',
-  '/dba/politicas': 'Consola Técnica DBA — Políticas de Respaldo',
-  '/dba/respaldos': 'Consola Técnica DBA — Respaldos y Recuperación',
-};
-
 export function AppLayout() {
-  const { user, logout, hasRole } = useAuth();
+  const { session, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [rbacTick, setRbacTick] = React.useState(0);
 
-  const visibleGroups = NAV_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => hasRole(item.allowedRoles)),
-  })).filter((group) => group.items.length > 0);
+  React.useEffect(() => {
+    const onRbacChange = () => setRbacTick((t) => t + 1);
+    window.addEventListener('sigemun-rbac-updated', onRbacChange);
+    return () => window.removeEventListener('sigemun-rbac-updated', onRbacChange);
+  }, []);
 
-  const currentPageTitle = ROUTE_TITLES[location.pathname] || 'SIGEMUN — Municipalidad de Nicoya';
+  const userRoles = React.useMemo(() => session?.roles ?? [], [session?.roles]);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
-  };
+  // Filtrar estrictamente los módulos a los que el rol actual tiene permiso de CONSULTAR
+  const groupedSections = React.useMemo(() => {
+    void rbacTick;
+    const map = new Map<string, NavItem[]>();
+    for (const item of NAV_ITEMS) {
+      const authorized =
+        !item.moduleKey || canPerformCrud(userRoles, item.moduleKey, 'CONSULTAR');
+      if (!authorized) continue;
+
+      const list = map.get(item.section) ?? [];
+      list.push(item);
+      map.set(item.section, list);
+    }
+    return Array.from(map.entries());
+  }, [userRoles, rbacTick]);
+
+  const currentNav = NAV_ITEMS.find((item) =>
+    item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)
+  );
 
   return (
-    <div className="flex min-h-screen bg-[#F4F7F5] text-[#23342B]">
-      {/* Mobile overlay */}
+    <div className="flex min-h-screen bg-[#F8FAFC] text-[#171717]">
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-[#071A12]/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-[#0F172A]/60 backdrop-blur-xs lg:hidden"
           onClick={() => setMobileOpen(false)}
-          aria-hidden="true"
         />
       )}
 
-      {/* Institutional Dark Green Sidebar (#164B35) */}
+      {/* SIDEBAR INSTITUCIONAL ESTANDARIZADO */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex flex-col bg-[#103D2B] text-white shadow-xl transition-all duration-200 lg:sticky lg:top-0 lg:h-screen',
-          collapsed ? 'w-20' : 'w-72',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          'fixed inset-y-0 left-0 z-50 flex w-[268px] flex-col border-r border-[#1E293B] bg-[#0F172A] text-white transition-transform duration-200 lg:static lg:translate-x-0',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        {/* Top Brand Header */}
-        <div className="flex h-[4.5rem] items-center justify-between border-b border-white/10 px-4">
-          <Link
-            to="/dashboard"
-            aria-label="Ir al panel principal de SIGEMUN"
-            className="flex items-center gap-3 overflow-hidden"
-          >
+        {/* Cabecera con Escudo Oficial de la Municipalidad de Nicoya */}
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+          <div className="flex items-center gap-3">
             <img
-              src="/images/logo2.png"
-              alt=""
-              className="h-11 w-11 shrink-0 rounded-xl object-contain shadow-md ring-1 ring-white/20"
+              src="/images/escudo-nicoya.jpg"
+              alt="Escudo Oficial Municipalidad de Nicoya"
+              className="h-11 w-11 rounded-[10px] border border-white/20 bg-white object-contain p-0.5 shadow-xs"
             />
-            {!collapsed && (
-              <div className="leading-tight">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-base font-extrabold tracking-wider text-white">SIGEMUN</span>
-                  <span className="rounded bg-[#B6944A]/25 px-1.5 py-0.5 text-[10px] font-semibold text-[#D4B872]">
-                    NICOYA
-                  </span>
-                </div>
-                <p className="truncate text-[11px] text-white/70">Municipalidad de Nicoya</p>
-              </div>
-            )}
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => setCollapsed((c) => !c)}
-            className="hidden rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white lg:inline-flex"
-            title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </button>
-
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#93C5FD]">
+                Gobierno Local
+              </p>
+              <p className="truncate text-sm font-bold leading-tight text-white">
+                Municipalidad de Nicoya
+              </p>
+              <p className="truncate text-[11px] text-slate-400">SIGEMUN · Guanacaste</p>
+            </div>
+          </div>
           <button
             type="button"
             onClick={() => setMobileOpen(false)}
-            className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white lg:hidden"
-            aria-label="Cerrar menú de navegación"
+            aria-label="Cerrar menú lateral"
+            className="rounded-[10px] p-1 text-slate-300 hover:bg-white/10 lg:hidden"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="sidebar-scroll flex-1 space-y-6 overflow-y-auto px-3 py-5" aria-label="Navegación principal">
-          {visibleGroups.map((group) => (
-            <div key={group.groupTitle}>
-              {!collapsed && (
-                <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-[#D4B872]">
-                  {group.groupTitle}
-                </p>
-              )}
+        {/* Navegación por Módulos (Solo visibles los permitidos para el rol) */}
+        <nav
+          className="flex-1 space-y-5 overflow-y-auto px-3 py-4"
+          aria-label="Navegación principal del sistema"
+        >
+          {groupedSections.map(([sectionTitle, items]) => (
+            <div key={sectionTitle}>
+              <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                {sectionTitle}
+              </p>
               <div className="space-y-1">
-                {group.items.map((item) => (
+                {items.map((item) => (
                   <NavLink
                     key={item.to}
                     to={item.to}
+                    end={item.to === '/'}
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) =>
                       cn(
-                        'flex min-h-10 items-center gap-3 rounded-xl px-3 py-2.5 text-[0.8125rem] font-medium transition-all',
+                        'flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-xs font-medium transition-colors',
                         isActive
-                          ? 'bg-[#B6944A] text-white font-semibold shadow-sm ring-1 ring-white/10'
-                          : 'text-white/80 hover:bg-white/10 hover:text-white',
-                        collapsed && 'justify-center px-2'
+                          ? 'bg-[#1D4ED8] font-semibold text-white shadow-xs'
+                          : 'text-slate-300 hover:bg-white/8 hover:text-white'
                       )
                     }
-                    title={collapsed ? item.label : undefined}
                   >
-                    <span className="shrink-0">{item.icon}</span>
-                    {!collapsed && (
-                      <span className="flex-1 truncate">{item.label}</span>
-                    )}
+                    {item.icon}
+                    <span className="truncate">{item.label}</span>
                   </NavLink>
                 ))}
               </div>
@@ -312,102 +261,118 @@ export function AppLayout() {
           ))}
         </nav>
 
-        {/* Bottom User Profile & Logout */}
-        <div className="safe-bottom border-t border-white/10 p-3">
-          {!collapsed && user && (
-            <div className="mb-2 rounded-lg bg-white/5 p-2.5">
-              <p className="truncate text-xs font-semibold text-white">
-                {user.nombreCompleto || user.userName}
-              </p>
-              <p className="truncate text-[11px] text-[#D4B872]">{user.rol}</p>
-              {user.nombreDepartamento && (
-                <p className="mt-0.5 truncate text-[10px] text-white/60">
-                  {user.nombreDepartamento}
-                </p>
-              )}
+        {/* Tarjeta inferior de sesión activa */}
+        <div className="border-t border-white/10 bg-[#0B1120] p-4">
+          <div className="mb-3 flex items-center gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#1E3A8A] text-xs font-bold text-white">
+              {(session?.nombreFuncionario || session?.userName || 'MN')
+                .slice(0, 2)
+                .toUpperCase()}
             </div>
-          )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-bold text-white">
+                {session?.nombreFuncionario || session?.userName}
+              </p>
+              <p className="truncate font-mono text-[11px] text-slate-400">
+                @{session?.userName} · ID #{session?.idUsuario}
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-3 flex flex-wrap gap-1">
+            {userRoles.map((r) => (
+              <span
+                key={r}
+                className="rounded-[6px] border border-[#1D4ED8]/40 bg-[#1E3A8A]/50 px-2 py-0.5 text-[10px] font-semibold text-[#BFDBFE]"
+              >
+                {r}
+              </span>
+            ))}
+          </div>
+
           <button
             type="button"
-            onClick={handleLogout}
-            className={cn(
-              'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-red-200 transition-colors hover:bg-red-500/20 hover:text-white',
-              collapsed && 'justify-center'
-            )}
-            title="Cerrar sesión"
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+            className="flex h-[38px] w-full items-center justify-center gap-2 rounded-[10px] border border-white/15 bg-white/5 px-3 text-xs font-semibold text-white transition-colors hover:bg-[#DC2626] hover:border-[#DC2626]"
           >
-            <LogOut className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>Cerrar Sesión</span>}
+            <LogOut className="h-3.5 w-3.5" />
+            Cerrar sesión segura
           </button>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* Top Institutional Header */}
-        <header className="sticky top-0 z-30 flex h-[4.5rem] items-center justify-between border-b border-[#DCE3DE] bg-white/95 px-4 shadow-sm backdrop-blur sm:px-6">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              type="button"
+      {/* CONTENEDOR PRINCIPAL */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* TOPBAR INSTITUCIONAL */}
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#E5E7EB] bg-white px-4 shadow-xs sm:px-8">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="secondary"
+              size="icon"
+              className="lg:hidden"
+              aria-label="Abrir menú de navegación"
               onClick={() => setMobileOpen(true)}
-              className="rounded-lg p-2 text-[#26352D] hover:bg-[#E8F0EC] lg:hidden"
-              aria-label="Abrir menú"
             >
               <Menu className="h-5 w-5" />
-            </button>
-
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 text-xs text-[#5A6B61]">
-                <span>SIGEMUN</span>
-                <span>/</span>
-                <span className="truncate font-medium text-[#164B35]">{currentPageTitle}</span>
+            </Button>
+            <div className="flex items-center gap-3">
+              <img
+                src="/images/nicoya-azul.jpg"
+                alt="Nicoya Azul"
+                className="hidden h-9 w-9 rounded-[8px] object-cover sm:block"
+              />
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#1D4ED8]">
+                  Sistema de Gestión Municipal · Nicoya
+                </p>
+                <p className="text-sm font-bold text-[#171717]">
+                  {currentNav?.label ?? 'Plataforma Institucional SIGEMUN'}
+                </p>
               </div>
-              <h2 className="truncate text-sm font-bold text-[#26352D] sm:text-base">
-                {currentPageTitle}
-              </h2>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            {user && (
-              <div className="hidden items-center gap-2.5 sm:flex">
-                <div className="text-right">
-                  <p className="text-xs font-bold text-[#26352D]">
-                    {user.nombreCompleto || user.userName}
-                  </p>
-                  <div className="flex items-center justify-end gap-1">
-                    <Badge variant="gold" className="text-[10px] py-0 px-2">
-                      {user.rol}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#164B35] text-xs font-bold text-[#B6944A]">
-                  {(user.nombreCompleto || user.userName).slice(0, 2).toUpperCase()}
-                </div>
-              </div>
-            )}
+            <Badge variant="success" className="hidden sm:inline-flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#15803D]" />
+              SQL Server Conectado
+            </Badge>
+            <div className="hidden items-center gap-2 rounded-[10px] border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-1.5 text-xs md:flex">
+              <span className="font-semibold text-[#171717]">
+                {session?.nombreFuncionario || session?.userName}
+              </span>
+              <span className="text-[#9CA3AF]">|</span>
+              <span className="font-medium text-[#1E3A8A]">
+                {userRoles[0] || 'Usuario Municipal'}
+              </span>
+            </div>
           </div>
         </header>
 
-        {/* Page Container */}
-        <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 sm:p-6 lg:p-8">
+        {/* ÁREA DE CONTENIDO */}
+        <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-8">
           <Outlet />
         </main>
 
-        {/* Institutional Footer */}
-        <footer className="border-t border-[#DCE3DE] bg-white px-6 py-3 text-xs text-[#5A6B61]">
-          <div className="mx-auto flex max-w-[1600px] flex-col items-center justify-between gap-2 sm:flex-row">
-            <p>
-              <strong>SIGEMUN</strong> — Sistema de Gestión Municipal · Municipalidad de Nicoya,
-              Guanacaste, Costa Rica
-            </p>
-            <p className="text-[11px]">
-              Hito 3 · Administración de Bases de Datos · Universidad Nacional (Campus Nicoya)
-            </p>
+        {/* PIE DE PÁGINA INSTITUCIONAL */}
+        <footer className="border-t border-[#E5E7EB] bg-white px-6 py-4 text-xs text-[#6B7280]">
+          <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-between gap-2 sm:flex-row">
+            <div className="flex items-center gap-2">
+              <img
+                src="/images/escudo-nicoya.jpg"
+                alt="Escudo de Nicoya"
+                className="h-5 w-5 object-contain"
+              />
+              <span className="font-semibold text-[#171717]">Municipalidad de Nicoya</span>
+              <span>— De la Patria por Nuestra Voluntad (1848)</span>
+            </div>
+            <span>SIGEMUN 2026 · Estándar Institucional Unificado</span>
           </div>
         </footer>
       </div>
     </div>
   );
 }
-
