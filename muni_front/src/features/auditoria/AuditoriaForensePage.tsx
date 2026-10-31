@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { FormField } from '@/components/forms/FormField';
 import { exportToCsv, formatDateTime } from '@/lib/utils';
+import type { SpConsultarAuditoriaResultDto, VwAuditoriaDetallada } from '@/types/api';
 
 interface AuditRowNormalized {
   idAuditoria: number;
@@ -36,6 +37,29 @@ interface AuditRowNormalized {
   userName: string;
   nombreFuncionario?: string;
   nombreDepartamento?: string;
+}
+
+/**
+ * Normaliza las filas de la vista SQL dbo.vw_auditoria_detallada y los procedimientos almacenados
+ * sp_consultar_auditoria / sp_filtrar_auditoria, soportando tanto fechaHora/operacionDml/usuarioEjecutor
+ * como fechaEvento/tipoAccion/userName.
+ */
+function normalizarAuditoria(
+  r: VwAuditoriaDetallada | SpConsultarAuditoriaResultDto
+): AuditRowNormalized {
+  return {
+    idAuditoria: r.idAuditoria,
+    fechaEvento: r.fechaHora || r.fechaEvento || '',
+    tablaAfectada: r.tablaAfectada ?? '',
+    idRegistroAfectado: r.idRegistroAfectado ?? '',
+    tipoAccion: r.operacionDml || r.tipoAccion || '',
+    valoresAnteriores: r.valoresAnteriores,
+    valoresNuevos: r.valoresNuevos,
+    direccionIp: r.direccionIp ?? '',
+    userName: r.usuarioEjecutor || r.userName || 'SISTEMA_INTERNO',
+    nombreFuncionario: (r as VwAuditoriaDetallada).nombreFuncionario || r.usuarioEjecutor || r.userName,
+    nombreDepartamento: (r as VwAuditoriaDetallada).nombreDepartamento,
+  };
 }
 
 function formatDiffContent(raw: string | null | undefined): string {
@@ -111,12 +135,12 @@ export function AuditoriaForensePage() {
 
   const baseRows: AuditRowNormalized[] = useMemo(() => {
     if (consultarRegistroActivo) {
-      return registroPuntualQuery.data ?? [];
+      return (registroPuntualQuery.data ?? []).map(normalizarAuditoria);
     }
     if (useServerFilter) {
-      return filtrarQuery.data ?? [];
+      return (filtrarQuery.data ?? []).map(normalizarAuditoria);
     }
-    return detalladaQuery.data ?? [];
+    return (detalladaQuery.data ?? []).map(normalizarAuditoria);
   }, [
     consultarRegistroActivo,
     useServerFilter,

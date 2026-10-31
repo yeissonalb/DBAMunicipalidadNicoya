@@ -878,29 +878,35 @@ export interface SpReporteGestionMunicipalResultDto {
 // ----------------------------------------------------------------------------
 export interface VwAuditoriaDetallada {
   idAuditoria: number;
-  fechaEvento: string;
+  fechaEvento?: string;
+  fechaHora?: string;
   tablaAfectada: string;
   idRegistroAfectado: string;
-  tipoAccion: string;
+  tipoAccion?: string;
+  operacionDml?: string;
   valoresAnteriores?: string | null;
   valoresNuevos?: string | null;
   direccionIp: string;
-  idUsuario: number;
-  userName: string;
-  nombreFuncionario: string;
-  nombreDepartamento: string;
+  idUsuario?: number;
+  userName?: string;
+  usuarioEjecutor?: string;
+  nombreFuncionario?: string;
+  nombreDepartamento?: string;
 }
 
 export interface SpConsultarAuditoriaResultDto {
   idAuditoria: number;
-  fechaEvento: string;
+  fechaEvento?: string;
+  fechaHora?: string;
   tablaAfectada: string;
   idRegistroAfectado: string;
-  tipoAccion: string;
+  tipoAccion?: string;
+  operacionDml?: string;
   valoresAnteriores?: string | null;
   valoresNuevos?: string | null;
   direccionIp: string;
-  userName: string;
+  userName?: string;
+  usuarioEjecutor?: string;
 }
 
 export type SpFiltrarAuditoriaResultDto = SpConsultarAuditoriaResultDto;
