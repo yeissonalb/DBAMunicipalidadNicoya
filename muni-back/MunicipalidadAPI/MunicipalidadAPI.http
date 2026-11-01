@@ -1,0 +1,32 @@
+@host = http://localhost:5080
+@token = pegue_aqui_el_token
+
+### Login (usuario semilla admin_nicoya / password)
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "admin_nicoya", "password": "password" }
+
+### Quién soy
+GET {{host}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### Padrón (Admin / Cajero)
+GET {{host}}/api/contribuyente
+Authorization: Bearer {{token}}
+
+### Error de negocio esperado: cédula duplicada -> THROW 50001 -> HTTP 400
+POST {{host}}/api/contribuyente/fisico
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "cedulaIdentidad": "5-0321-0456",
+  "nombre": "Prueba",
+  "apellido1Fisico": "Duplicada",
+  "apellido2Fisico": "Test",
+  "fechaNacimiento": "1990-01-01",
+  "correoElectronico": "prueba@test.com",
+  "telefono": "8888-8888",
+  "direccionNotificaciones": "Nicoya centro"
+}
