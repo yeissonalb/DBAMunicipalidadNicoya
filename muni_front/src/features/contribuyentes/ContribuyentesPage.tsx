@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,8 +21,9 @@ import {
   catalogosGeneralesApi,
   contribuyenteApi,
   inmuebleApi,
+  tramiteApi,
 } from '@/services/api';
-import { consultarCedulaHacienda } from '@/services/haciendaCedulaApi';
+import { consultarCedulaHacienda, type HaciendaContribuyenteInfo } from '@/services/haciendaCedulaApi';
 import type { VwPadronContribuyente } from '@/types/api';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/common/StateFeedback';
@@ -105,6 +106,40 @@ export function ContribuyentesPage() {
   const [editingContribuyente, setEditingContribuyente] = useState<VwPadronContribuyente | null>(
     null
   );
+  const [viewingContribuyente, setViewingContribuyente] = useState<VwPadronContribuyente | null>(
+    null
+  );
+  const [haciendaViewInfo, setHaciendaViewInfo] = useState<HaciendaContribuyenteInfo | null>(null);
+  const [cargandoHaciendaView, setCargandoHaciendaView] = useState(false);
+
+  useEffect(() => {
+    if (!viewingContribuyente?.identificacion) {
+      setHaciendaViewInfo(null);
+      return;
+    }
+    const clean = viewingContribuyente.identificacion.replace(/\D/g, '');
+    if (clean.length >= 9) {
+      setCargandoHaciendaView(true);
+      consultarCedulaHacienda(clean)
+        .then((info) => setHaciendaViewInfo(info))
+        .catch(() => setHaciendaViewInfo(null))
+        .finally(() => setCargandoHaciendaView(false));
+    } else {
+      setHaciendaViewInfo(null);
+    }
+  }, [viewingContribuyente]);
+
+  const viewInmueblesQuery = useQuery({
+    queryKey: ['contribuyentes', 'view-inmuebles', viewingContribuyente?.idContribuyente],
+    queryFn: () => inmuebleApi.porContribuyente(viewingContribuyente!.idContribuyente),
+    enabled: Boolean(viewingContribuyente && viewingContribuyente.idContribuyente > 0),
+  });
+
+  const viewTramitesQuery = useQuery({
+    queryKey: ['contribuyentes', 'view-tramites', viewingContribuyente?.idContribuyente],
+    queryFn: () => tramiteApi.porContribuyente(viewingContribuyente!.idContribuyente),
+    enabled: Boolean(viewingContribuyente && viewingContribuyente.idContribuyente > 0),
+  });
 
   // Estados de consulta en tiempo real a la API de Hacienda en los formularios
   const [buscandoHaciendaFisica, setBuscandoHaciendaFisica] = useState(false);
@@ -735,7 +770,11 @@ export function ContribuyentesPage() {
                           <div className="inline-flex items-center gap-1.5">
                             <Button
                               variant="secondary"
-                              onClick={() => setSelectedContribuyenteId(row.idContribuyente)}
+                              onClick={() => {
+                                setSelectedContribuyenteId(row.idContribuyente);
+                                setViewingContribuyente(row);
+                              }}
+                              title="Ver expediente integral del contribuyente"
                             >
                               <Eye className="h-3.5 w-3.5" /> Ver
                             </Button>
@@ -1271,6 +1310,226 @@ export function ContribuyentesPage() {
               </Button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      {/* MODAL 5: VER EXPEDIENTE INTEGRAL DEL CONTRIBUYENTE */}
+      <Modal
+        open={Boolean(viewingContribuyente)}
+        onClose={() => setViewingContribuyente(null)}
+        title="Expediente Integral del Contribuyente"
+        description="Consulta oficial consolidada: Padrón Municipal, Bienes Inmuebles, Trámites y Ministerio de Hacienda."
+        maxWidth="max-w-4xl"
+      >
+        {viewingContribuyente && (
+          <div className="space-y-6">
+            {/* Cabecera con datos clave y estado */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-[12px] border border-[#BFDBFE] bg-[#EFF6FF] p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#1E3A8A] text-white font-bold text-lg">
+                  {viewingContribuyente.tipoPersona === 'Física' ? 'PF' : 'PJ'}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#171717]">
+                    {viewingContribuyente.nombreCompletoORazonSocial}
+                  </h3>
+                  <p className="font-mono text-xs font-semibold text-[#1E3A8A]">
+                    Identificación: {viewingContribuyente.identificacion} · ID Sistema #{viewingContribuyente.idContribuyente}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={viewingContribuyente.activo !== false ? 'success' : 'danger'}>
+                  {viewingContribuyente.activo !== false ? 'Padrón Activo' : 'Inactivo'}
+                </Badge>
+                <Badge variant="blue">{viewingContribuyente.tipoPersona}</Badge>
+                {cargandoHaciendaView ? (
+                  <Badge variant="outline">Consultando Hacienda...</Badge>
+                ) : haciendaViewInfo ? (
+                  <Badge variant={haciendaViewInfo.moroso ? 'danger' : 'success'}>
+                    Hacienda: {haciendaViewInfo.moroso ? 'Moroso' : 'Al Día'}
+                  </Badge>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Cuadrícula de Datos Generales */}
+            <div className="rounded-[10px] border border-[#E5E7EB] bg-white p-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#4B5563] mb-3">
+                Información de Contacto y Domicilio Fiscal
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                <div>
+                  <span className="text-[#6B7280]">Correo Electrónico:</span>
+                  <p className="font-medium text-[#171717] mt-0.5 break-all">
+                    {viewingContribuyente.correoElectronico || 'No registrado'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[#6B7280]">Teléfono:</span>
+                  <p className="font-mono font-semibold text-[#171717] mt-0.5">
+                    {viewingContribuyente.telefono || 'No registrado'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[#6B7280]">Distrito Cantonal:</span>
+                  <p className="font-medium text-[#171717] mt-0.5">
+                    {viewingContribuyente.nombreDistrito || 'Nicoya'}
+                  </p>
+                </div>
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <span className="text-[#6B7280]">Dirección de Notificaciones:</span>
+                  <p className="font-medium text-[#171717] mt-0.5">
+                    {viewingContribuyente.direccionExacta || viewingContribuyente.direccionNotificaciones || 'No especificada'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Validación en Tiempo Real con Ministerio de Hacienda */}
+            {haciendaViewInfo && (
+              <div className="rounded-[10px] border border-[#E5E7EB] bg-[#F8FAFC] p-4 text-xs">
+                <div className="flex items-center gap-2 mb-2 font-bold text-[#1E3A8A]">
+                  <ShieldCheck className="h-4 w-4 text-[#1D4ED8]" />
+                  <span>Validación Oficial Ministerio de Hacienda (API Cédulas Costa Rica)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-[#6B7280]">Nombre Oficial en Hacienda:</span>
+                    <p className="font-semibold text-[#171717]">{haciendaViewInfo.nombre}</p>
+                  </div>
+                  <div>
+                    <span className="text-[#6B7280]">Estado Tributario:</span>
+                    <p className="font-semibold text-[#171717]">{haciendaViewInfo.estadoTributario}</p>
+                  </div>
+                  {haciendaViewInfo.actividades && haciendaViewInfo.actividades.length > 0 && (
+                    <div className="sm:col-span-2">
+                      <span className="text-[#6B7280]">Actividades Económicas:</span>
+                      <ul className="mt-1 list-disc list-inside text-[#374151]">
+                        {haciendaViewInfo.actividades.map((act, i) => (
+                          <li key={i}>{act.codigo} - {act.descripcion} ({act.estado})</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Bienes Inmuebles Registrados */}
+            <div className="rounded-[10px] border border-[#E5E7EB] overflow-hidden">
+              <div className="bg-[#F8FAFC] px-4 py-2.5 border-b border-[#E5E7EB] flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#4B5563]">
+                  Bienes Inmuebles Registrados en Catastro
+                </span>
+                <Badge variant="blue">
+                  {viewInmueblesQuery.data?.length ?? 0} finca(s)
+                </Badge>
+              </div>
+              {(viewInmueblesQuery.data ?? []).length === 0 ? (
+                <div className="p-4 text-center text-xs text-[#6B7280]">
+                  No registra propiedades inscritas a su nombre en el cantón de Nicoya.
+                </div>
+              ) : (
+                <div className="overflow-x-auto max-h-48 overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC] text-[11px] font-bold text-[#6B7280]">
+                        <th className="px-3 py-2">Finca</th>
+                        <th className="px-3 py-2">Plano</th>
+                        <th className="px-3 py-2">Distrito</th>
+                        <th className="px-3 py-2">Uso</th>
+                        <th className="px-3 py-2">Valor Fiscal</th>
+                        <th className="px-3 py-2">% Part.</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E7EB]">
+                      {viewInmueblesQuery.data!.map((inm) => (
+                        <tr key={inm.idInmueble} className="hover:bg-[#F8FAFC]">
+                          <td className="px-3 py-2 font-mono font-bold text-[#1E3A8A]">{inm.numeroFinca}</td>
+                          <td className="px-3 py-2 font-mono text-[11px]">{inm.planoCatastro}</td>
+                          <td className="px-3 py-2">{inm.nombreDistrito}</td>
+                          <td className="px-3 py-2">{inm.descripcionUso}</td>
+                          <td className="px-3 py-2 font-bold">{formatCurrencyCRC(inm.valorFiscal)}</td>
+                          <td className="px-3 py-2 font-bold text-[#15803D]">{inm.porcentajeParticipacion}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Trámites y Expedientes */}
+            <div className="rounded-[10px] border border-[#E5E7EB] overflow-hidden">
+              <div className="bg-[#F8FAFC] px-4 py-2.5 border-b border-[#E5E7EB] flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#4B5563]">
+                  Trámites y Solicitudes Municipales
+                </span>
+                <Badge variant="neutral">
+                  {viewTramitesQuery.data?.length ?? 0} trámite(s)
+                </Badge>
+              </div>
+              {(viewTramitesQuery.data ?? []).length === 0 ? (
+                <div className="p-4 text-center text-xs text-[#6B7280]">
+                  No registra trámites activos ni finalizados en la plataforma de expedientes.
+                </div>
+              ) : (
+                <div className="overflow-x-auto max-h-48 overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC] text-[11px] font-bold text-[#6B7280]">
+                        <th className="px-3 py-2">Expediente</th>
+                        <th className="px-3 py-2">Trámite</th>
+                        <th className="px-3 py-2">Fecha Radicación</th>
+                        <th className="px-3 py-2">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E7EB]">
+                      {viewTramitesQuery.data!.map((tr) => (
+                        <tr key={tr.idTramite} className="hover:bg-[#F8FAFC]">
+                          <td className="px-3 py-2 font-mono font-bold text-[#1E3A8A]">{tr.numeroExpediente}</td>
+                          <td className="px-3 py-2 font-medium">{tr.nombreTramite}</td>
+                          <td className="px-3 py-2">{formatDate(tr.fechaRadicacion)}</td>
+                          <td className="px-3 py-2">
+                            <Badge variant={tr.estadoActual?.toUpperCase().includes('APR') ? 'success' : 'blue'}>
+                              {tr.estadoActual}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Botones de acción al pie */}
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#E5E7EB]">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  const target = viewingContribuyente;
+                  setViewingContribuyente(null);
+                  setEditingContribuyente(target);
+                  const dMatch = distritosQuery.data?.find((d) => d.nombreDistrito === target.nombreDistrito);
+                  editForm.reset({
+                    correoElectronico: target.correoElectronico,
+                    telefono: target.telefono,
+                    direccionExacta: target.direccionExacta,
+                    idDistrito: dMatch?.idDistrito ?? 1,
+                    activo: target.activo,
+                  });
+                }}
+              >
+                <Edit3 className="h-4 w-4" /> Editar Contribuyente
+              </Button>
+              <Button type="button" onClick={() => setViewingContribuyente(null)}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
         )}
       </Modal>
     </div>
