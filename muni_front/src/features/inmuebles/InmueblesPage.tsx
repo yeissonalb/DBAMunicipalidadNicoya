@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,117 +6,152 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import {
   Building2,
-  Download,
+  Calculator,
   Edit3,
-  Link2,
-  Loader2,
   Plus,
   RefreshCw,
-  Search,
+  UserPlus,
 } from 'lucide-react';
-import { catalogosInmuebleApi, contribuyenteApi, inmuebleApi } from '@/services/api';
-import { useAuth } from '@/app/providers/AuthProvider';
-import { MODULE_PERMISSIONS } from '@/features/auth/permissions';
-import type { VwInmueblesPropietario } from '@/types/api';
+import {
+  catalogosGeneralesApi,
+  catalogosInmuebleApi,
+  contribuyenteApi,
+  inmuebleApi,
+} from '@/services/api';
+import type { VwCatastroInmueble } from '@/types/api';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/common/StateFeedback';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input, Select } from '@/components/ui/input';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/Select';
+import { Calendar } from '@/components/ui/Calendar';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
 import { FormField } from '@/components/forms/FormField';
-import { exportToCsv, formatCurrencyCRC, formatNumber } from '@/lib/utils';
+import { formatCurrencyCRC, formatDate, formatNumber } from '@/lib/utils';
 
 const registrarInmuebleSchema = z.object({
-  numeroFinca: z.string().trim().min(1, 'Número de finca requerido').max(30),
-  planoCatastrado: z.string().trim().min(1, 'Plano catastrado requerido').max(30),
-  direccionExacta: z.string().trim().min(3, 'Dirección exacta requerida').max(255),
-  areaTerrenoM2: z.coerce.number().positive('El área de terreno debe ser mayor a 0'),
-  areaConstruccionM2: z.coerce.number().min(0, 'No puede ser negativa'),
-  valorFiscal: z.coerce.number().positive('El valor fiscal debe ser mayor a 0'),
-  idDistrito: z.coerce.number().int().min(1, 'Seleccione un distrito de Nicoya'),
-  idTipoUsoInmueble: z.coerce.number().int().min(1, 'Seleccione el tipo de uso'),
+  numeroFinca: z.string().trim().min(3, 'Número de finca requerido').max(50),
+  planoCatastro: z.string().trim().min(3, 'Plano catastrado requerido').max(50),
+  areaMetros: z.coerce.number().positive('Área debe ser mayor a 0'),
+  valorFiscal: z.coerce.number().positive('Valor fiscal debe ser mayor a 0'),
+  latitud: z.coerce.number().min(-90).max(90),
+  longitud: z.coerce.number().min(-180).max(180),
+  idDistrito: z.coerce.number().int().min(1),
+  idUsoSuelo: z.coerce.number().int().min(1),
+  idZonaHomogenea: z.coerce.number().int().min(1),
+  idTopografia: z.coerce.number().int().min(1),
+  idFormaPredio: z.coerce.number().int().min(1),
+  idUbicacionManzana: z.coerce.number().int().min(1),
 });
 
 const actualizarInmuebleSchema = z.object({
-  planoCatastrado: z.string().trim().min(1, 'Plano catastrado requerido').max(30),
-  direccionExacta: z.string().trim().min(3, 'Dirección exacta requerida').max(255),
-  areaTerrenoM2: z.coerce.number().positive('Mayor a 0'),
-  areaConstruccionM2: z.coerce.number().min(0, 'Mayor o igual a 0'),
-  valorFiscal: z.coerce.number().positive('Mayor a 0'),
-  idTipoUsoInmueble: z.coerce.number().int().min(1, 'Seleccione el tipo de uso'),
+  areaMetros: z.coerce.number().positive('Área debe ser mayor a 0'),
+  valorFiscal: z.coerce.number().positive('Valor fiscal debe ser mayor a 0'),
+  idUsoSuelo: z.coerce.number().int().min(1),
+  idZonaHomogenea: z.coerce.number().int().min(1),
+  activo: z.boolean(),
 });
 
-const asignarDerechoSchema = z.object({
-  idInmueble: z.coerce.number().int().min(1, 'Seleccione un inmueble'),
-  idContribuyente: z.coerce.number().int().min(1, 'Indique el ID del contribuyente'),
+const asociarPropietarioSchema = z.object({
+  idContribuyente: z.coerce.number().int().min(1, 'Seleccione contribuyente'),
   porcentajeParticipacion: z.coerce
     .number()
-    .min(0.01, 'Mínimo 0.01%')
-    .max(100, 'No puede superar el 100%'),
+    .gt(0, 'Debe ser mayor a 0%')
+    .lte(100, 'No puede exceder 100%'),
+});
+
+const registrarAvaluoSchema = z.object({
+  fechaAvaluo: z.string().min(1, 'Fecha requerida'),
+  valorTerreno: z.coerce.number().min(0),
+  valorConstruccion: z.coerce.number().min(0),
+  idPerito: z.coerce.number().int().min(1, 'Seleccione perito valuador'),
+  idEstadoAvaluo: z.coerce.number().int().min(1, 'Seleccione estado del avalúo'),
 });
 
 type RegistrarInmuebleForm = z.infer<typeof registrarInmuebleSchema>;
 type ActualizarInmuebleForm = z.infer<typeof actualizarInmuebleSchema>;
-type AsignarDerechoForm = z.infer<typeof asignarDerechoSchema>;
+type AsociarPropietarioForm = z.infer<typeof asociarPropietarioSchema>;
+type RegistrarAvaluoForm = z.infer<typeof registrarAvaluoSchema>;
 
 export function InmueblesPage() {
   const queryClient = useQueryClient();
-  const { hasRole } = useAuth();
-  const canReadPadron = hasRole(MODULE_PERMISSIONS.PADRON_LECTURA);
+  const [busqueda, setBusqueda] = useState('');
+  const [selectedContribuyenteId, setSelectedContribuyenteId] = useState<string>('');
 
-  const [fincaFiltro, setFincaFiltro] = useState('');
-  const [distritoFiltro, setDistritoFiltro] = useState<string>('');
-  const [contribuyenteFiltroId, setContribuyenteFiltroId] = useState<string>('');
-  const [openRegistrarModal, setOpenRegistrarModal] = useState(false);
-  const [editingInmueble, setEditingInmueble] = useState<VwInmueblesPropietario | null>(null);
-
-  const inmueblesPropietariosQuery = useQuery({
-    queryKey: ['inmuebles', 'propietarios'],
-    queryFn: () => inmuebleApi.listarConPropietarios(),
-  });
-
-  // sp_consultar_inmueble sin filtros = catastro completo, incluidas fincas aún sin propietario
-  // (vw_inmuebles_propietarios solo muestra fincas con al menos un derecho registrado).
-  const catastroQuery = useQuery({
-    queryKey: ['inmuebles', 'catastro'],
-    queryFn: () => inmuebleApi.buscar(),
-  });
+  const [openCreateModal, setOpenCreateModal] = useState(false);
+  const [editingInmueble, setEditingInmueble] = useState<VwCatastroInmueble | null>(null);
+  const [asociarInmuebleTarget, setAsociarInmuebleTarget] = useState<VwCatastroInmueble | null>(
+    null
+  );
+  const [avaluoInmuebleTarget, setAvaluoInmuebleTarget] = useState<VwCatastroInmueble | null>(null);
 
   const distritosQuery = useQuery({
     queryKey: ['catalogos', 'distritos'],
-    queryFn: () => catalogosInmuebleApi.distritos(),
+    queryFn: () => catalogosGeneralesApi.distritos(),
+  });
+  const usosSueloQuery = useQuery({
+    queryKey: ['catalogos-inm', 'usos-suelo'],
+    queryFn: () => catalogosInmuebleApi.usosSuelo(),
+  });
+  const zonasQuery = useQuery({
+    queryKey: ['catalogos-inm', 'zonas-homogeneas'],
+    queryFn: () => catalogosInmuebleApi.zonasHomogeneas(),
+  });
+  const topografiasQuery = useQuery({
+    queryKey: ['catalogos-inm', 'topografias'],
+    queryFn: () => catalogosInmuebleApi.topografias(),
+  });
+  const formasQuery = useQuery({
+    queryKey: ['catalogos-inm', 'formas-predio'],
+    queryFn: () => catalogosInmuebleApi.formasPredio(),
+  });
+  const ubicacionesQuery = useQuery({
+    queryKey: ['catalogos-inm', 'ubicaciones-manzana'],
+    queryFn: () => catalogosInmuebleApi.ubicacionesManzana(),
+  });
+  const peritosQuery = useQuery({
+    queryKey: ['catalogos-inm', 'peritos'],
+    queryFn: () => catalogosInmuebleApi.peritos(),
+  });
+  const estadosAvaluoQuery = useQuery({
+    queryKey: ['catalogos-inm', 'estados-avaluo'],
+    queryFn: () => catalogosInmuebleApi.estadosAvaluo(),
   });
 
-  const tiposUsoQuery = useQuery({
-    queryKey: ['catalogos', 'tipos-uso'],
-    queryFn: () => catalogosInmuebleApi.tiposUso(),
+  const catastroQuery = useQuery({
+    queryKey: ['inmuebles', 'catastro'],
+    queryFn: () => inmuebleApi.catastro(),
   });
 
   const padronQuery = useQuery({
-    queryKey: ['contribuyentes', 'padron-selector'],
+    queryKey: ['contribuyentes', 'padron-select'],
     queryFn: () => contribuyenteApi.padron(),
-    enabled: canReadPadron,
   });
 
-  const porContribuyenteQuery = useQuery({
-    queryKey: ['inmuebles', 'por-contribuyente', contribuyenteFiltroId],
-    queryFn: () => inmuebleApi.porContribuyente(Number(contribuyenteFiltroId)),
-    enabled: Number(contribuyenteFiltroId) > 0,
+  const inmueblesPorContribuyenteQuery = useQuery({
+    queryKey: ['inmuebles', 'por-contribuyente', selectedContribuyenteId],
+    queryFn: () => inmuebleApi.porContribuyente(Number(selectedContribuyenteId)),
+    enabled: Boolean(selectedContribuyenteId),
   });
 
-  const regForm = useForm<RegistrarInmuebleForm>({
+  const createForm = useForm<RegistrarInmuebleForm>({
     resolver: zodResolver(registrarInmuebleSchema),
     defaultValues: {
       numeroFinca: '',
-      planoCatastrado: '',
-      direccionExacta: '',
-      areaTerrenoM2: 250,
-      areaConstruccionM2: 120,
+      planoCatastro: '',
+      areaMetros: 250,
       valorFiscal: 25000000,
+      latitud: 10.1483,
+      longitud: -85.452,
       idDistrito: 1,
-      idTipoUsoInmueble: 1,
+      idUsoSuelo: 1,
+      idZonaHomogenea: 1,
+      idTopografia: 1,
+      idFormaPredio: 1,
+      idUbicacionManzana: 1,
     },
   });
 
@@ -124,27 +159,37 @@ export function InmueblesPage() {
     resolver: zodResolver(actualizarInmuebleSchema),
   });
 
-  const derechoForm = useForm<AsignarDerechoForm>({
-    resolver: zodResolver(asignarDerechoSchema),
+  const asociarForm = useForm<AsociarPropietarioForm>({
+    resolver: zodResolver(asociarPropietarioSchema),
     defaultValues: {
-      idInmueble: 0,
-      idContribuyente: 0,
+      idContribuyente: 1,
       porcentajeParticipacion: 100,
     },
   });
 
-  const registrarMut = useMutation({
+  const avaluoForm = useForm<RegistrarAvaluoForm>({
+    resolver: zodResolver(registrarAvaluoSchema),
+    defaultValues: {
+      fechaAvaluo: new Date().toISOString().slice(0, 10),
+      valorTerreno: 18000000,
+      valorConstruccion: 14000000,
+      idPerito: 1,
+      idEstadoAvaluo: 1,
+    },
+  });
+
+  const crearMut = useMutation({
     mutationFn: (dto: RegistrarInmuebleForm) => inmuebleApi.registrar(dto),
     onSuccess: (res) => {
       toast.success(`${res.message || 'Inmueble registrado'} (ID #${res.data})`);
-      setOpenRegistrarModal(false);
-      regForm.reset();
+      createForm.reset();
+      setOpenCreateModal(false);
       queryClient.invalidateQueries({ queryKey: ['inmuebles'] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const actualizarMut = useMutation({
+  const editarMut = useMutation({
     mutationFn: ({ id, dto }: { id: number; dto: ActualizarInmuebleForm }) =>
       inmuebleApi.actualizar(id, dto),
     onSuccess: (res) => {
@@ -155,270 +200,244 @@ export function InmueblesPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const asignarDerechoMut = useMutation({
-    mutationFn: (dto: AsignarDerechoForm) =>
-      inmuebleApi.asignarDerecho(dto.idInmueble, {
-        idContribuyente: dto.idContribuyente,
-        porcentajeParticipacion: dto.porcentajeParticipacion,
-      }),
+  const asociarMut = useMutation({
+    mutationFn: ({ idInmueble, dto }: { idInmueble: number; dto: AsociarPropietarioForm }) =>
+      inmuebleApi.asociarPropietario(idInmueble, dto),
     onSuccess: (res) => {
-      toast.success(res.message || 'Derecho de propiedad asignado.');
+      toast.success(res.message || 'Propietario asociado al inmueble.');
+      setAsociarInmuebleTarget(null);
       queryClient.invalidateQueries({ queryKey: ['inmuebles'] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const openEdit = (row: VwInmueblesPropietario) => {
-    setEditingInmueble(row);
-    const matchingUso = tiposUsoQuery.data?.find((u) => u.codigoUso === row.codigoUso);
-    editForm.reset({
-      planoCatastrado: row.planoCatastrado ?? '',
-      direccionExacta: row.direccionExacta ?? '',
-      areaTerrenoM2: row.areaTerrenoM2,
-      areaConstruccionM2: row.areaConstruccionM2,
-      valorFiscal: row.valorFiscal,
-      idTipoUsoInmueble: matchingUso?.idTipoUsoInmueble ?? 1,
-    });
-  };
+  const avaluoMut = useMutation({
+    mutationFn: ({ idInmueble, dto }: { idInmueble: number; dto: RegistrarAvaluoForm }) =>
+      inmuebleApi.registrarAvaluo(idInmueble, dto),
+    onSuccess: (res) => {
+      toast.success(`${res.message || 'Avalúo registrado'} (ID Avalúo #${res.data})`);
+      setAvaluoInmuebleTarget(null);
+      queryClient.invalidateQueries({ queryKey: ['inmuebles'] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
-  // Lista única de inmuebles para el selector de asignación de derechos
-  const conPropietario = new Set((inmueblesPropietariosQuery.data ?? []).map((i) => i.idInmueble));
-  const sinPropietario: VwInmueblesPropietario[] = (catastroQuery.data ?? [])
-    .filter((c) => !conPropietario.has(c.idInmueble))
-    .map((c) => ({
-      idInmueble: c.idInmueble,
-      numeroFinca: c.numeroFinca,
-      nombreDistrito: c.nombreDistrito,
-      codigoDistrital: null,
-      codigoUso: c.codigoUso,
-      usoSuelo: c.usoSuelo,
-      direccionExacta: c.direccionExacta,
-      areaTerrenoM2: c.areaTerrenoM2,
-      areaConstruccionM2: c.areaConstruccionM2,
-      valorFiscal: c.valorFiscal,
-      planoCatastrado: c.planoCatastrado,
-      idContribuyente: 0,
-      identificacionOficial: null,
-      nombreORazonSocial: null,
-      porcentajeParticipacion: 0,
-      fechaAdquisicion: '',
-      valorFiscalProporcional: null,
-    }));
-  const todasLasFilas = [...(inmueblesPropietariosQuery.data ?? []), ...sinPropietario];
-
-  const inmueblesUnicos = Array.from(
-    new Map(todasLasFilas.map((item) => [item.idInmueble, item])).values()
-  );
-
-  // Filtrado de tabla
-  const rows = todasLasFilas.filter((r) => {
-    const matchFinca =
-      !fincaFiltro.trim() ||
-      (r.numeroFinca ?? '').toLowerCase().includes(fincaFiltro.trim().toLowerCase()) ||
-      (r.planoCatastrado ?? '').toLowerCase().includes(fincaFiltro.trim().toLowerCase()) ||
-      (r.nombreORazonSocial ?? '').toLowerCase().includes(fincaFiltro.trim().toLowerCase()) ||
-      (r.identificacionOficial ?? '').toLowerCase().includes(fincaFiltro.trim().toLowerCase());
-
-    const selectedDistritoObj = distritosQuery.data?.find(
-      (d) => String(d.idDistrito) === distritoFiltro
+  const catastroFiltrado = (catastroQuery.data ?? []).filter((f) => {
+    if (!busqueda.trim()) return true;
+    const q = busqueda.trim().toLowerCase();
+    return (
+      f.numeroFinca.toLowerCase().includes(q) ||
+      f.planoCatastro.toLowerCase().includes(q) ||
+      f.nombreDistrito.toLowerCase().includes(q) ||
+      (f.propietarios || '').toLowerCase().includes(q)
     );
-    const matchDistrito =
-      !distritoFiltro ||
-      !selectedDistritoObj ||
-      (r.nombreDistrito ?? '').toLowerCase() === (selectedDistritoObj.nombreDistrito ?? '').toLowerCase();
-
-    const matchContribuyente =
-      !contribuyenteFiltroId ||
-      String(r.idContribuyente ?? '') === contribuyenteFiltroId.trim();
-
-    return matchFinca && matchDistrito && matchContribuyente;
   });
 
   return (
-    <div className="flex flex-col" style={{ gap: '2rem' }}>
+    <div className="space-y-6">
       <PageHeader
-        title="Padrón de bienes inmuebles"
-        subtitle="Consulte y administre fincas, información catastral y derechos de propiedad del cantón."
-        badge={`${inmueblesUnicos.length} fincas`}
+        title="Catastro Municipal y Bienes Inmuebles"
+        subtitle="Fincas inscritas, planos catastrados, uso de suelo, copropiedad y avalúos periciales."
+        badge={`${catastroQuery.data?.length ?? 0} fincas registradas`}
         icon={<Building2 className="h-6 w-6" />}
         actions={
           <>
             <Button
-              variant="outline"
-              size="sm"
+              variant="secondary"
               onClick={() => queryClient.invalidateQueries({ queryKey: ['inmuebles'] })}
             >
               <RefreshCw className="h-4 w-4" /> Actualizar
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                exportToCsv('inmuebles_propietarios_nicoya.csv', rows as unknown as Record<string, unknown>[])
-              }
-              disabled={rows.length === 0}
-            >
-              <Download className="h-4 w-4" /> Exportar CSV
-            </Button>
-            <Button size="sm" onClick={() => setOpenRegistrarModal(true)}>
-              <Plus className="h-4 w-4" /> Registrar inmueble
+            <Button onClick={() => setOpenCreateModal(true)}>
+              <Plus className="h-4 w-4" /> Registrar Nuevo Inmueble
             </Button>
           </>
         }
       />
 
-      {/* Layout de 2 columnas del Wireframe 11: Tabla a la izquierda, Panel "Asociar Inmueble" a la derecha */}
-      <div className="flex flex-col" style={{ gap: '2rem' }}>
-        {/* Consulta y tabla a ancho completo para conservar una lectura horizontal cómoda. */}
-        <div className="flex flex-col" style={{ gap: '1.5rem' }}>
-          <Card className="overflow-hidden">
-            <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
-              <CardTitle className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-sigemun-primary" /> Consultar catastro
-              </CardTitle>
-              <CardDescription>Filtre por finca, plano, distrito o contribuyente propietario.</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6 sm:pt-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-sigemun-text">
-                    Finca, plano o propietario
-                  </label>
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-sigemun-muted" />
-                    <Input
-                      placeholder="Ej. 5-123456-000 o G-..."
-                      value={fincaFiltro}
-                      onChange={(e) => setFincaFiltro(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                </div>
+      {/* Barra de Búsqueda y Filtro por Contribuyente */}
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+            <div className="lg:col-span-7">
+              <label className="mb-1.5 block text-xs font-semibold text-[#171717]">
+                Búsqueda Rápida en Catastro
+              </label>
+              <SearchInput
+                value={busqueda}
+                onChange={setBusqueda}
+                placeholder="Buscar por número de finca, plano catastro, distrito o propietario..."
+              />
+            </div>
+            <div className="lg:col-span-5">
+              <label className="mb-1.5 block text-xs font-semibold text-[#171717]">
+                Consultar Propiedades por Contribuyente
+              </label>
+              <Select
+                value={selectedContribuyenteId}
+                onChange={(e) => setSelectedContribuyenteId(e.target.value)}
+              >
+                <option value="">— Ver todo el catastro municipal —</option>
+                {(padronQuery.data ?? []).map((p) => (
+                  <option key={p.idContribuyente} value={p.idContribuyente}>
+                    #{p.idContribuyente} · {p.identificacion} — {p.nombreCompletoORazonSocial}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-sigemun-text">
-                    Distrito
-                  </label>
-                  <Select
-                    value={distritoFiltro}
-                    onChange={(e) => setDistritoFiltro(e.target.value)}
-                  >
-                    <option value="">Todos los distritos</option>
-                    {(distritosQuery.data ?? []).map((d) => (
-                      <option key={d.idDistrito} value={d.idDistrito}>
-                        {d.codigoDistrital} — {d.nombreDistrito}
-                      </option>
-                    ))}
-                  </Select>
+          {selectedContribuyenteId && (
+            <div className="rounded-[10px] border border-[#BFDBFE] bg-[#EFF6FF] p-4">
+              <p className="mb-2 text-xs font-bold text-[#1E3A8A]">
+                Propiedades asociadas al Contribuyente #{selectedContribuyenteId}:
+              </p>
+              {inmueblesPorContribuyenteQuery.isLoading ? (
+                <p className="text-xs text-[#4B5563]">Consultando propiedades...</p>
+              ) : (inmueblesPorContribuyenteQuery.data ?? []).length === 0 ? (
+                <p className="text-xs text-[#6B7280]">
+                  Este contribuyente no tiene inmuebles asociados aún.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {(inmueblesPorContribuyenteQuery.data ?? []).map((inm) => (
+                    <div
+                      key={inm.idInmueble}
+                      className="rounded-[10px] border border-[#D1D5DB] bg-white p-3 text-xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-bold text-[#1E3A8A]">
+                          Finca {inm.numeroFinca}
+                        </span>
+                        <Badge variant="success">{inm.porcentajeParticipacion}% derecho</Badge>
+                      </div>
+                      <p className="mt-1 text-[#4B5563]">
+                        Plano: <span className="font-mono">{inm.planoCatastro}</span> ·{' '}
+                        {inm.nombreDistrito}
+                      </p>
+                      <p className="mt-0.5 font-bold text-[#171717]">
+                        Valor fiscal: {formatCurrencyCRC(inm.valorFiscal)}
+                      </p>
+                    </div>
+                  ))}
                 </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-sigemun-text">
-                    ID del contribuyente
-                  </label>
-                  <Input
-                    type="number"
-                    min={1}
-                    placeholder="Ej. 1"
-                    value={contribuyenteFiltroId}
-                    onChange={(e) => setContribuyenteFiltroId(e.target.value)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {inmueblesPropietariosQuery.isLoading ? (
-            <LoadingState message="Cargando catastro de bienes inmuebles y propietarios..." />
-          ) : inmueblesPropietariosQuery.isError ? (
-            <ErrorState
-              error={inmueblesPropietariosQuery.error}
-              onRetry={() => inmueblesPropietariosQuery.refetch()}
-            />
-          ) : rows.length === 0 ? (
-            <EmptyState
-              title="No se encontraron bienes inmuebles"
-              description="Ajuste los filtros o registre un nuevo bien inmueble."
-            />
-          ) : (
-            <div className="overflow-x-auto rounded-2xl border border-sigemun-border bg-white shadow-card" role="region" aria-label="Catastro de bienes inmuebles" tabIndex={0}>
-              <table className="w-full min-w-[1080px] border-collapse text-left text-sm">
+      {/* Tabla de Catastro de Inmuebles */}
+      {catastroQuery.isLoading ? (
+        <LoadingState message="Cargando catastro de bienes inmuebles..." />
+      ) : catastroQuery.isError ? (
+        <ErrorState error={catastroQuery.error} onRetry={() => catastroQuery.refetch()} />
+      ) : catastroFiltrado.length === 0 ? (
+        <EmptyState title="No se encontraron fincas con los filtros aplicados" />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Listado Oficial de Fincas y Derechos de Propiedad</CardTitle>
+            <CardDescription>
+              Gestione copropietarios, avalúos periciales (con actualización automática de valor
+              fiscal por trigger) y datos catastrales.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1150px] text-left text-xs">
                 <thead>
-                  <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
-                    <th scope="col" className="px-5 py-4">Finca y plano</th>
-                    <th scope="col" className="px-4 py-4">Distrito y uso</th>
-                    <th scope="col" className="px-4 py-4">Áreas</th>
-                    <th scope="col" className="px-4 py-4">Valor fiscal</th>
-                    <th scope="col" className="px-4 py-4">Propiedad</th>
-                    <th scope="col" className="px-5 py-4 text-right">Acciones</th>
+                  <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC] font-bold uppercase text-[#4B5563]">
+                    <th className="px-4 py-3.5">ID</th>
+                    <th className="px-4 py-3.5">Finca / Plano Catastro</th>
+                    <th className="px-4 py-3.5">Distrito / Uso / Zona</th>
+                    <th className="px-4 py-3.5">Área (m²)</th>
+                    <th className="px-4 py-3.5">Valor Fiscal</th>
+                    <th className="px-4 py-3.5">Último Avalúo</th>
+                    <th className="px-4 py-3.5">Copropietarios (% Derecho)</th>
+                    <th className="px-4 py-3.5 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-sigemun-border">
-                  {rows.map((r, idx) => (
-                    <tr
-                      key={`${r.idInmueble}-${r.idContribuyente ?? 'none'}-${idx}`}
-                      className="even:bg-sigemun-surface transition-colors hover:bg-sigemun-sky-muted/55"
-                    >
-                      <td className="px-3.5 py-3">
-                        <p className="font-mono font-bold text-sigemun-primary">{r.numeroFinca}</p>
-                        <p className="font-mono text-[11px] text-sigemun-muted">
-                          Plano: {r.planoCatastrado}
+                <tbody className="divide-y divide-[#E5E7EB]">
+                  {catastroFiltrado.map((inm) => (
+                    <tr key={inm.idInmueble} className="hover:bg-[#F8FAFC]">
+                      <td className="px-4 py-3.5 font-mono font-bold text-[#171717]">
+                        #{inm.idInmueble}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <p className="font-mono font-bold text-[#1E3A8A]">{inm.numeroFinca}</p>
+                        <p className="font-mono text-[11px] text-[#6B7280]">{inm.planoCatastro}</p>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <p className="font-semibold text-[#171717]">{inm.nombreDistrito}</p>
+                        <p className="text-[11px] text-[#6B7280]">
+                          {inm.usoSuelo} · {inm.zonaHomogenea}
                         </p>
                       </td>
-                      <td className="px-3.5 py-3">
-                        <p className="font-semibold text-sigemun-text">{r.nombreDistrito}</p>
-                        <Badge variant="outline" className="mt-0.5 text-[10px]">
-                          {r.usoSuelo}
-                        </Badge>
+                      <td className="px-4 py-3.5 font-medium">
+                        {formatNumber(inm.areaMetros, 2)} m²
                       </td>
-                      <td className="px-3.5 py-3">
-                        <p>Terreno: {formatNumber(r.areaTerrenoM2, 2)} m²</p>
-                        <p className="text-sigemun-muted">
-                          Const.: {formatNumber(r.areaConstruccionM2, 2)} m²
-                        </p>
+                      <td className="px-4 py-3.5 font-bold text-[#171717]">
+                        {formatCurrencyCRC(inm.valorFiscal)}
                       </td>
-                      <td className="px-3.5 py-3 font-semibold text-sigemun-text">
-                        {formatCurrencyCRC(r.valorFiscal)}
-                      </td>
-                      <td className="px-3.5 py-3">
-                        {r.nombreORazonSocial ? (
+                      <td className="px-4 py-3.5">
+                        {inm.ultimoValorTotalAvaluado ? (
                           <div>
-                            <p className="font-semibold text-sigemun-text">
-                              {r.nombreORazonSocial}{' '}
-                              <span className="font-mono text-[11px] text-sigemun-muted">
-                                (#{r.idContribuyente})
-                              </span>
+                            <p className="font-semibold text-[#15803D]">
+                              {formatCurrencyCRC(inm.ultimoValorTotalAvaluado)}
                             </p>
-                            <Badge variant="accent" className="mt-0.5">
-                              {formatNumber(r.porcentajeParticipacion, 2)}% participación
-                            </Badge>
+                            <p className="text-[11px] text-[#6B7280]">
+                              {formatDate(inm.fechaUltimoAvaluo)}
+                            </p>
                           </div>
                         ) : (
-                          <Badge variant="warning">Sin propietario asignado</Badge>
+                          <span className="text-[#9CA3AF]">Sin avalúo</span>
                         )}
                       </td>
-                      <td className="px-3.5 py-3 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1">
+                      <td className="px-4 py-3.5 max-w-xs">
+                        <p className="truncate font-medium text-[#171717]">
+                          {inm.propietarios || 'Sin propietarios asociados'}
+                        </p>
+                        <Badge
+                          variant={
+                            (inm.porcentajeTotalRegistrado ?? 0) === 100 ? 'success' : 'warning'
+                          }
+                          className="mt-1"
+                        >
+                          {formatNumber(inm.porcentajeTotalRegistrado ?? 0, 2)}% asignado
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1.5">
                           <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEdit(r)}
-                            title="Actualizar datos catastrales"
+                            variant="secondary"
+                            onClick={() => {
+                              setEditingInmueble(inm);
+                              const usoMatch = usosSueloQuery.data?.find(
+                                (u) => u.descripcion === inm.usoSuelo
+                              );
+                              const zonaMatch = zonasQuery.data?.find(
+                                (z) => z.nombreZona === inm.zonaHomogenea
+                              );
+                              editForm.reset({
+                                areaMetros: inm.areaMetros,
+                                valorFiscal: inm.valorFiscal,
+                                idUsoSuelo: usoMatch?.idUsoSuelo ?? 1,
+                                idZonaHomogenea: zonaMatch?.idZonaHomogenea ?? 1,
+                                activo: inm.inmuebleActivo,
+                              });
+                            }}
                           >
-                            <Edit3 className="h-3.5 w-3.5" />
+                            <Edit3 className="h-3.5 w-3.5" /> Editar
                           </Button>
                           <Button
                             variant="secondary"
-                            size="sm"
-                            onClick={() => {
-                              derechoForm.setValue('idInmueble', r.idInmueble);
-                              if (r.idContribuyente) {
-                                derechoForm.setValue('idContribuyente', r.idContribuyente);
-                              }
-                            }}
-                            title="Seleccionar finca para asignar copropiedad"
+                            onClick={() => setAsociarInmuebleTarget(inm)}
                           >
-                            <Link2 className="h-3.5 w-3.5" /> Derecho
+                            <UserPlus className="h-3.5 w-3.5" /> Propietario
+                          </Button>
+                          <Button onClick={() => setAvaluoInmuebleTarget(inm)}>
+                            <Calculator className="h-3.5 w-3.5" /> Avalúo
                           </Button>
                         </div>
                       </td>
@@ -427,333 +446,330 @@ export function InmueblesPage() {
                 </tbody>
               </table>
             </div>
-          )}
+          </CardContent>
+        </Card>
+      )}
 
-          {Number(contribuyenteFiltroId) > 0 && porContribuyenteQuery.data && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">
-                  Inmuebles del contribuyente #{contribuyenteFiltroId}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-sigemun-muted">
-                  Inmuebles asociados al contribuyente #{contribuyenteFiltroId}:{' '}
-                  <strong>{porContribuyenteQuery.data.length}</strong> registro(s).
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Herramientas complementarias en disposición horizontal. */}
-        <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: '2rem' }}>
-          <Card className="overflow-hidden border-sigemun-sky">
-            <CardHeader className="border-b border-sigemun-border bg-sigemun-bg">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-sigemun-primary shadow-sm">
-                  <Link2 className="h-5 w-5" />
-                </div>
-                <div>
-                  <CardTitle>Asignar derecho de propiedad</CardTitle>
-                  <CardDescription className="mt-1">
-                    Vincule un contribuyente a una finca y defina su porcentaje de participación.
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6 sm:pt-6">
-              <form
-                onSubmit={derechoForm.handleSubmit((v) => asignarDerechoMut.mutate(v))}
-                className="space-y-4"
-              >
-                <FormField
-                  label="Finca / Bien Inmueble"
-                  required
-                  error={derechoForm.formState.errors.idInmueble?.message}
-                >
-                  <Select {...derechoForm.register('idInmueble')}>
-                    <option value={0}>Seleccione una finca...</option>
-                    {inmueblesUnicos.map((inm) => (
-                      <option key={inm.idInmueble} value={inm.idInmueble}>
-                        #{inm.idInmueble} · Finca {inm.numeroFinca} ({inm.nombreDistrito})
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-
-                <FormField
-                  label="Contribuyente Propietario"
-                  required
-                  error={derechoForm.formState.errors.idContribuyente?.message}
-                  hint={
-                    canReadPadron
-                      ? 'Seleccione del padrón o ingrese el ID'
-                      : 'Ingrese el ID del contribuyente (su rol Analista consulta propietarios desde la vista de inmuebles)'
-                  }
-                >
-                  {canReadPadron && padronQuery.data ? (
-                    <Select {...derechoForm.register('idContribuyente')}>
-                      <option value={0}>Seleccione un contribuyente...</option>
-                      {padronQuery.data.map((c) => (
-                        <option key={c.idContribuyente} value={c.idContribuyente}>
-                          #{c.idContribuyente} · {c.identificacionOficial} —{' '}
-                          {c.nombreORazonSocial}
-                        </option>
-                      ))}
-                    </Select>
-                  ) : (
-                    <Input
-                      type="number"
-                      min={1}
-                      placeholder="ID del contribuyente (ej. 1)"
-                      {...derechoForm.register('idContribuyente')}
-                    />
-                  )}
-                </FormField>
-
-                <FormField
-                  label="Porcentaje de Participación (%)"
-                  required
-                  error={derechoForm.formState.errors.porcentajeParticipacion?.message}
-                  hint="Entre 0.01% y 100%. La suma de copropietarios no puede superar 100%."
-                >
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    max="100"
-                    {...derechoForm.register('porcentajeParticipacion')}
-                  />
-                </FormField>
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={asignarDerechoMut.isPending}
-                >
-                  {asignarDerechoMut.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" /> Validando participación...
-                    </>
-                  ) : (
-                    'Asignar Derecho de Propiedad'
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* Catálogo de Distritos de Nicoya */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Distritos del cantón de Nicoya</CardTitle>
-              <CardDescription>Referencia territorial utilizada en el registro catastral.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-1.5 text-xs">
-                {(distritosQuery.data ?? []).map((d) => (
-                  <div
-                    key={d.idDistrito}
-                    className="flex items-center justify-between rounded-lg bg-sigemun-bg px-3 py-1.5"
-                  >
-                    <span className="font-semibold text-sigemun-text">
-                      {d.codigoDistrital} · {d.nombreDistrito}
-                    </span>
-                    <span className="text-sigemun-muted">
-                      {formatNumber(inmueblesUnicos.filter((i) => i.nombreDistrito === d.nombreDistrito).length)} inmueble(s)
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* MODAL: REGISTRAR NUEVO INMUEBLE (CU-06) */}
+      {/* MODAL 1: REGISTRAR INMUEBLE */}
       <Modal
-        open={openRegistrarModal}
-        onClose={() => setOpenRegistrarModal(false)}
-        title="Registrar nuevo bien inmueble"
-        description="Complete la información catastral y fiscal de la propiedad."
+        open={openCreateModal}
+        onClose={() => setOpenCreateModal(false)}
+        title="Registrar Nuevo Bien Inmueble (dbo.Inmueble)"
         maxWidth="max-w-2xl"
       >
         <form
-          onSubmit={regForm.handleSubmit((dto) => registrarMut.mutate(dto))}
+          onSubmit={createForm.handleSubmit((dto) => crearMut.mutate(dto))}
           className="grid grid-cols-1 gap-4 sm:grid-cols-2"
         >
           <FormField
-            label="Número de Finca ( Folio Real )"
+            label="Número de Finca"
             required
-            error={regForm.formState.errors.numeroFinca?.message}
+            error={createForm.formState.errors.numeroFinca?.message}
           >
-            <Input placeholder="Ej. 5-198234-000" {...regForm.register('numeroFinca')} />
+            <Input placeholder="Ej. 5-198234-000" {...createForm.register('numeroFinca')} />
           </FormField>
 
           <FormField
             label="Plano Catastrado"
             required
-            error={regForm.formState.errors.planoCatastrado?.message}
+            error={createForm.formState.errors.planoCatastro?.message}
           >
-            <Input placeholder="Ej. G-1029384-2024" {...regForm.register('planoCatastrado')} />
+            <Input placeholder="Ej. G-2091823-2026" {...createForm.register('planoCatastro')} />
           </FormField>
 
           <FormField
-            label="Distrito de Nicoya"
+            label="Área en Metros Cuadrados (m²)"
             required
-            error={regForm.formState.errors.idDistrito?.message}
+            error={createForm.formState.errors.areaMetros?.message}
           >
-            <Select {...regForm.register('idDistrito')}>
+            <Input type="number" step="0.01" {...createForm.register('areaMetros')} />
+          </FormField>
+
+          <FormField
+            label="Valor Fiscal Inicial (₡ CRC)"
+            required
+            error={createForm.formState.errors.valorFiscal?.message}
+          >
+            <Input type="number" step="0.01" {...createForm.register('valorFiscal')} />
+          </FormField>
+
+          <FormField label="Latitud" required error={createForm.formState.errors.latitud?.message}>
+            <Input type="number" step="0.000001" {...createForm.register('latitud')} />
+          </FormField>
+
+          <FormField
+            label="Longitud"
+            required
+            error={createForm.formState.errors.longitud?.message}
+          >
+            <Input type="number" step="0.000001" {...createForm.register('longitud')} />
+          </FormField>
+
+          <FormField label="Distrito" required>
+            <Select {...createForm.register('idDistrito')}>
               {(distritosQuery.data ?? []).map((d) => (
                 <option key={d.idDistrito} value={d.idDistrito}>
-                  {d.nombreDistrito} ({d.codigoDistrital})
+                  {d.codigoDistrito} — {d.nombreDistrito}
                 </option>
               ))}
             </Select>
           </FormField>
 
-          <FormField
-            label="Tipo de Uso de Suelo"
-            required
-            error={regForm.formState.errors.idTipoUsoInmueble?.message}
-          >
-            <Select {...regForm.register('idTipoUsoInmueble')}>
-              {(tiposUsoQuery.data ?? []).map((u) => (
-                <option key={u.idTipoUsoInmueble} value={u.idTipoUsoInmueble}>
-                  {u.descripcion} ({u.codigoUso})
+          <FormField label="Uso de Suelo" required>
+            <Select {...createForm.register('idUsoSuelo')}>
+              {(usosSueloQuery.data ?? []).map((u) => (
+                <option key={u.idUsoSuelo} value={u.idUsoSuelo}>
+                  {u.codigoUso} — {u.descripcion}
                 </option>
               ))}
             </Select>
           </FormField>
 
-          <FormField
-            label="Área de Terreno (m²)"
-            required
-            error={regForm.formState.errors.areaTerrenoM2?.message}
-          >
-            <Input type="number" step="0.01" {...regForm.register('areaTerrenoM2')} />
+          <FormField label="Zona Homogénea" required>
+            <Select {...createForm.register('idZonaHomogenea')}>
+              {(zonasQuery.data ?? []).map((z) => (
+                <option key={z.idZonaHomogenea} value={z.idZonaHomogenea}>
+                  {z.nombreZona} ({formatCurrencyCRC(z.valorBaseMetro)}/m²)
+                </option>
+              ))}
+            </Select>
           </FormField>
 
-          <FormField
-            label="Área de Construcción (m²)"
-            required
-            error={regForm.formState.errors.areaConstruccionM2?.message}
-          >
-            <Input type="number" step="0.01" {...regForm.register('areaConstruccionM2')} />
+          <FormField label="Topografía" required>
+            <Select {...createForm.register('idTopografia')}>
+              {(topografiasQuery.data ?? []).map((t) => (
+                <option key={t.idTopografia} value={t.idTopografia}>
+                  {t.codigoTopografia} (Factor: {t.factorCorreccion})
+                </option>
+              ))}
+            </Select>
           </FormField>
 
-          <FormField
-            label="Valor Fiscal Imponible (₡ CRC)"
-            required
-            className="sm:col-span-2"
-            error={regForm.formState.errors.valorFiscal?.message}
-          >
-            <Input type="number" step="0.01" {...regForm.register('valorFiscal')} />
+          <FormField label="Forma del Predio" required>
+            <Select {...createForm.register('idFormaPredio')}>
+              {(formasQuery.data ?? []).map((f) => (
+                <option key={f.idFormaPredio} value={f.idFormaPredio}>
+                  {f.codigoForma} (Factor: {f.factorCorreccion})
+                </option>
+              ))}
+            </Select>
           </FormField>
 
-          <FormField
-            label="Dirección Exacta de la Propiedad"
-            required
-            className="sm:col-span-2"
-            error={regForm.formState.errors.direccionExacta?.message}
-          >
-            <Input
-              placeholder="Ubicación exacta, referencias y colindancias..."
-              {...regForm.register('direccionExacta')}
-            />
+          <FormField label="Ubicación en Manzana" required>
+            <Select {...createForm.register('idUbicacionManzana')}>
+              {(ubicacionesQuery.data ?? []).map((ub) => (
+                <option key={ub.idUbicacionManzana} value={ub.idUbicacionManzana}>
+                  {ub.codigoUbicacion} (Factor: {ub.factorCorreccion})
+                </option>
+              ))}
+            </Select>
           </FormField>
 
           <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setOpenRegistrarModal(false)}>
+            <Button type="button" variant="secondary" onClick={() => setOpenCreateModal(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={registrarMut.isPending}>
-              {registrarMut.isPending ? 'Registrando...' : 'Registrar Inmueble'}
+            <Button type="submit" disabled={crearMut.isPending}>
+              {crearMut.isPending ? 'Registrando...' : 'Registrar Inmueble'}
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* MODAL: ACTUALIZAR INMUEBLE (CU-08) */}
+      {/* MODAL 2: EDITAR INMUEBLE */}
       <Modal
         open={Boolean(editingInmueble)}
         onClose={() => setEditingInmueble(null)}
         title={`Actualizar Finca ${editingInmueble?.numeroFinca ?? ''}`}
-        description={`ID Inmueble #${editingInmueble?.idInmueble ?? ''} · Distrito ${
-          editingInmueble?.nombreDistrito ?? ''
-        }`}
-        maxWidth="max-w-xl"
       >
         {editingInmueble && (
           <form
             onSubmit={editForm.handleSubmit((dto) =>
-              actualizarMut.mutate({ id: editingInmueble.idInmueble, dto })
+              editarMut.mutate({ id: editingInmueble.idInmueble, dto })
             )}
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+            className="space-y-4"
           >
-            <FormField
-              label="Plano Catastrado"
-              required
-              error={editForm.formState.errors.planoCatastrado?.message}
-            >
-              <Input {...editForm.register('planoCatastrado')} />
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                label="Área (m²)"
+                required
+                error={editForm.formState.errors.areaMetros?.message}
+              >
+                <Input type="number" step="0.01" {...editForm.register('areaMetros')} />
+              </FormField>
+              <FormField
+                label="Valor Fiscal (₡)"
+                required
+                error={editForm.formState.errors.valorFiscal?.message}
+              >
+                <Input type="number" step="0.01" {...editForm.register('valorFiscal')} />
+              </FormField>
+            </div>
+
+            <FormField label="Uso de Suelo" required>
+              <Select {...editForm.register('idUsoSuelo')}>
+                {(usosSueloQuery.data ?? []).map((u) => (
+                  <option key={u.idUsoSuelo} value={u.idUsoSuelo}>
+                    {u.codigoUso} — {u.descripcion}
+                  </option>
+                ))}
+              </Select>
             </FormField>
 
+            <FormField label="Zona Homogénea" required>
+              <Select {...editForm.register('idZonaHomogenea')}>
+                {(zonasQuery.data ?? []).map((z) => (
+                  <option key={z.idZonaHomogenea} value={z.idZonaHomogenea}>
+                    {z.nombreZona}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+
+            <label className="flex items-center gap-2 text-sm font-medium text-[#171717]">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-[#D1D5DB] accent-[#171717]"
+                {...editForm.register('activo')}
+              />
+              Inmueble Activo
+            </label>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="secondary" onClick={() => setEditingInmueble(null)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={editarMut.isPending}>
+                Guardar Cambios
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* MODAL 3: ASOCIAR COPROPIETARIO */}
+      <Modal
+        open={Boolean(asociarInmuebleTarget)}
+        onClose={() => setAsociarInmuebleTarget(null)}
+        title={`Asociar Propietario — Finca ${asociarInmuebleTarget?.numeroFinca ?? ''}`}
+      >
+        {asociarInmuebleTarget && (
+          <form
+            onSubmit={asociarForm.handleSubmit((dto) =>
+              asociarMut.mutate({ idInmueble: asociarInmuebleTarget.idInmueble, dto })
+            )}
+            className="space-y-4"
+          >
             <FormField
-              label="Tipo de Uso de Suelo"
+              label="Contribuyente Propietario"
               required
-              error={editForm.formState.errors.idTipoUsoInmueble?.message}
+              error={asociarForm.formState.errors.idContribuyente?.message}
             >
-              <Select {...editForm.register('idTipoUsoInmueble')}>
-                {(tiposUsoQuery.data ?? []).map((u) => (
-                  <option key={u.idTipoUsoInmueble} value={u.idTipoUsoInmueble}>
-                    {u.descripcion}
+              <Select {...asociarForm.register('idContribuyente')}>
+                {(padronQuery.data ?? []).map((p) => (
+                  <option key={p.idContribuyente} value={p.idContribuyente}>
+                    #{p.idContribuyente} · {p.identificacion} — {p.nombreCompletoORazonSocial}
                   </option>
                 ))}
               </Select>
             </FormField>
 
             <FormField
-              label="Área de Terreno (m²)"
+              label="Porcentaje de Participación (%)"
               required
-              error={editForm.formState.errors.areaTerrenoM2?.message}
+              error={asociarForm.formState.errors.porcentajeParticipacion?.message}
             >
-              <Input type="number" step="0.01" {...editForm.register('areaTerrenoM2')} />
+              <Input
+                type="number"
+                step="0.01"
+                min={0.01}
+                max={100}
+                {...asociarForm.register('porcentajeParticipacion')}
+              />
             </FormField>
 
-            <FormField
-              label="Área de Construcción (m²)"
-              required
-              error={editForm.formState.errors.areaConstruccionM2?.message}
-            >
-              <Input type="number" step="0.01" {...editForm.register('areaConstruccionM2')} />
-            </FormField>
-
-            <FormField
-              label="Valor Fiscal (₡ CRC)"
-              required
-              className="sm:col-span-2"
-              error={editForm.formState.errors.valorFiscal?.message}
-            >
-              <Input type="number" step="0.01" {...editForm.register('valorFiscal')} />
-            </FormField>
-
-            <FormField
-              label="Dirección Exacta"
-              required
-              className="sm:col-span-2"
-              error={editForm.formState.errors.direccionExacta?.message}
-            >
-              <Input {...editForm.register('direccionExacta')} />
-            </FormField>
-
-            <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => setEditingInmueble(null)}>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setAsociarInmuebleTarget(null)}
+              >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={actualizarMut.isPending}>
-                {actualizarMut.isPending ? 'Guardando...' : 'Guardar Cambios'}
+              <Button type="submit" disabled={asociarMut.isPending}>
+                Guardar Asociación
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* MODAL 4: REGISTRAR AVALÚO PERICIAL */}
+      <Modal
+        open={Boolean(avaluoInmuebleTarget)}
+        onClose={() => setAvaluoInmuebleTarget(null)}
+        title={`Registrar Avalúo — Finca ${avaluoInmuebleTarget?.numeroFinca ?? ''}`}
+        description="El trigger de base de datos actualizará automáticamente el valor fiscal del inmueble al aprobar el avalúo."
+      >
+        {avaluoInmuebleTarget && (
+          <form
+            onSubmit={avaluoForm.handleSubmit((dto) =>
+              avaluoMut.mutate({ idInmueble: avaluoInmuebleTarget.idInmueble, dto })
+            )}
+            className="space-y-4"
+          >
+            <FormField
+              label="Fecha del Avalúo (dd/MM/yyyy)"
+              required
+              error={avaluoForm.formState.errors.fechaAvaluo?.message}
+            >
+              <Calendar
+                value={avaluoForm.watch('fechaAvaluo')}
+                onChange={(iso) =>
+                  avaluoForm.setValue('fechaAvaluo', iso, { shouldValidate: true })
+                }
+              />
+            </FormField>
+
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Valor del Terreno (₡)" required>
+                <Input type="number" step="0.01" {...avaluoForm.register('valorTerreno')} />
+              </FormField>
+              <FormField label="Valor de Construcción (₡)" required>
+                <Input type="number" step="0.01" {...avaluoForm.register('valorConstruccion')} />
+              </FormField>
+            </div>
+
+            <FormField label="Perito Valuador" required>
+              <Select {...avaluoForm.register('idPerito')}>
+                {(peritosQuery.data ?? []).map((p) => (
+                  <option key={p.idPerito} value={p.idPerito}>
+                    {p.codigoCarné} — {p.nombreCompleto} ({p.especialidad})
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+
+            <FormField label="Estado del Avalúo" required>
+              <Select {...avaluoForm.register('idEstadoAvaluo')}>
+                {(estadosAvaluoQuery.data ?? []).map((ea) => (
+                  <option key={ea.idEstadoAvaluo} value={ea.idEstadoAvaluo}>
+                    {ea.codigoEstado}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setAvaluoInmuebleTarget(null)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={avaluoMut.isPending}>
+                Registrar Avalúo
               </Button>
             </div>
           </form>
@@ -762,4 +778,3 @@ export function InmueblesPage() {
     </div>
   );
 }
-

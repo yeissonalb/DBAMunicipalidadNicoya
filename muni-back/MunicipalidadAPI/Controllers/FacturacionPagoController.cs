@@ -8,7 +8,7 @@ namespace MunicipalidadAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = $"{Roles.Admin},{Roles.Cajero}")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Cajero},{Roles.Contribuyente},{Roles.Ciudadano},{Roles.CiudadanoContribuyente}")]
     public class FacturacionPagoController : ControllerBase
     {
         private readonly ISvFacturacionPago _svFacturacionPago;

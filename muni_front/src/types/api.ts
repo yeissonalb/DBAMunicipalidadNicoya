@@ -1,9 +1,6 @@
-// ============================================================================
+﻿// ============================================================================
 // Contratos tipados exactos del Backend SIGEMUN (muni-back .NET 9 Web API)
 // ============================================================================
-
-// Recordsets exactos de la API (generados desde muni-back)
-export * from './generated';
 
 export interface BaseResponse<T> {
   success: boolean;
@@ -23,6 +20,7 @@ export interface UsuarioTokenDto {
   idUsuario: number;
   userName: string;
   nombreCompleto?: string | null;
+  nombreFuncionario?: string | null;
   email?: string | null;
   idDepartamento: number;
   nombreDepartamento?: string | null;
@@ -39,27 +37,83 @@ export interface LoginResponseDto {
 // ----------------------------------------------------------------------------
 // 2. Catálogos Generales (/api/catalogosgenerales)
 // ----------------------------------------------------------------------------
+export interface SpDepartamentoResultDto {
+  idDepartamento: number;
+  codigoDepartamento: string;
+  nombreDepartamento: string;
+  descripcion?: string | null;
+  ubicacionFisica?: string | null;
+  telefonoDepartamento?: string | null;
+  correoDepartamento?: string | null;
+  estadoDepartamento: boolean;
+}
+
+export interface CatalogoTipoIdentificacionDto {
+  idTipoIdentificacion: number;
+  codigoTipoIdentificacion: string;
+  descripcion: string;
+}
+
+export interface CatalogoGeneroDto {
+  idGenero: number;
+  codigoGenero: string;
+}
+
+export interface CatalogoEstadoCivilDto {
+  idEstadoCivil: number;
+  codigoEstadoCivil: string;
+}
+
+export interface CatalogoActividadEconomicaDto {
+  idActividadEconomica: number;
+  codigoCiiu: string;
+  descripcion: string;
+}
+
+export interface CatalogoCargoRepresentacionDto {
+  idCargoRepresentacion: number;
+  nombreCargo: string;
+}
 
 // ----------------------------------------------------------------------------
 // 3. Usuarios (/api/usuario)
 // ----------------------------------------------------------------------------
-
-export interface RegistrarUsuarioDto {
+export interface SpConsultarUsuarioResultDto {
+  idUsuario: number;
   userName: string;
-  password: string;
   nombreUsuario: string;
   apellido1Usuario: string;
   apellido2Usuario: string;
+  nombreFuncionario?: string;
   emailUsuario: string;
+  activo: boolean;
+  fechaCreacion: string;
+  idDepartamento: number;
+  nombreDepartamento: string;
+}
+
+export type SpUsuarioResultDto = SpConsultarUsuarioResultDto;
+
+export interface RegistrarUsuarioDto {
+  userName: string;
+  password?: string;
+  passwordTextoPlano?: string;
+  nombreUsuario?: string;
+  apellido1Usuario?: string;
+  apellido2Usuario?: string;
+  nombreFuncionario?: string;
+  emailUsuario?: string;
   idDepartamento: number;
 }
 
 export interface ActualizarUsuarioDto {
-  nombreUsuario: string;
-  apellido1Usuario: string;
-  apellido2Usuario: string;
-  emailUsuario: string;
+  nombreUsuario?: string;
+  apellido1Usuario?: string;
+  apellido2Usuario?: string;
+  nombreFuncionario?: string;
+  emailUsuario?: string;
   idDepartamento: number;
+  activo?: boolean;
 }
 
 export interface CambiarEstadoUsuarioDto {
@@ -69,9 +123,40 @@ export interface CambiarEstadoUsuarioDto {
 // ----------------------------------------------------------------------------
 // 4. Roles y Permisos (/api/rolpermiso)
 // ----------------------------------------------------------------------------
+export interface VwUsuariosRolesPermiso {
+  idUsuario: number;
+  userName: string;
+  nombreCompleto: string;
+  emailUsuario: string;
+  usuarioActivo: boolean;
+  nombreDepartamento: string;
+  idRol: number;
+  nombreRol: string;
+  idPermiso: number;
+  modulo: string;
+  accion: string;
+}
 
+export interface SpRolResultDto {
+  idRol: number;
+  nombreRol: string;
+}
 
+export interface SpPermisoResultDto {
+  idPermiso: number;
+  modulo: string;
+  accion: string;
+}
 
+export interface SpRolesPermisosUsuarioResultDto {
+  idUsuario: number;
+  userName: string;
+  idRol: number;
+  nombreRol: string;
+  idPermiso?: number | null;
+  modulo?: string | null;
+  accion?: string | null;
+}
 
 export interface RegistrarRolDto {
   nombreRol: string;
@@ -95,69 +180,202 @@ export interface AsignarPermisoRolDto {
 // ----------------------------------------------------------------------------
 // 5. Contribuyentes (/api/contribuyente)
 // ----------------------------------------------------------------------------
-
-
-export interface RegistrarContribuyenteFisicoDto {
-  cedulaIdentidad: string;
-  nombre: string;
-  apellido1Fisico: string;
-  apellido2Fisico: string;
-  fechaNacimiento: string;
+export interface VwPadronContribuyente {
+  idContribuyente: number;
+  tipoContribuyente: string;
+  tipoPersona: string;
+  identificacion: string;
+  nombreCompletoORazonSocial: string;
+  nombreFantasia?: string | null;
   correoElectronico: string;
   telefono: string;
   direccionNotificaciones: string;
+  direccionExacta: string;
+  nombreDistrito: string;
+  fechaRegistro: string;
+  estadoContribuyente: boolean;
+  activo: boolean;
+  actividadEconomica?: string;
+  fechaNacimientoOConstitucion?: string;
+}
+
+export interface SpConsultarContribuyenteResultDto {
+  idContribuyente: number;
+  correoElectronico: string;
+  telefono: string;
+  direccionNotificaciones: string;
+  fechaRegistro: string;
+  estadoContribuyente: boolean;
+  tipoPersona: string;
+  identificacion: string;
+  nombreORazonSocial: string;
+  nombreCompleto?: string;
+  distrito?: string;
+  actividadEconomica?: string;
+  fechaNacimientoOConstitucion?: string;
+}
+
+export interface RegistrarContribuyenteFisicoDto {
+  cedulaIdentidad?: string;
+  identificacion?: string;
+  nombre: string;
+  apellido1Fisico?: string;
+  primerApellido?: string;
+  apellido2Fisico?: string;
+  segundoApellido?: string;
+  fechaNacimiento?: string;
+  fechaDeNacimiento?: string;
+  correoElectronico: string;
+  telefono: string;
+  direccionNotificaciones?: string;
+  direccionExacta?: string;
+  idDistrito?: number;
+  idTipoIdentificacion?: number;
+  idGenero?: number;
+  idEstadoCivil?: number;
 }
 
 export interface RegistrarContribuyenteJuridicoDto {
-  cedulaJuridica: string;
+  cedulaJuridica?: string;
+  identificacion?: string;
   razonSocial: string;
   nombreFantasia?: string | null;
-  fechaConstitucion: string;
+  nombreComercial?: string | null;
+  fechaConstitucion?: string;
+  fechaDeConstitucion?: string;
   correoElectronico: string;
   telefono: string;
-  direccionNotificaciones: string;
+  direccionNotificaciones?: string;
+  direccionExacta?: string;
+  idDistrito?: number;
+  idTipoIdentificacion?: number;
+  idActividadEconomica?: number;
 }
 
 export interface ActualizarContribuyenteDto {
   correoElectronico: string;
   telefono: string;
-  direccionNotificaciones: string;
-  estadoContribuyente: boolean;
+  direccionNotificaciones?: string;
+  direccionExacta?: string;
+  idDistrito?: number;
+  estadoContribuyente?: boolean;
+  activo?: boolean;
 }
 
 export interface RegistrarRepresentanteLegalDto {
-  nombreRepresentante: string;
-  apellido1Representante: string;
-  apellido2Representante: string;
-  tomoFolioRegistro: string;
-  cedulaRepresentante: string;
-  fechaVencimientoPoder: string;
+  nombreRepresentante?: string;
+  apellido1Representante?: string;
+  apellido2Representante?: string;
+  tomoFolioRegistro?: string;
+  cedulaRepresentante?: string;
+  fechaVencimientoPoder?: string;
+  idPersonaJuridica?: number;
+  idPersonaFisica?: number;
+  idCargoRepresentacion?: number;
+  fechaDeInicio?: string;
+  fechaFin?: string | null;
 }
 
 // ----------------------------------------------------------------------------
 // 6. Inmuebles y Catálogos (/api/inmueble, /api/catalogosinmueble)
 // ----------------------------------------------------------------------------
+export interface VwInmueblesPropietario {
+  idInmueble: number;
+  numeroFinca: string;
+  planoCatastrado: string;
+  planoCatastro: string;
+  direccionExacta: string;
+  areaTerrenoM2: number;
+  areaConstruccionM2: number;
+  areaMetros: number;
+  valorFiscal: number;
+  fechaRegistroInmueble: string;
+  nombreDistrito: string;
+  tipoUso: string;
+  usoSuelo: string;
+  zonaHomogenea?: string;
+  idContribuyente?: number | null;
+  propietario?: string | null;
+  propietarios?: string | null;
+  porcentajeParticipacion?: number | null;
+  porcentajeTotalRegistrado?: number | null;
+  ultimoValorTotalAvaluado?: number | null;
+  fechaUltimoAvaluo?: string | null;
+  inmuebleActivo?: boolean;
+}
 
+export type VwCatastroInmueble = VwInmueblesPropietario;
 
+export interface SpConsultarInmuebleResultDto {
+  idInmueble: number;
+  numeroFinca: string;
+  planoCatastrado: string;
+  direccionExacta: string;
+  areaTerrenoM2: number;
+  areaConstruccionM2: number;
+  valorFiscal: number;
+  fechaRegistroInmueble: string;
+  nombreDistrito: string;
+  tipoUso: string;
+}
+
+export interface SpInmueblesPorContribuyenteResultDto {
+  idInmueble: number;
+  numeroFinca: string | null;
+  duplicado?: string | null;
+  horizontal?: string | null;
+  planoCatastrado?: string | null;
+  planoCatastro?: string | null;
+  nombreDistrito?: string | null;
+  distrito?: string | null;
+  codigoDistrital?: string | null;
+  codigoUso?: string | null;
+  codigoUsoSuelo?: string | null;
+  usoSuelo?: string | null;
+  descripcionUso?: string | null;
+  tipoUso?: string | null;
+  direccionExacta?: string | null;
+  areaTerrenoM2?: number;
+  areaConstruccionM2?: number;
+  areaMetros?: number;
+  valorFiscalTotal?: number;
+  valorFiscalProporcional?: number;
+  valorFiscal?: number;
+  porcentajeParticipacion?: number;
+  barrioPoblado?: string | null;
+}
 
 export interface RegistrarInmuebleDto {
   numeroFinca: string;
-  direccionExacta: string;
-  areaTerrenoM2: number;
-  areaConstruccionM2: number;
+  direccionExacta?: string;
+  areaTerrenoM2?: number;
+  areaConstruccionM2?: number;
+  areaMetros?: number;
   valorFiscal: number;
-  planoCatastrado: string;
-  idTipoUsoInmueble: number;
+  planoCatastrado?: string;
+  planoCatastro?: string;
+  idTipoUsoInmueble?: number;
+  idUsoSuelo?: number;
   idDistrito: number;
+  latitud?: number;
+  longitud?: number;
+  idZonaHomogenea?: number;
+  idTopografia?: number;
+  idFormaPredio?: number;
+  idUbicacionManzana?: number;
 }
 
 export interface ActualizarInmuebleDto {
-  direccionExacta: string;
-  areaTerrenoM2: number;
-  areaConstruccionM2: number;
+  direccionExacta?: string;
+  areaTerrenoM2?: number;
+  areaConstruccionM2?: number;
+  areaMetros?: number;
   valorFiscal: number;
-  planoCatastrado: string;
-  idTipoUsoInmueble: number;
+  planoCatastrado?: string;
+  idTipoUsoInmueble?: number;
+  idUsoSuelo?: number;
+  idZonaHomogenea?: number;
+  activo?: boolean;
 }
 
 export interface AsignarDerechoInmuebleDto {
@@ -165,35 +383,197 @@ export interface AsignarDerechoInmuebleDto {
   porcentajeParticipacion: number;
 }
 
+export interface SpDistritoResultDto {
+  idDistrito: number;
+  codigoDistrito: string;
+  nombreDistrito: string;
+  areaKm2: number;
+  poblacionEstimada: number;
+  ubicacionCabecera: string;
+}
 
+export interface SpTipoUsoInmuebleResultDto {
+  idTipoUsoInmueble: number;
+  idUsoSuelo: number;
+  codigoTipoUso: string;
+  codigoUso: string;
+  descripcionUso: string;
+  descripcion: string;
+  permiteActividadComercial: boolean;
+}
+
+export interface CatalogoZonaHomogeneaDto {
+  idZonaHomogenea: number;
+  nombreZona: string;
+  valorBaseMetro: number;
+}
+
+export interface CatalogoTopografiaDto {
+  idTopografia: number;
+  codigoTopografia: string;
+  factorCorreccion: number;
+}
+
+export interface CatalogoFormaPredioDto {
+  idFormaPredio: number;
+  codigoForma: string;
+  factorCorreccion: number;
+}
+
+export interface CatalogoUbicacionManzanaDto {
+  idUbicacionManzana: number;
+  codigoUbicacion: string;
+  factorCorreccion: number;
+}
+
+export interface CatalogoPeritoDto {
+  idPerito: number;
+  codigoCarné: string;
+  nombreCompleto: string;
+  especialidad: string;
+}
+
+export interface CatalogoEstadoAvaluoDto {
+  idEstadoAvaluo: number;
+  codigoEstado: string;
+}
 
 // ----------------------------------------------------------------------------
 // 7. Tipos de Trámite y Requisitos (/api/tipotramite)
 // ----------------------------------------------------------------------------
+export interface SpTiposTramiteResultDto {
+  idTipoTramite: number;
+  nombreTramite: string;
+  descripcionTipo: string;
+  descripcion: string;
+  diasResolucionMax: number;
+  diasSlaMaximo: number;
+  idDepartamento: number;
+  nombreDepartamento: string;
+  codigoDepartamento?: string;
+}
 
 export interface TipoTramiteDto {
   nombreTramite: string;
-  descripcionTipo: string;
-  diasResolucionMax: number;
+  descripcionTipo?: string;
+  descripcion?: string;
+  diasResolucionMax?: number;
+  diasSlaMaximo?: number;
   idDepartamento: number;
 }
 
+export interface SpRequisitoResultDto {
+  idRequisito: number;
+  nombreRequisito: string;
+  descripcion: string;
+  esObligatorio: boolean;
+}
 
+export interface SpRequisitosTramiteResultDto {
+  idRequisito: number;
+  nombreRequisito: string;
+  descripcion: string;
+  esObligatorio: boolean;
+}
 
 export interface RegistrarRequisitoDto {
   nombreRequisito: string;
-  descripcion: string;
+  descripcion?: string;
   esObligatorio: boolean;
 }
 
 // ----------------------------------------------------------------------------
 // 8. Trámites y Expedientes (/api/tramite)
 // ----------------------------------------------------------------------------
+export interface VwTramitesSeguimiento {
+  idTramite: number;
+  numeroExpediente: string;
+  fechaSolicitud: string;
+  fechaCierre?: string | null;
+  nombreTramite: string;
+  diasResolucionMax: number;
+  diasSlaMaximo: number;
+  nombreDepartamento: string;
+  codigoEstado?: string | null;
+  nombreEstado?: string | null;
+  estadoActual: string;
+  esEstadoFinal?: boolean | null;
+  idContribuyente: number;
+  contribuyente: string;
+  funcionarioAsignado: string;
+  numeroFinca?: string | null;
+  diasTranscurridos?: number | null;
+}
 
+export interface VwHistorialTramitesDetallado {
+  idHistorialTramite: number;
+  idTramite: number;
+  numeroExpediente: string;
+  nombreTramite: string;
+  fechaCambio: string;
+  observaciones: string;
+  codigoEstado: string;
+  nombreEstado: string;
+  esEstadoFinal: boolean;
+  contribuyente?: string | null;
+}
 
+export interface SpConsultarTramiteResultDto {
+  idTramite: number;
+  numeroExpediente: string;
+  fechaSolicitud: string;
+  fechaCierre?: string | null;
+  nombreTramite: string;
+  diasResolucionMax: number;
+  diasSlaMaximo: number;
+  funcionarioAsignado: string;
+  idContribuyente: number;
+  contribuyente: string;
+  numeroFinca?: string | null;
+  ultimoEstado?: string | null;
+  estadoActual: string;
+}
 
+export interface SpEstadosTramiteResultDto {
+  idEstadoTramite?: number;
+  idEstado: number;
+  codigoEstado?: string;
+  codigo?: string | null;
+  nombreEstado: string | null;
+  descripcionEstado?: string;
+  esEstadoFinal?: boolean;
+}
 
+export interface SpHistorialTramiteResultDto {
+  idHistorial?: number;
+  idTramite: number;
+  numeroExpediente: string | null;
+  nombreTramite?: string | null;
+  fechaCambio: string;
+  codigoEstado?: string | null;
+  nombreEstado?: string | null;
+  observaciones?: string | null;
+}
 
+export interface SpTramitesPorContribuyenteResultDto {
+  idTramite: number;
+  numeroExpediente: string | null;
+  fechaRadicacion?: string;
+  fechaSolicitud?: string;
+  fechaResolucionEstimada?: string | null;
+  fechaResolucionFinal?: string | null;
+  fechaCierre?: string | null;
+  nombreTramite: string | null;
+  diasResolucionMax?: number;
+  nombreDepartamento?: string | null;
+  idContribuyente?: number;
+  cedulaSolicitante?: string | null;
+  numeroFinca?: string | null;
+  estadoActual?: string | null;
+  fueraPlazo?: boolean;
+  diasTranscurridos?: number;
+  diasRestantesSla?: number;
+}
 
 export interface RegistrarTramiteDto {
   numeroExpediente: string;
@@ -208,13 +588,18 @@ export interface ActualizarTramiteDto {
 }
 
 export interface CambiarEstadoTramiteDto {
-  codigoEstado: string;
-  observaciones: string;
+  codigoEstado?: string;
+  idEstado?: number;
+  observaciones?: string;
+  observacion?: string;
 }
 
 export interface ResolucionTramiteDto {
-  codigoEstado: 'APR' | 'RECH';
-  observaciones: string;
+  codigoEstado?: 'APR' | 'RECH';
+  observaciones?: string;
+  numeroResolucion?: string;
+  tipoResolucion?: string;
+  detalleResolucion?: string;
 }
 
 export interface ArchivoAdjuntadoDto {
@@ -230,8 +615,51 @@ export interface ArchivoAdjuntadoDto {
 // ----------------------------------------------------------------------------
 // 9. Tributos y Deudas (/api/tributodeuda)
 // ----------------------------------------------------------------------------
+export interface SpTiposTributoResultDto {
+  idTipoTributo: number;
+  codigoTributo: string;
+  nombreTributo: string;
+  periodicidad: string;
+  formulaCalculo: string;
+  tasaBase: number;
+  idDepartamento: number;
+  nombreDepartamento: string;
+}
 
+export interface VwFacturasPendiente {
+  idFactura: number;
+  claveNumericaHacienda: string;
+  fechaEmision: string;
+  subtotal: number;
+  descuentos: number;
+  totalFactura: number;
+  estadoFactura: string;
+  idDeudaMunicipal: number;
+  periodoDeuda: string;
+  fechaDeVencimiento: string;
+  diasMora?: number | null;
+  nombreTributo: string;
+  numeroFinca: string;
+  idContribuyente: number;
+  contribuyente?: string | null;
+  totalAbonado: number;
+  saldoPendiente: number;
+}
 
+export interface SpDeudasContribuyenteResultDto {
+  idDeudaMunicipal: number;
+  periodoDeuda: string;
+  montoPrincipal: number;
+  montoIntereses: number;
+  montoMultas: number;
+  montoTotal: number;
+  fechaDeVencimiento: string;
+  diasMora?: number | null;
+  numeroFinca: string;
+  nombreTributo: string;
+  codigoEstadoDeuda: string;
+  descripcionEstado: string;
+}
 
 export interface RegistrarDeudaMunicipalDto {
   periodoDeuda: string;
@@ -245,7 +673,7 @@ export interface RegistrarDeudaMunicipalDto {
 }
 
 export interface ActualizarEstadoDeudaDto {
-  codigoEstadoDeuda: 'PEND' | 'PAG' | 'VENC' | 'ARR';
+  codigoEstadoDeuda: 'PEND' | 'PAG' | 'VENC' | 'ARR' | string;
 }
 
 export interface CalcularRecargosDto {
@@ -255,10 +683,91 @@ export interface CalcularRecargosDto {
 // ----------------------------------------------------------------------------
 // 10. Facturación y Pagos (/api/facturacionpago)
 // ----------------------------------------------------------------------------
+export interface VwEstadoCuentaContribuyente {
+  idContribuyente: number;
+  identificacion?: string | null;
+  contribuyente?: string | null;
+  correoElectronico: string;
+  telefono: string;
+  cantidadInmuebles?: number | null;
+  totalDeudasRegistradas?: number | null;
+  deudasPendientesOVencidas?: number | null;
+  montoTotalDeudas?: number | null;
+  montoPendienteDeuda?: number | null;
+  totalFacturado?: number | null;
+  totalPagadoHistorico?: number | null;
+}
 
+export interface SpEstadoCuentaResultDto {
+  idContribuyente?: number;
+  identificacionOficial?: string | null;
+  nombreORazonSocial?: string | null;
+  numeroFinca?: string | null;
+  idDeudaMunicipal: number;
+  idFactura?: number;
+  claveNumericaHacienda?: string | null;
+  periodoDeuda?: string | null;
+  nombreTributo?: string | null;
+  fechaDeVencimiento?: string | null;
+  montoPrincipal?: number;
+  montoIntereses: number;
+  montoMultas: number;
+  totalDeuda?: number;
+  totalRecargos?: number;
+  totalAdeudado?: number;
+  facturasPendientes?: number;
+  facturasVencidas?: number;
+  condicionGeneral?: string | null;
+  codigoEstadoDeuda?: string | null;
+  descripcionEstadoDeuda?: string | null;
+}
 
+export interface SpConsultarFacturaResultDto {
+  idFactura: number;
+  claveNumericaHacienda: string;
+  fechaEmision: string;
+  subtotal: number;
+  descuentos: number;
+  totalFactura: number;
+  estadoFactura: string;
+  idDeudaMunicipal: number;
+  periodoDeuda: string;
+  nombreTributo: string;
+  numeroFinca: string;
+  totalAplicado: number;
+  saldoPendiente: number;
+}
 
+export interface SpFacturasContribuyenteResultDto {
+  idFactura: number;
+  numeroFactura: string | null;
+  claveNumericaHacienda?: string | null;
+  fechaEmision?: string;
+  fechaVencimiento?: string;
+  subtotal?: number;
+  descuentos?: number;
+  montoPrincipal?: number;
+  montoIntereses?: number;
+  montoMultas?: number;
+  montoTotal?: number;
+  totalAPagar?: number;
+  saldoPendiente: number;
+  montoPagado?: number;
+  codigoEstadoFactura?: string | null;
+  estadoFactura?: string | null;
+  nombreTributo?: string | null;
+  numeroFinca?: string | null;
+  periodoDeuda?: string | null;
+}
 
+export interface SpMediosPagoResultDto {
+  idMedioPago: number;
+  codigoMedioPago: string;
+  nombreMedioPago: string;
+  requiereReferencia: boolean;
+  comisionPorcentaje: number;
+  activo: boolean;
+}
 
 export interface GenerarFacturaDto {
   idDeudaMunicipal: number;
@@ -283,14 +792,112 @@ export interface AplicarPagoFacturaDto {
 // ----------------------------------------------------------------------------
 // 11. Reportes (/api/reportes)
 // ----------------------------------------------------------------------------
+export interface VwMorosidadContribuyente {
+  idDeudaMunicipal: number;
+  idContribuyente: number;
+  identificacion?: string | null;
+  contribuyente?: string | null;
+  correoElectronico: string;
+  telefono: string;
+  numeroFinca: string;
+  nombreDistrito: string;
+  nombreTributo: string;
+  periodoDeuda: string;
+  montoPrincipal: number;
+  montoIntereses: number;
+  montoMultas: number;
+  totalDeuda: number;
+  fechaDeVencimiento: string;
+  diasMora?: number | null;
+  codigoEstadoDeuda: string;
+}
 
+export interface VwRecaudacionPorTributo {
+  idTipoTributo: number;
+  codigoTributo: string;
+  nombreTributo: string;
+  periodicidad: string;
+  cantidadDeudasEmitidas?: number | null;
+  cantidadFacturasEmitidas?: number | null;
+  totalPrincipalRecaudado: number;
+  totalInteresRecaudado: number;
+  totalRecargoRecaudado: number;
+  totalGeneralRecaudado: number;
+}
 
+export interface VwRecaudacionPorDistrito {
+  idDistrito: number;
+  codigoDistrito: string;
+  nombreDistrito: string;
+  cantidadInmuebles?: number | null;
+  valorFiscalTotalDistrito: number;
+  cantidadDeudas?: number | null;
+  totalFacturadoDistrito: number;
+  totalRecaudadoDistrito: number;
+}
 
+export interface SpReporteHistorialTramitesResultDto {
+  idTramite: number;
+  numeroExpediente: string;
+  nombreTramite: string;
+  fechaSolicitud: string;
+  fechaCierre?: string | null;
+  numeroFinca?: string | null;
+  estadoActual?: string | null;
+  diasEnGestion?: number | null;
+}
 
+export interface SpReporteRecaudacionTributoResultDto {
+  codigoTributo: string;
+  nombreTributo: string;
+  pagosAplicados?: number | null;
+  recaudadoPrincipal: number;
+  recaudadoInteres: number;
+  recaudadoRecargo: number;
+  totalRecaudado: number;
+}
 
+export interface SpReporteRecaudacionDistritoResultDto {
+  codigoDistrito: string;
+  nombreDistrito: string;
+  inmueblesConPago?: number | null;
+  totalRecaudado: number;
+}
 
+export interface SpReporteContribuyentesMorososResultDto {
+  idContribuyente: number;
+  correoElectronico: string;
+  telefono: string;
+  idDeudaMunicipal: number;
+  periodoDeuda: string;
+  nombreTributo: string;
+  numeroFinca: string;
+  fechaDeVencimiento: string;
+  diasMora?: number | null;
+  montoPrincipal: number;
+  montoIntereses: number;
+  montoMultas: number;
+  totalAdeudado: number;
+  codigoEstadoDeuda: string;
+}
 
+export interface SpReporteSolicitudesDeptoResultDto {
+  codigoDepartamento: string;
+  nombreDepartamento: string;
+  totalTramitesRecibidos?: number | null;
+  tramitesCerrados?: number | null;
+  tramitesAbiertos?: number | null;
+  promedioDiasResolucion?: number | null;
+}
 
+export interface SpReporteEficienciaResultDto {
+  nombreTramite: string;
+  diasSlaMaximo: number;
+  totalSolicitudes?: number | null;
+  solicitudesResueltas?: number | null;
+  promedioDiasReales?: number | null;
+  resueltosFueraSla?: number | null;
+}
 
 export type TipoReporteGestion = 'PADRON' | 'INMUEBLES' | 'MOROSOS' | 'AUDITORIA';
 
@@ -304,8 +911,40 @@ export interface SpReporteGestionMunicipalResultDto {
 // ----------------------------------------------------------------------------
 // 12. Auditoría (/api/auditoria)
 // ----------------------------------------------------------------------------
+export interface VwAuditoriaDetallada {
+  idAuditoria: number;
+  fechaEvento?: string;
+  fechaHora?: string;
+  tablaAfectada: string;
+  idRegistroAfectado: string;
+  tipoAccion?: string;
+  operacionDml?: string;
+  valoresAnteriores?: string | null;
+  valoresNuevos?: string | null;
+  direccionIp: string;
+  idUsuario?: number;
+  userName?: string;
+  usuarioEjecutor?: string;
+  nombreFuncionario?: string;
+  nombreDepartamento?: string;
+}
 
+export interface SpConsultarAuditoriaResultDto {
+  idAuditoria: number;
+  fechaEvento?: string;
+  fechaHora?: string;
+  tablaAfectada: string;
+  idRegistroAfectado: string;
+  tipoAccion?: string;
+  operacionDml?: string;
+  valoresAnteriores?: string | null;
+  valoresNuevos?: string | null;
+  direccionIp: string;
+  userName?: string;
+  usuarioEjecutor?: string;
+}
 
+export type SpFiltrarAuditoriaResultDto = SpConsultarAuditoriaResultDto;
 
 export interface RegistrarTipoAccionAuditoriaDto {
   codigo: string;
@@ -322,10 +961,58 @@ export interface RegistrarAuditoriaDto {
 // ----------------------------------------------------------------------------
 // 13. Consola Técnica DBA (/api/respaldosdba)
 // ----------------------------------------------------------------------------
+export interface VwEstadoRespaldo {
+  idRespaldosConfig: number;
+  nombreConfiguracion: string;
+  tipoRespaldo: string;
+  frecuencia: string;
+  horaEjecucion: string;
+  retencionDias: number;
+  rutaDestino: string;
+  configuracionActiva: boolean;
+  totalEjecuciones?: number | null;
+  ultimaEjecucion?: string | null;
+  ultimoTamanoMb?: number | null;
+  horasDesdeUltimoRespaldo?: number | null;
+}
 
+export interface SpFrecuenciaResultDto {
+  idFrecuencia: number;
+  codigoFrecuencia: string;
+}
 
+export interface SpTipoRespaldoResultDto {
+  idTipoDeRespaldo: number;
+  codigoTipoDeRespaldo: string;
+}
 
+export interface SpConfiguracionRespaldoResultDto {
+  idRespaldosConfig: number;
+  nombreConfiguracion: string;
+  horaEjecucion: string;
+  origen: string;
+  retencionDias: number;
+  cifrado: string;
+  rutaDestino: string;
+  activo: boolean;
+  idFrecuencia: number;
+  codigoFrecuencia: string;
+  idTipoDeRespaldo: number;
+  codigoTipoDeRespaldo: string;
+}
 
+export interface SpHistorialRespaldosResultDto {
+  idRespaldoHistorial: number;
+  fechaInicio: string;
+  fechaFin?: string | null;
+  rutaArchivo: string;
+  tamanoMb: number;
+  hashVerificacion: string;
+  nombreConfiguracion: string;
+  codigoTipoDeRespaldo: string;
+  estadoRespaldo: string;
+  usuarioEjecutor?: string | null;
+}
 
 export interface RegistrarConfiguracionRespaldoDto {
   nombreConfiguracion: string;
@@ -349,6 +1036,16 @@ export interface ActualizarConfiguracionRespaldoDto {
 export interface EjecutarBackupDto {
   rutaCarpeta?: string | null;
 }
+
+export interface SimularRestauracionDto {
+  rutaBackupFull: string;
+}
+
+
+// ============================================================================
+// Recordsets generados y DTOs específicos del Data Warehouse, Monitoreo DBA y Portal
+// ============================================================================
+export * from './generated';
 
 /** POST /api/monitoreodba/mantenimiento */
 export interface EjecutarMantenimientoDto {
@@ -390,8 +1087,3 @@ export interface PagoSinpeDto {
   comprobante: string;
   monto: number;
 }
-
-export interface SimularRestauracionDto {
-  rutaBackupFull: string;
-}
-

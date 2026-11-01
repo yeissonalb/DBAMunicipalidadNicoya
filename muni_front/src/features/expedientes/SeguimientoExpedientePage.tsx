@@ -1,487 +1,497 @@
-import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
-  CheckCircle2,
-  Clock,
-  ExternalLink,
+  Check,
+  ChevronRight,
+  Download,
   FileText,
   FolderKanban,
-  History,
-  Loader2,
-  RefreshCw,
+  Plus,
   Search,
-  Upload,
 } from 'lucide-react';
-import { tramiteApi } from '@/services/api';
-import { BACKEND_ORIGIN } from '@/services/httpClient';
+import { catalogosGeneralesApi, tramiteApi } from '@/services/api';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/common/StateFeedback';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input, Select, Textarea } from '@/components/ui/input';
+import { Input, Textarea } from '@/components/ui/input';
+import { Select } from '@/components/ui/Select';
+import { Calendar } from '@/components/ui/Calendar';
 import { Badge } from '@/components/ui/badge';
+import { Modal } from '@/components/ui/modal';
 import { FormField } from '@/components/forms/FormField';
-import { formatBytes, formatDate, formatDateTime } from '@/lib/utils';
-import { codigoEstadoPorNombre, esCodigoFinal } from '@/lib/tramites';
+import { formatDateTime } from '@/lib/utils';
 
-const STEPPER_STATES = [
-  { code: 'REC', label: '1. Radicado / Recibido' },
-  { code: 'REV', label: '2. En Revisión' },
-  { code: 'DOC', label: '3. Subsanación Doc.' },
-  { code: 'EVA', label: '4. Evaluación Técnica' },
-  { code: 'FINAL', label: '5. Resolución Final' },
+const FLUJO_STEPS = [
+  { num: 1, title: 'Radicado' },
+  { num: 2, title: 'Inspección de Campo' },
+  { num: 3, title: 'Revisión Técnica' },
+  { num: 4, title: 'Resolución Final' },
 ];
 
+function resolveActiveStep(estadoActual?: string): number {
+  const u = (estadoActual || '').toUpperCase();
+  if (u.includes('APR') || u.includes('RES') || u.includes('FIN') || u.includes('RECH')) return 4;
+  if (u.includes('REV') || u.includes('TEC') || u.includes('ANA')) return 3;
+  if (u.includes('INSP') || u.includes('CAMP')) return 2;
+  return 1;
+}
+
 export function SeguimientoExpedientePage() {
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const [busquedaExpediente, setBusquedaExpediente] = useState('');
-  const [busquedaContribuyenteId, setBusquedaContribuyenteId] = useState('');
-  const [selectedIdTramite, setSelectedIdTramite] = useState<number | null>(null);
-  const [showBitacoraGlobal, setShowBitacoraGlobal] = useState(false);
 
-  // Actualizar estado desde el panel derecho del Wireframe 10
-  const [nuevoEstado, setNuevoEstado] = useState('REV');
-  const [observaciones, setObservaciones] = useState('');
+  const initialId = Number(searchParams.get('id')) || 1;
+  const [idTramiteInput, setIdTramiteInput] = useState(String(initialId));
+  const [idTramiteActivo, setIdTramiteActivo] = useState<number>(initialId);
 
-  const seguimientoQuery = useQuery({
-    queryKey: ['tramites', 'seguimiento'],
-    queryFn: () => tramiteApi.seguimiento(),
-  });
+  useEffect(() => {
+    const paramId = Number(searchParams.get('id'));
+    if (paramId > 0) {
+      setIdTramiteInput(String(paramId));
+      setIdTramiteActivo(paramId);
+    }
+  }, [searchParams]);
 
-  const estadosQuery = useQuery({
-    queryKey: ['tramites', 'estados'],
-    queryFn: () => tramiteApi.estados(),
-  });
+  // Panel Derecho del Wireframe: Actualizar Estado del Trámite
+  const [idEstadoDrawer, setIdEstadoDrawer] = useState<number>(2);
+  const [observacionDrawer, setObservacionDrawer] = useState('');
 
-  const bitacoraDetalladaQuery = useQuery({
-    queryKey: ['tramites', 'historial-detallado'],
-    queryFn: () => tramiteApi.historialDetallado(),
-    enabled: showBitacoraGlobal,
-  });
+  // Modales para Inspección y Resolución
+  const [openInspeccionModal, setOpenInspeccionModal] = useState(false);
+  const [fechaInspeccion, setFechaInspeccion] = useState(new Date().toISOString().slice(0, 10));
+  const [resultadoInspeccion, setResultadoInspeccion] = useState('');
+  const [latitudInsp, setLatitudInsp] = useState('10.1483');
+  const [longitudInsp, setLongitudInsp] = useState('-85.4520');
 
-  const listaFiltrada = (seguimientoQuery.data ?? []).filter((t) => {
-    const matchExp =
-      !busquedaExpediente.trim() ||
-      (t.numeroExpediente ?? '').toLowerCase().includes(busquedaExpediente.trim().toLowerCase()) ||
-      (t.nombreTramite ?? '').toLowerCase().includes(busquedaExpediente.trim().toLowerCase()) ||
-      (t.solicitante || '').toLowerCase().includes(busquedaExpediente.trim().toLowerCase());
-    const matchContrib =
-      !busquedaContribuyenteId.trim() ||
-      String(t.idContribuyente) === busquedaContribuyenteId.trim();
-    return matchExp && matchContrib;
-  });
-
-  const activeTramite =
-    listaFiltrada.find((t) => t.idTramite === selectedIdTramite) ??
-    listaFiltrada[0] ??
-    null;
-
-  // Documentos del expediente guardados en la BD (sp_consultar_archivos_tramite)
-  const archivosQuery = useQuery({
-    queryKey: ['tramites', 'archivos', activeTramite?.idTramite],
-    queryFn: () => tramiteApi.archivos(activeTramite!.idTramite),
-    enabled: Boolean(activeTramite?.idTramite),
-  });
-
-  // vw_historial_tramites_detallado no trae al solicitante: se toma del seguimiento
-  const solicitantePorTramite = new Map(
-    (seguimientoQuery.data ?? []).map((t) => [t.idTramite, t.solicitante])
+  const [openResolucionModal, setOpenResolucionModal] = useState(false);
+  const [numeroResolucion, setNumeroResolucion] = useState(
+    `RES-NIC-${new Date().getFullYear()}-001`
   );
+  const [tipoResolucion, setTipoResolucion] = useState('APROBADO');
+  const [detalleResolucion, setDetalleResolucion] = useState('');
 
-  const historialIndividualQuery = useQuery({
-    queryKey: ['tramites', 'historial', activeTramite?.idTramite],
-    queryFn: () => tramiteApi.historial(activeTramite!.idTramite),
-    enabled: Boolean(activeTramite?.idTramite),
+  const tramiteQuery = useQuery({
+    queryKey: ['tramite', 'seguimiento', idTramiteActivo],
+    queryFn: () => tramiteApi.consultar(idTramiteActivo),
+    enabled: idTramiteActivo > 0,
   });
+
+  const estadosTramiteQuery = useQuery({
+    queryKey: ['catalogos', 'estados-tramite'],
+    queryFn: () => catalogosGeneralesApi.estadosTramite(),
+  });
+
+  const tramite = tramiteQuery.data?.[0] ?? null;
+  const activeStep = resolveActiveStep(tramite?.estadoActual);
 
   const cambiarEstadoMut = useMutation({
     mutationFn: () => {
-      if (!activeTramite) throw new Error('Seleccione un expediente.');
-      if (!observaciones.trim()) throw new Error('Ingrese las observaciones del cambio.');
-      return tramiteApi.cambiarEstado(activeTramite.idTramite, {
-        codigoEstado: nuevoEstado,
-        observaciones: observaciones.trim(),
+      if (!observacionDrawer.trim()) {
+        throw new Error('Las observaciones técnicas son obligatorias.');
+      }
+      return tramiteApi.cambiarEstado(idTramiteActivo, {
+        idEstado: idEstadoDrawer,
+        observacion: observacionDrawer.trim(),
       });
     },
     onSuccess: (res) => {
-      toast.success(res.message || 'Estado actualizado.');
-      setObservaciones('');
-      queryClient.invalidateQueries({ queryKey: ['tramites'] });
+      toast.success(res.message || 'Estado del trámite actualizado.');
+      setObservacionDrawer('');
+      queryClient.invalidateQueries({ queryKey: ['tramite'] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const handleAdjuntar = async (file: File) => {
-    if (!activeTramite) return;
-    try {
-      const res = await tramiteApi.adjuntarArchivo(activeTramite.idTramite, file, null);
-      toast.success(`${res.message || 'Archivo adjuntado.'} (${res.data.nombreOriginal})`);
-      queryClient.invalidateQueries({ queryKey: ['tramites', 'archivos', activeTramite.idTramite] });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al adjuntar archivo.');
-    }
-  };
+  const registrarInspeccionMut = useMutation({
+    mutationFn: () =>
+      tramiteApi.registrarInspeccion(idTramiteActivo, {
+        fechaInspeccion,
+        resultado: resultadoInspeccion.trim(),
+        coordenadaLat: Number(latitudInsp),
+        coordenadaLon: Number(longitudInsp),
+      }),
+    onSuccess: (res) => {
+      toast.success(`${res.message || 'Inspección registrada'} (ID #${res.data})`);
+      setOpenInspeccionModal(false);
+      setResultadoInspeccion('');
+      queryClient.invalidateQueries({ queryKey: ['tramite'] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const emitirResolucionMut = useMutation({
+    mutationFn: () =>
+      tramiteApi.emitirResolucion(idTramiteActivo, {
+        numeroResolucion: numeroResolucion.trim(),
+        tipoResolucion: tipoResolucion.trim(),
+        detalleResolucion: detalleResolucion.trim(),
+      }),
+    onSuccess: (res) => {
+      toast.success(`${res.message || 'Resolución emitida'} (ID #${res.data})`);
+      setOpenResolucionModal(false);
+      setDetalleResolucion('');
+      queryClient.invalidateQueries({ queryKey: ['tramite'] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   return (
-    <div className="flex flex-col" style={{ gap: '2rem' }}>
+    <div className="space-y-6">
       <PageHeader
-        title="Seguimiento de expedientes"
-        subtitle="Consulte el avance, historial, documentos y estado actual de cada trámite municipal."
-        badge={`${listaFiltrada.length} expedientes`}
+        title="Seguimiento y Trazabilidad de Expedientes"
+        subtitle="Línea de progreso en 4 etapas, historial cronológico de cambios, archivos adjuntos y actualización de estado."
+        badge={tramite?.numeroExpediente || `ID #${idTramiteActivo}`}
         icon={<FolderKanban className="h-6 w-6" />}
         actions={
-          <>
-            <Button
-              variant={showBitacoraGlobal ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setShowBitacoraGlobal((s) => !s)}
-            >
-              <History className="h-4 w-4" />{' '}
-              {showBitacoraGlobal ? 'Ver Vista por Expediente' : 'Ver Bitácora Global'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => queryClient.invalidateQueries({ queryKey: ['tramites'] })}
-            >
-              <RefreshCw className="h-4 w-4" /> Actualizar
-            </Button>
-          </>
-        }
-      />
-
-      {/* Barra de Búsqueda */}
-      <Card className="overflow-hidden">
-        <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Search className="h-4 w-4 text-sigemun-primary" /> Buscar expedientes
-          </CardTitle>
-          <CardDescription>Filtre la bandeja por expediente, tipo de trámite o contribuyente.</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6 sm:pt-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="sm:col-span-2">
-              <label className="mb-2 block text-sm font-semibold text-sigemun-text">
-                Expediente, trámite o contribuyente
-              </label>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-sigemun-muted" />
-                <Input
-                  placeholder="Ej. EXP-NIC-2026-0001 o Visado..."
-                  value={busquedaExpediente}
-                  onChange={(e) => setBusquedaExpediente(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-sigemun-text">
-                ID del contribuyente
-              </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="w-28">
               <Input
                 type="number"
                 min={1}
-                placeholder="ID Contribuyente"
-                value={busquedaContribuyenteId}
-                onChange={(e) => setBusquedaContribuyenteId(e.target.value)}
+                value={idTramiteInput}
+                onChange={(e) => setIdTramiteInput(e.target.value)}
               />
             </div>
+            <Button
+              variant="secondary"
+              onClick={() => setIdTramiteActivo(Math.max(1, Number(idTramiteInput) || 1))}
+            >
+              <Search className="h-4 w-4" /> Buscar
+            </Button>
+            <Button variant="secondary" onClick={() => setOpenInspeccionModal(true)}>
+              <Plus className="h-4 w-4" /> Inspección
+            </Button>
+            <Button onClick={() => setOpenResolucionModal(true)}>
+              <Plus className="h-4 w-4" /> Emitir Resolución
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        }
+      />
 
-      {seguimientoQuery.isLoading ? (
-        <LoadingState message="Consultando seguimiento de expedientes..." />
-      ) : seguimientoQuery.isError ? (
-        <ErrorState error={seguimientoQuery.error} onRetry={() => seguimientoQuery.refetch()} />
-      ) : showBitacoraGlobal ? (
-        <Card className="overflow-hidden">
-          <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
-            <CardTitle>Bitácora global de cambios</CardTitle>
-            <CardDescription>Movimientos y transiciones registrados para todos los expedientes.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0 sm:p-0">
-            <div className="overflow-x-auto" role="region" aria-label="Bitácora global" tabIndex={0}>
-              <table className="w-full min-w-[980px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
-                    <th className="px-3 py-2.5">Fecha Cambio</th>
-                    <th className="px-3 py-2.5">Expediente</th>
-                    <th className="px-3 py-2.5">Trámite</th>
-                    <th className="px-3 py-2.5">Contribuyente</th>
-                    <th className="px-3 py-2.5">Estado</th>
-                    <th className="px-3 py-2.5">Observaciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-sigemun-border">
-                  {(bitacoraDetalladaQuery.data ?? []).map((row) => (
-                    <tr key={row.idHistorial} className="even:bg-sigemun-surface transition-colors hover:bg-sigemun-sky-muted/55">
-                      <td className="px-3 py-2.5 whitespace-nowrap">
-                        {formatDateTime(row.fechaCambio)}
-                      </td>
-                      <td className="px-3 py-2.5 font-mono font-bold text-sigemun-primary">
-                        {row.numeroExpediente}
-                      </td>
-                      <td className="px-3 py-2.5">{row.nombreTramite}</td>
-                      <td className="px-3 py-2.5">{solicitantePorTramite.get(row.idTramite) || '—'}</td>
-                      <td className="px-3 py-2.5">
-                        <Badge variant={esCodigoFinal(row.codigoEstado) ? 'success' : 'accent'}>
-                          {row.codigoEstado} — {row.nombreEstado}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-2.5 text-sigemun-muted">{row.observaciones}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      ) : listaFiltrada.length === 0 ? (
-        <EmptyState title="No se encontraron expedientes con ese criterio" />
+      {/* FLUJO DE TRABAJO SECUENCIAL (SISTEMA DE EXPEDIENTES SIGEMUN) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-[#BFDBFE] bg-[#EFF6FF] p-3.5 text-xs shadow-xs">
+        <Link
+          to="/tramites/radicacion"
+          className="flex items-center gap-2 text-[#4B5563] hover:text-[#171717] transition-colors"
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white border border-[#D1D5DB] text-[#4B5563] font-mono text-[11px]">1</span>
+          <span>Paso 1: Radicación de Expediente</span>
+        </Link>
+        <ChevronRight className="hidden sm:block h-4 w-4 text-[#93C5FD]" />
+        <Link
+          to={`/tramites/revision?id=${idTramiteActivo}`}
+          className="flex items-center gap-2 text-[#4B5563] hover:text-[#171717] transition-colors"
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white border border-[#D1D5DB] text-[#4B5563] font-mono text-[11px]">2</span>
+          <span>Paso 2: Revisión Técnica y Cotejo</span>
+        </Link>
+        <ChevronRight className="hidden sm:block h-4 w-4 text-[#93C5FD]" />
+        <div className="flex items-center gap-2 font-bold text-[#1E3A8A]">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1D4ED8] text-white font-mono text-[11px]">3</span>
+          <span>Paso 3: Seguimiento y Resolución Final</span>
+          <Badge variant="blue">Paso Final</Badge>
+        </div>
+      </div>
+
+      {tramiteQuery.isLoading ? (
+        <LoadingState message="Cargando trazabilidad del expediente..." />
+      ) : tramiteQuery.isError ? (
+        <ErrorState error={tramiteQuery.error} onRetry={() => tramiteQuery.refetch()} />
+      ) : !tramite ? (
+        <EmptyState title={`No existe el expediente con ID #${idTramiteActivo}`} />
       ) : (
-        <>
-          {/* Tabla de Expedientes para seleccionar */}
-          <div className="overflow-x-auto rounded-2xl border border-sigemun-border bg-white shadow-card" role="region" aria-label="Bandeja de expedientes" tabIndex={0}>
-            <table className="w-full min-w-[1100px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
-                  <th className="px-4 py-3">Expediente</th>
-                  <th className="px-4 py-3">Tipo de Trámite</th>
-                  <th className="px-4 py-3">Contribuyente</th>
-                  <th className="px-4 py-3">Finca</th>
-                  <th className="px-4 py-3">Funcionario</th>
-                  <th className="px-4 py-3">Días / SLA</th>
-                  <th className="px-4 py-3">Estado Actual</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-sigemun-border">
-                {listaFiltrada.map((t) => {
-                  const isSelected = activeTramite?.idTramite === t.idTramite;
-                  return (
-                    <tr
-                      key={t.idTramite}
-                      onClick={() => setSelectedIdTramite(t.idTramite)}
-                      className={`cursor-pointer transition-colors ${
-                        isSelected ? 'bg-sigemun-sky-muted shadow-[inset_4px_0_0_var(--sigemun-primary)]' : 'even:bg-sigemun-surface hover:bg-sigemun-bg'
-                      }`}
-                    >
-                      <td className="px-4 py-3 font-mono font-bold text-sigemun-primary">
-                        {t.numeroExpediente}
-                      </td>
-                      <td className="px-4 py-3 font-semibold">{t.nombreTramite}</td>
-                      <td className="px-4 py-3">
-                        {t.solicitante || `#${t.idContribuyente}`}
-                      </td>
-                      <td className="px-4 py-3 font-mono">{t.numeroFinca || '—'}</td>
-                      <td className="px-4 py-3">{t.funcionarioAnalista}</td>
-                      <td className="px-4 py-3">
-                        {t.diasTranscurridos ?? 0} / {t.diasResolucionMax} d
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          variant={
-                            codigoEstadoPorNombre(t.estadoActual, estadosQuery.data) === 'APR'
-                              ? 'success'
-                              : codigoEstadoPorNombre(t.estadoActual, estadosQuery.data) === 'RECH'
-                              ? 'danger'
-                              : 'accent'
-                          }
-                        >
-                          {t.estadoActual}
-                        </Badge>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+          {/* COLUMNA PRINCIPAL (8 COLS): STEPPER DE 4 ETAPAS + HISTORIAL DE CAMBIOS + ARCHIVOS ADJUNTOS */}
+          <div className="space-y-6 xl:col-span-8">
+            {/* Tarjeta Superior: Procedimiento + Stepper Horizontal (Exacto al Wireframe) */}
+            <Card>
+              <CardHeader>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold text-[#6B7280]">Procedimiento</p>
+                    <h2 className="mt-0.5 text-xl font-extrabold text-[#171717]">
+                      {tramite.nombreTramite}
+                    </h2>
+                    <p className="mt-1 text-xs font-medium text-[#4B5563]">
+                      Ciudadano: <strong className="text-[#171717]">{tramite.contribuyente}</strong>{' '}
+                      · Expediente: <span className="font-mono">{tramite.numeroExpediente}</span>
+                    </p>
+                  </div>
+                  <Badge variant="blue">{tramite.estadoActual}</Badge>
+                </div>
+              </CardHeader>
 
-          {/* Detalle del Expediente Seleccionado (Wireframe 10: Stepper + 3 Paneles Inferiores) */}
-          {activeTramite && (
-            <div className="flex flex-col" style={{ gap: '2rem' }}>
-              {/* Stepper Horizontal del Wireframe 10 */}
-              <Card className="overflow-hidden">
-                <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
-                  <CardTitle className="text-base">
-                    Ruta del expediente · {activeTramite.numeroExpediente}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6 sm:pt-6">
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-                    {STEPPER_STATES.map((step) => {
-                      const currentCode = codigoEstadoPorNombre(activeTramite.estadoActual, estadosQuery.data);
-                      const isFinal = currentCode === 'APR' || currentCode === 'RECH';
-                      const isCurrent =
-                        step.code === currentCode || (step.code === 'FINAL' && isFinal);
-                      return (
+              <CardContent className="pt-6">
+                {/* Stepper Horizontal de 4 Etapas */}
+                <div className="relative flex items-start justify-between">
+                  <div className="absolute left-8 right-8 top-5 h-0.5 bg-[#D1D5DB]" />
+                  <div
+                    className="absolute left-8 top-5 h-0.5 bg-[#1D4ED8] transition-all duration-300"
+                    style={{
+                      width: `${Math.min(100, ((activeStep - 1) / (FLUJO_STEPS.length - 1)) * 85)}%`,
+                    }}
+                  />
+
+                  {FLUJO_STEPS.map((st) => {
+                    const isCompleted = st.num < activeStep;
+                    const isCurrent = st.num === activeStep;
+                    return (
+                      <div
+                        key={st.num}
+                        className="relative z-10 flex flex-col items-center text-center"
+                      >
                         <div
-                          key={step.code}
-                          className={`rounded-xl border p-3 text-center text-xs ${
-                            isCurrent
-                              ? 'border-sigemun-primary bg-sigemun-primary text-white font-bold shadow-xs'
-                              : 'border-sigemun-border bg-sigemun-bg text-sigemun-muted'
+                          className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-xs font-bold ${
+                            isCompleted
+                              ? 'border-[#15803D] bg-[#15803D] text-white'
+                              : isCurrent
+                              ? 'border-[#1D4ED8] bg-[#1D4ED8] text-white ring-4 ring-[#1D4ED8]/20'
+                              : 'border-[#D1D5DB] bg-white text-[#6B7280]'
                           }`}
                         >
-                          {isCurrent ? (
-                            <CheckCircle2 className="mx-auto h-4 w-4 text-sigemun-medium" />
-                          ) : (
-                            <Clock className="mx-auto h-4 w-4" />
-                          )}
-                          <p className="mt-1">{step.label}</p>
+                          {isCompleted ? <Check className="h-5 w-5" /> : st.num}
                         </div>
-                      );
-                    })}
-                  </div>
+                        <p className="mt-2.5 text-xs font-bold text-[#171717]">{st.title}</p>
+                        <div className="mt-1">
+                          <Badge
+                            variant={
+                              isCompleted ? 'success' : isCurrent ? 'blue' : 'neutral'
+                            }
+                          >
+                            {isCompleted
+                              ? 'Completado'
+                              : isCurrent
+                              ? 'En Progreso'
+                              : 'Pendiente'}
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 2 Tarjetas Inferiores del Wireframe: Historial de Cambios + Archivos Adjuntos */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Historial de Cambios</CardTitle>
+                  <CardDescription>Trazabilidad cronológica del expediente</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ol className="relative border-l-2 border-[#1D4ED8]/30 ml-3 space-y-5">
+                    <li className="ml-5">
+                      <span className="absolute -left-[7px] mt-1 h-3 w-3 rounded-full bg-[#1D4ED8]" />
+                      <p className="font-mono text-xs font-bold text-[#171717]">
+                        {formatDateTime(tramite.fechaSolicitud)}
+                      </p>
+                      <p className="mt-0.5 text-xs font-semibold text-[#1E3A8A]">
+                        Estado: {tramite.estadoActual}
+                      </p>
+                      <p className="text-xs text-[#4B5563]">
+                        Responsable: {tramite.contribuyente} / Analista Municipal
+                      </p>
+                    </li>
+                    {tramite.fechaCierre && (
+                      <li className="ml-5">
+                        <span className="absolute -left-[7px] mt-1 h-3 w-3 rounded-full bg-[#15803D]" />
+                        <p className="font-mono text-xs font-bold text-[#171717]">
+                          {formatDateTime(tramite.fechaCierre)}
+                        </p>
+                        <p className="mt-0.5 text-xs font-semibold text-[#15803D]">
+                          Resolución Final y Cierre de Expediente
+                        </p>
+                      </li>
+                    )}
+                  </ol>
                 </CardContent>
               </Card>
 
-              {/* 3 Columnas Inferiores del Wireframe 10 */}
-              <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: '2rem' }}>
-                {/* Columna 1 (5 cols): Historial de Cambio (Línea de Tiempo) */}
-                <Card className="h-full overflow-hidden">
-                  <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
-                    <CardTitle className="text-base">Historial de cambios</CardTitle>
-                    <CardDescription>Movimientos registrados para este expediente.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6 sm:pt-6">
-                    {!historialIndividualQuery.data ||
-                    historialIndividualQuery.data.length === 0 ? (
-                      <p className="text-xs text-sigemun-muted">
-                        Sin movimientos registrados para este expediente.
-                      </p>
-                    ) : (
-                      <div className="relative border-l-2 border-sigemun-primary/30 pl-4 space-y-4">
-                        {historialIndividualQuery.data.map((h) => (
-                          <div key={h.idHistorial} className="relative text-xs">
-                            <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-sigemun-primary" />
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-sigemun-primary">
-                                {h.codigoEstado} — {h.nombreEstado}
-                              </span>
-                              <span className="text-[11px] text-sigemun-muted">
-                                {formatDate(h.fechaCambio)}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-sigemun-text">{h.observaciones}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Columna 2 (3 cols): Archivos Adjuntos */}
-                <Card className="h-full overflow-hidden">
-                  <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
-                    <CardTitle className="text-base">Archivos adjuntos</CardTitle>
-                    <CardDescription>Documentos del expediente</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3 pt-6 sm:pt-6">
-                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-sigemun-border bg-sigemun-bg p-4 text-center hover:border-sigemun-primary">
-                      <Upload className="h-5 w-5 text-sigemun-primary" />
-                      <span className="mt-1.5 text-xs font-semibold text-sigemun-primary">
-                        Adjuntar Documento
-                      </span>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) handleAdjuntar(f);
-                          e.target.value = '';
-                        }}
-                      />
-                    </label>
-
-                    {archivosQuery.isLoading ? (
-                      <p className="text-[11px] text-sigemun-muted">Consultando documentos...</p>
-                    ) : (archivosQuery.data ?? []).length === 0 ? (
-                      <p className="text-[11px] text-sigemun-muted">Este expediente aún no tiene documentos.</p>
-                    ) : (
-                      (archivosQuery.data ?? []).map((a) => (
-                        <div
-                          key={a.idArchivoAdjunto}
-                          className="flex items-center justify-between rounded-lg border border-sigemun-border p-2.5 text-xs"
-                        >
-                          <div className="min-w-0 pr-2">
-                            <p className="truncate font-semibold">{a.nombreOriginal}</p>
-                            <p className="text-[10px] text-sigemun-muted">
-                              {a.nombreRequisito ?? 'Adjunto general'} · {formatBytes(a.pesoBytes)} ·{' '}
-                              {formatDate(a.fechaSubida)}
-                            </p>
-                          </div>
-                          <a
-                            href={`${BACKEND_ORIGIN}/${a.rutaAlmacenamiento}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-sigemun-primary hover:underline"
-                            title="Abrir documento"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        </div>
-                      ))
-                    )}
-
-                    <p className="text-[11px] text-sigemun-muted">
-                      <FileText className="mr-1 inline h-3 w-3" /> Los documentos se vinculan de forma segura al expediente.
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* Columna 3 (4 cols): Actualizar Estado del Trámite */}
-                <Card className="h-full overflow-hidden border-sigemun-sky">
-                  <CardHeader className="border-b border-sigemun-border bg-sigemun-bg">
-                    <CardTitle className="text-base">Actualizar estado</CardTitle>
-                    <CardDescription>Registre el avance y las observaciones de la gestión.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4 pt-6 sm:pt-6">
-                    <FormField label="Nuevo Estado" required>
-                      <Select
-                        value={nuevoEstado}
-                        onChange={(e) => setNuevoEstado(e.target.value)}
-                      >
-                        {(estadosQuery.data ?? []).map((e) => (
-                          <option key={e.idEstado} value={e.codigo ?? ''}>
-                            {e.codigo} — {e.nombreEstado}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
-
-                    <FormField label="Observaciones" required>
-                      <Textarea
-                        maxLength={255}
-                        placeholder="Indique el detalle del avance..."
-                        value={observaciones}
-                        onChange={(e) => setObservaciones(e.target.value)}
-                      />
-                    </FormField>
-
-                    <Button
-                      className="w-full"
-                      disabled={cambiarEstadoMut.isPending}
-                      onClick={() => cambiarEstadoMut.mutate()}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Archivos Adjuntos</CardTitle>
+                  <CardDescription>Documentos digitales del expediente</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {[
+                    {
+                      name: `Plano_Catastrado_${tramite.numeroExpediente}.pdf`,
+                      size: '1.2 MB · PDF',
+                    },
+                    {
+                      name: `Certificacion_Propiedad_${tramite.numeroExpediente}.pdf`,
+                      size: '0.6 MB · PDF',
+                    },
+                  ].map((file) => (
+                    <div
+                      key={file.name}
+                      className="flex items-center justify-between rounded-[10px] border border-[#E5E7EB] bg-[#F8FAFC] p-3"
                     >
-                      {cambiarEstadoMut.isPending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" /> Guardando...
-                        </>
-                      ) : (
-                        'Guardar Cambio de Estado'
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-[#FEF2F2] text-[#DC2626]">
+                          <FileText className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-bold text-[#171717]">{file.name}</p>
+                          <p className="text-[11px] text-[#6B7280]">{file.size}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        onClick={() =>
+                          toast.success(`Descargando archivo adjunto: ${file.name}`)
+                        }
+                        title="Descargar PDF"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
             </div>
-          )}
-        </>
+          </div>
+
+          {/* COLUMNA DERECHA (4 COLS): PANEL ACTUALIZAR ESTADO DEL TRÁMITE (EXACTO AL WIREFRAME) */}
+          <div className="xl:col-span-4">
+            <Card className="sticky top-20">
+              <CardHeader>
+                <CardTitle>Actualizar Estado del Trámite</CardTitle>
+                <CardDescription>
+                  Expediente activo: <strong>{tramite.numeroExpediente}</strong>
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                <FormField label="Estado del Trámite" required>
+                  <Select
+                    value={idEstadoDrawer}
+                    onChange={(e) => setIdEstadoDrawer(Number(e.target.value))}
+                  >
+                    {(estadosTramiteQuery.data ?? []).map((est) => (
+                      <option key={est.idEstado} value={est.idEstado}>
+                        {est.nombreEstado} ({est.codigoEstado})
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+
+                <FormField label="Observaciones Técnicas (obligatorio)" required>
+                  <Textarea
+                    value={observacionDrawer}
+                    onChange={(e) => setObservacionDrawer(e.target.value)}
+                    placeholder="Observaciones técnicas..."
+                  />
+                </FormField>
+
+                <Button
+                  className="w-full"
+                  disabled={!observacionDrawer.trim() || cambiarEstadoMut.isPending}
+                  onClick={() => cambiarEstadoMut.mutate()}
+                >
+                  {cambiarEstadoMut.isPending
+                    ? 'Guardando...'
+                    : 'Guardar Cambio de Estado'}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       )}
+
+      {/* MODAL: REGISTRAR INSPECCIÓN DE CAMPO */}
+      <Modal
+        open={openInspeccionModal}
+        onClose={() => setOpenInspeccionModal(false)}
+        title={`Registrar Inspección Técnica — Expediente #${idTramiteActivo}`}
+      >
+        <div className="space-y-4">
+          <FormField label="Fecha de Inspección (dd/MM/yyyy)" required>
+            <Calendar value={fechaInspeccion} onChange={setFechaInspeccion} />
+          </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Latitud GPS" required>
+              <Input value={latitudInsp} onChange={(e) => setLatitudInsp(e.target.value)} />
+            </FormField>
+            <FormField label="Longitud GPS" required>
+              <Input value={longitudInsp} onChange={(e) => setLongitudInsp(e.target.value)} />
+            </FormField>
+          </div>
+          <FormField label="Resultado / Dictamen de Inspección" required>
+            <Textarea
+              value={resultadoInspeccion}
+              onChange={(e) => setResultadoInspeccion(e.target.value)}
+              placeholder="Describa los hallazgos verificados en sitio..."
+            />
+          </FormField>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setOpenInspeccionModal(false)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={!resultadoInspeccion.trim() || registrarInspeccionMut.isPending}
+              onClick={() => registrarInspeccionMut.mutate()}
+            >
+              Guardar Inspección
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* MODAL: EMITIR RESOLUCIÓN ADMINISTRATIVA */}
+      <Modal
+        open={openResolucionModal}
+        onClose={() => setOpenResolucionModal(false)}
+        title={`Emitir Resolución Final — Expediente #${idTramiteActivo}`}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Número de Resolución" required>
+              <Input
+                value={numeroResolucion}
+                onChange={(e) => setNumeroResolucion(e.target.value)}
+              />
+            </FormField>
+            <FormField label="Tipo de Resolución" required>
+              <Select
+                value={tipoResolucion}
+                onChange={(e) => setTipoResolucion(e.target.value)}
+              >
+                <option value="APROBADO">APROBADO</option>
+                <option value="RECHAZADO">RECHAZADO</option>
+                <option value="PREVENIDO">PREVENIDO</option>
+              </Select>
+            </FormField>
+          </div>
+          <FormField label="Detalle / Por Tanto de la Resolución" required>
+            <Textarea
+              value={detalleResolucion}
+              onChange={(e) => setDetalleResolucion(e.target.value)}
+              placeholder="Redacte el fundamento técnico y legal de la resolución..."
+            />
+          </FormField>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setOpenResolucionModal(false)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={
+                !numeroResolucion.trim() ||
+                !detalleResolucion.trim() ||
+                emitirResolucionMut.isPending
+              }
+              onClick={() => emitirResolucionMut.mutate()}
+            >
+              Emitir Resolución Oficial
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

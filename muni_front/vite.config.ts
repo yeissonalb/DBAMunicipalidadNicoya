@@ -12,6 +12,16 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: false,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5080',
+        changeOrigin: true,
+      },
+      '/hacienda-api': {
+        target: 'https://api.hacienda.go.cr',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/hacienda-api/, ''),
+      },
+    },
   },
 });
-

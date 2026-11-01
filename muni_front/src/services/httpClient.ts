@@ -1,5 +1,5 @@
-import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
-import type { BaseResponse } from '@/types/api';
+﻿import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import type { BaseResponse, UsuarioTokenDto } from '@/types/api';
 
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5080/api';
 export const API_BASE_URL = rawBaseUrl.replace(/\/+$/, '');
@@ -10,16 +10,7 @@ export const SESSION_STORAGE_KEY = 'sigemun_auth_session_v1';
 export interface StoredSession {
   token: string;
   expiraUtc: string;
-  usuario: {
-    idUsuario: number;
-    userName: string;
-    nombreCompleto?: string | null;
-    email?: string | null;
-    idDepartamento: number;
-    nombreDepartamento?: string | null;
-    rol: string;
-    roles: string[];
-  };
+  usuario: UsuarioTokenDto;
 }
 
 export function getStoredSession(): StoredSession | null {

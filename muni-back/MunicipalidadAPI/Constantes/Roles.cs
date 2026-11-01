@@ -1,4 +1,4 @@
-namespace MunicipalidadAPI.Constantes
+﻿namespace MunicipalidadAPI.Constantes
 {
     /// <summary>Nombres exactos de dbo.Rol (ver Scripts_Ordinarios/09_Datos_Semilla_Pruebas.sql).</summary>
     public static class Roles
@@ -9,10 +9,9 @@ namespace MunicipalidadAPI.Constantes
         public const string Auditor = "Auditor Interno";
         public const string Dba = "DBA Administrador de Base de Datos";
 
-        /// <summary>
-        /// Rol del portal ciudadano. No existe en dbo.Rol: solo lo emite POST /api/auth/ciudadano/login
-        /// para contribuyentes con cuenta en dbo.Cuenta_Ciudadana (script 15).
-        /// </summary>
+        /// <summary>Roles del portal ciudadano y contribuyentes.</summary>
         public const string Ciudadano = "Ciudadano";
+        public const string Contribuyente = "Contribuyente";
+        public const string CiudadanoContribuyente = "Ciudadano Contribuyente";
     }
 }

@@ -9,7 +9,7 @@ namespace MunicipalidadAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = $"{Roles.Auditor},{Roles.Admin}")]
+    [Authorize(Roles = $"{Roles.Auditor},{Roles.Admin},{Roles.Dba}")]
     public class ReportesController : ControllerBase
     {
         private readonly ISvReportes _svReportes;

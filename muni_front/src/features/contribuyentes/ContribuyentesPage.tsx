@@ -1,424 +1,801 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import {
-  Building,
-  Download,
+  Building2,
   Edit3,
-  Loader2,
+  Eye,
+  Link2,
   Plus,
   RefreshCw,
   Search,
+  ShieldCheck,
   UserCheck,
   UserPlus,
   Users,
 } from 'lucide-react';
-import { contribuyenteApi } from '@/services/api';
+import {
+  catalogosGeneralesApi,
+  contribuyenteApi,
+  inmuebleApi,
+  tramiteApi,
+} from '@/services/api';
+import { consultarCedulaHacienda, type HaciendaContribuyenteInfo } from '@/services/haciendaCedulaApi';
 import type { VwPadronContribuyente } from '@/types/api';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/common/StateFeedback';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input, Select } from '@/components/ui/input';
+import { Input, Textarea } from '@/components/ui/input';
+import { Select } from '@/components/ui/Select';
+import { Calendar } from '@/components/ui/Calendar';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
 import { FormField } from '@/components/forms/FormField';
-import { exportToCsv, formatDate } from '@/lib/utils';
+import { formatCurrencyCRC, formatDate } from '@/lib/utils';
 
-const fisicoSchema = z.object({
-  cedulaIdentidad: z.string().trim().min(5, 'Cédula requerida').max(20, 'Máximo 20 caracteres'),
-  nombre: z.string().trim().min(1, 'Nombre requerido').max(50),
-  apellido1Fisico: z.string().trim().min(1, 'Primer apellido requerido').max(50),
-  apellido2Fisico: z.string().trim().min(1, 'Segundo apellido requerido').max(50),
-  fechaNacimiento: z.string().min(1, 'Fecha de nacimiento requerida'),
-  correoElectronico: z.string().trim().email('Correo electrónico inválido').max(100),
-  telefono: z.string().trim().min(4, 'Teléfono requerido').max(20),
-  direccionNotificaciones: z.string().trim().min(3, 'Dirección requerida').max(255),
+const personaFisicaSchema = z.object({
+  identificacion: z.string().trim().min(5, 'Identificación requerida (mín. 5 dígitos)').max(50),
+  correoElectronico: z.string().trim().email('Correo electrónico inválido').max(150),
+  telefono: z.string().trim().min(4, 'Teléfono requerido').max(50),
+  direccionExacta: z.string().trim().min(5, 'Dirección exacta requerida').max(300),
+  idDistrito: z.coerce.number().int().min(1, 'Seleccione un distrito'),
+  idTipoIdentificacion: z.coerce.number().int().min(1, 'Seleccione tipo de identificación'),
+  nombre: z.string().trim().min(2, 'Nombre requerido').max(100),
+  primerApellido: z.string().trim().min(2, 'Primer apellido requerido').max(100),
+  segundoApellido: z.string().trim().max(100),
+  fechaDeNacimiento: z.string().min(1, 'Fecha de nacimiento requerida'),
+  idGenero: z.coerce.number().int().min(1, 'Seleccione género'),
+  idEstadoCivil: z.coerce.number().int().min(1, 'Seleccione estado civil'),
 });
 
-const juridicoSchema = z.object({
-  cedulaJuridica: z.string().trim().min(5, 'Cédula jurídica requerida').max(20),
-  razonSocial: z.string().trim().min(2, 'Razón social requerida').max(255),
-  nombreFantasia: z.string().trim().max(150).optional(),
-  fechaConstitucion: z.string().min(1, 'Fecha de constitución requerida'),
-  correoElectronico: z.string().trim().email('Correo electrónico inválido').max(100),
-  telefono: z.string().trim().min(4, 'Teléfono requerido').max(20),
-  direccionNotificaciones: z.string().trim().min(3, 'Dirección requerida').max(255),
-});
-
-const actualizarSchema = z.object({
-  correoElectronico: z.string().trim().email('Correo electrónico inválido').max(100),
-  telefono: z.string().trim().min(4, 'Teléfono requerido').max(20),
-  direccionNotificaciones: z.string().trim().min(3, 'Dirección requerida').max(255),
-  estadoContribuyente: z.boolean(),
+const personaJuridicaSchema = z.object({
+  identificacion: z.string().trim().min(5, 'Cédula jurídica requerida').max(50),
+  correoElectronico: z.string().trim().email('Correo electrónico inválido').max(150),
+  telefono: z.string().trim().min(4, 'Teléfono requerido').max(50),
+  direccionExacta: z.string().trim().min(5, 'Dirección requerida').max(300),
+  idDistrito: z.coerce.number().int().min(1, 'Seleccione un distrito'),
+  idTipoIdentificacion: z.coerce.number().int().min(1, 'Seleccione tipo de identificación'),
+  razonSocial: z.string().trim().min(3, 'Razón social requerida').max(200),
+  nombreComercial: z.string().trim().min(2, 'Nombre comercial requerido').max(200),
+  fechaDeConstitucion: z.string().min(1, 'Fecha de constitución requerida'),
+  idActividadEconomica: z.coerce.number().int().min(1, 'Seleccione actividad económica'),
 });
 
 const representanteSchema = z.object({
-  nombreRepresentante: z.string().trim().min(1, 'Nombre requerido').max(50),
-  apellido1Representante: z.string().trim().min(1, 'Primer apellido requerido').max(50),
-  apellido2Representante: z.string().trim().min(1, 'Segundo apellido requerido').max(50),
-  tomoFolioRegistro: z.string().trim().min(1, 'Tomo/Folio requerido').max(30),
-  cedulaRepresentante: z.string().trim().min(5, 'Cédula requerida').max(20),
-  fechaVencimientoPoder: z.string().min(1, 'Fecha de vencimiento del poder requerida'),
+  idPersonaJuridica: z.coerce.number().int().min(1, 'ID de Persona Jurídica requerido'),
+  idPersonaFisica: z.coerce.number().int().min(1, 'ID de Persona Física requerido'),
+  idCargoRepresentacion: z.coerce.number().int().min(1, 'Seleccione cargo'),
+  fechaDeInicio: z.string().min(1, 'Fecha de inicio requerida'),
+  fechaFin: z.string().optional(),
 });
 
-type FisicoForm = z.infer<typeof fisicoSchema>;
-type JuridicoForm = z.infer<typeof juridicoSchema>;
-type ActualizarForm = z.infer<typeof actualizarSchema>;
+const actualizarContribuyenteSchema = z.object({
+  correoElectronico: z.string().trim().email('Correo inválido').max(150),
+  telefono: z.string().trim().min(4, 'Teléfono requerido').max(50),
+  direccionExacta: z.string().trim().min(5, 'Dirección requerida').max(300),
+  idDistrito: z.coerce.number().int().min(1),
+  activo: z.boolean(),
+});
+
+type PersonaFisicaForm = z.infer<typeof personaFisicaSchema>;
+type PersonaJuridicaForm = z.infer<typeof personaJuridicaSchema>;
 type RepresentanteForm = z.infer<typeof representanteSchema>;
+type ActualizarContribuyenteForm = z.infer<typeof actualizarContribuyenteSchema>;
 
 export function ContribuyentesPage() {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'padron' | 'fisico' | 'juridico'>('padron');
-  const [criterioBusqueda, setCriterioBusqueda] = useState('');
-  const [searchApplied, setSearchApplied] = useState('');
-  const [tipoFiltro, setTipoFiltro] = useState<'TODOS' | 'FISICO' | 'JURIDICO'>('TODOS');
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroDistrito, setFiltroDistrito] = useState<string>('TODOS');
+  const [tipoPersonaTab, setTipoPersonaTab] = useState<'TODAS' | 'FISICA' | 'JURIDICA'>('TODAS');
+  const [selectedContribuyenteId, setSelectedContribuyenteId] = useState<number>(1);
 
-  // Modales de edición y representante legal
+  // Panel Derecho del Wireframe: Asociar Inmueble (dbo.Contribuyente_Inmueble)
+  const [asociarIdInmueble, setAsociarIdInmueble] = useState<number>(1);
+  const [asociarPlanoOpcional, setAsociarPlanoOpcional] = useState<string>('');
+  const [asociarPorcentaje, setAsociarPorcentaje] = useState<string>('100');
+
+  // Modales
+  const [openFisicaModal, setOpenFisicaModal] = useState(false);
+  const [openJuridicaModal, setOpenJuridicaModal] = useState(false);
+  const [openRepModal, setOpenRepModal] = useState(false);
   const [editingContribuyente, setEditingContribuyente] = useState<VwPadronContribuyente | null>(
     null
   );
-  const [repLegalTarget, setRepLegalTarget] = useState<VwPadronContribuyente | null>(null);
+  const [viewingContribuyente, setViewingContribuyente] = useState<VwPadronContribuyente | null>(
+    null
+  );
+  const [haciendaViewInfo, setHaciendaViewInfo] = useState<HaciendaContribuyenteInfo | null>(null);
+  const [cargandoHaciendaView, setCargandoHaciendaView] = useState(false);
+
+  useEffect(() => {
+    if (!viewingContribuyente?.identificacion) {
+      setHaciendaViewInfo(null);
+      return;
+    }
+    const clean = viewingContribuyente.identificacion.replace(/\D/g, '');
+    if (clean.length >= 9) {
+      setCargandoHaciendaView(true);
+      consultarCedulaHacienda(clean)
+        .then((info) => setHaciendaViewInfo(info))
+        .catch(() => setHaciendaViewInfo(null))
+        .finally(() => setCargandoHaciendaView(false));
+    } else {
+      setHaciendaViewInfo(null);
+    }
+  }, [viewingContribuyente]);
+
+  const viewInmueblesQuery = useQuery({
+    queryKey: ['contribuyentes', 'view-inmuebles', viewingContribuyente?.idContribuyente],
+    queryFn: () => inmuebleApi.porContribuyente(viewingContribuyente!.idContribuyente),
+    enabled: Boolean(viewingContribuyente && viewingContribuyente.idContribuyente > 0),
+  });
+
+  const viewTramitesQuery = useQuery({
+    queryKey: ['contribuyentes', 'view-tramites', viewingContribuyente?.idContribuyente],
+    queryFn: () => tramiteApi.porContribuyente(viewingContribuyente!.idContribuyente),
+    enabled: Boolean(viewingContribuyente && viewingContribuyente.idContribuyente > 0),
+  });
+
+  // Estados de consulta en tiempo real a la API de Hacienda en los formularios
+  const [buscandoHaciendaFisica, setBuscandoHaciendaFisica] = useState(false);
+  const [haciendaFisicaResumen, setHaciendaFisicaResumen] = useState<string | null>(null);
+
+  const [buscandoHaciendaJuridica, setBuscandoHaciendaJuridica] = useState(false);
+  const [haciendaJuridicaResumen, setHaciendaJuridicaResumen] = useState<string | null>(null);
+
+  const handleConsultarHaciendaFisica = async () => {
+    const rawCed = fisicaForm.getValues('identificacion');
+    if (!rawCed || rawCed.trim().length < 8) {
+      toast.error('Ingrese un número de cédula válido para consultar en Hacienda.');
+      return;
+    }
+    setBuscandoHaciendaFisica(true);
+    try {
+      const info = await consultarCedulaHacienda(rawCed);
+      fisicaForm.setValue('nombre', info.nombre, { shouldValidate: true });
+      fisicaForm.setValue('primerApellido', info.primerApellido, { shouldValidate: true });
+      fisicaForm.setValue('segundoApellido', info.segundoApellido, { shouldValidate: true });
+      if (info.idTipoIdentificacionSugerido) {
+        fisicaForm.setValue('idTipoIdentificacion', info.idTipoIdentificacionSugerido, { shouldValidate: true });
+      }
+      setHaciendaFisicaResumen(
+        `${info.nombreCompleto} — ${info.estadoTributario} (${info.moroso ? 'MOROSO' : 'AL DÍA'})`
+      );
+      toast.success(`Hacienda: ${info.nombreCompleto}`);
+    } catch (err) {
+      setHaciendaFisicaResumen(null);
+      toast.error(err instanceof Error ? err.message : 'Error al consultar Hacienda.');
+    } finally {
+      setBuscandoHaciendaFisica(false);
+    }
+  };
+
+  const handleConsultarHaciendaJuridica = async () => {
+    const rawCed = juridicaForm.getValues('identificacion');
+    if (!rawCed || rawCed.trim().length < 9) {
+      toast.error('Ingrese una cédula jurídica válida (mín. 10 dígitos) para consultar en Hacienda.');
+      return;
+    }
+    setBuscandoHaciendaJuridica(true);
+    try {
+      const info = await consultarCedulaHacienda(rawCed);
+      juridicaForm.setValue('razonSocial', info.nombreCompleto, { shouldValidate: true });
+      juridicaForm.setValue('nombreComercial', info.nombreCompleto, { shouldValidate: true });
+      juridicaForm.setValue('idTipoIdentificacion', 2, { shouldValidate: true });
+      setHaciendaJuridicaResumen(
+        `${info.nombreCompleto} — ${info.estadoTributario} (${info.moroso ? 'MOROSO' : 'AL DÍA'})`
+      );
+      toast.success(`Hacienda: ${info.nombreCompleto}`);
+    } catch (err) {
+      setHaciendaJuridicaResumen(null);
+      toast.error(err instanceof Error ? err.message : 'Error al consultar Hacienda.');
+    } finally {
+      setBuscandoHaciendaJuridica(false);
+    }
+  };
+
+  // Catálogos
+  const distritosQuery = useQuery({
+    queryKey: ['catalogos', 'distritos'],
+    queryFn: () => catalogosGeneralesApi.distritos(),
+  });
+  const tiposIdQuery = useQuery({
+    queryKey: ['catalogos', 'tipos-identificacion'],
+    queryFn: () => catalogosGeneralesApi.tiposIdentificacion(),
+  });
+  const generosQuery = useQuery({
+    queryKey: ['catalogos', 'generos'],
+    queryFn: () => catalogosGeneralesApi.generos(),
+  });
+  const estadosCivilesQuery = useQuery({
+    queryKey: ['catalogos', 'estados-civiles'],
+    queryFn: () => catalogosGeneralesApi.estadosCiviles(),
+  });
+  const actividadesQuery = useQuery({
+    queryKey: ['catalogos', 'actividades-economicas'],
+    queryFn: () => catalogosGeneralesApi.actividadesEconomicas(),
+  });
+  const cargosQuery = useQuery({
+    queryKey: ['catalogos', 'cargos-representacion'],
+    queryFn: () => catalogosGeneralesApi.cargosRepresentacion(),
+  });
 
   const padronQuery = useQuery({
     queryKey: ['contribuyentes', 'padron'],
     queryFn: () => contribuyenteApi.padron(),
   });
 
-  const buscarQuery = useQuery({
-    queryKey: ['contribuyentes', 'buscar', searchApplied],
-    queryFn: () => contribuyenteApi.buscar(searchApplied),
-    enabled: searchApplied.trim().length > 0,
+  const catastroGeneralQuery = useQuery({
+    queryKey: ['inmuebles', 'catastro-asociar'],
+    queryFn: () => inmuebleApi.catastro(),
   });
 
-  // Formulario Persona Física
-  const fisicoForm = useForm<FisicoForm>({
-    resolver: zodResolver(fisicoSchema),
+  const detalleContribuyenteQuery = useQuery({
+    queryKey: ['contribuyentes', 'detalle', selectedContribuyenteId],
+    queryFn: () => contribuyenteApi.consultar(selectedContribuyenteId),
+    enabled: selectedContribuyenteId > 0,
+  });
+
+  const inmueblesContribuyenteQuery = useQuery({
+    queryKey: ['contribuyentes', 'inmuebles-propios', selectedContribuyenteId],
+    queryFn: () => inmuebleApi.porContribuyente(selectedContribuyenteId),
+    enabled: selectedContribuyenteId > 0,
+  });
+
+  const padronFiltrado = useMemo(() => {
+    const rows = padronQuery.data ?? [];
+    return rows.filter((r) => {
+      const matchDistrito = filtroDistrito === 'TODOS' || r.nombreDistrito === filtroDistrito;
+      const matchTipo =
+        tipoPersonaTab === 'TODAS' ||
+        (tipoPersonaTab === 'FISICA' && r.tipoPersona.toLowerCase().includes('fís')) ||
+        (tipoPersonaTab === 'JURIDICA' && r.tipoPersona.toLowerCase().includes('jur'));
+      const q = busqueda.trim().toLowerCase();
+      const matchTexto =
+        !q ||
+        r.identificacion.toLowerCase().includes(q) ||
+        r.nombreCompletoORazonSocial.toLowerCase().includes(q) ||
+        r.correoElectronico.toLowerCase().includes(q) ||
+        String(r.idContribuyente) === q;
+      return matchDistrito && matchTipo && matchTexto;
+    });
+  }, [padronQuery.data, filtroDistrito, tipoPersonaTab, busqueda]);
+
+  const activeContribuyente = useMemo(() => {
+    const found = (padronQuery.data ?? []).find(
+      (c) => c.idContribuyente === selectedContribuyenteId
+    );
+    return found ?? padronFiltrado[0] ?? null;
+  }, [padronQuery.data, padronFiltrado, selectedContribuyenteId]);
+
+  const fisicaForm = useForm<PersonaFisicaForm>({
+    resolver: zodResolver(personaFisicaSchema),
     defaultValues: {
-      cedulaIdentidad: '',
+      identificacion: '',
+      correoElectronico: '',
+      telefono: '',
+      direccionExacta: '',
+      idDistrito: 1,
+      idTipoIdentificacion: 1,
       nombre: '',
-      apellido1Fisico: '',
-      apellido2Fisico: '',
-      fechaNacimiento: '1985-05-15',
-      correoElectronico: '',
-      telefono: '',
-      direccionNotificaciones: '',
+      primerApellido: '',
+      segundoApellido: '',
+      fechaDeNacimiento: '1990-01-15',
+      idGenero: 1,
+      idEstadoCivil: 1,
     },
   });
 
-  // Formulario Persona Jurídica
-  const juridicoForm = useForm<JuridicoForm>({
-    resolver: zodResolver(juridicoSchema),
+  const juridicaForm = useForm<PersonaJuridicaForm>({
+    resolver: zodResolver(personaJuridicaSchema),
     defaultValues: {
-      cedulaJuridica: '',
-      razonSocial: '',
-      nombreFantasia: '',
-      fechaConstitucion: '2018-01-15',
+      identificacion: '',
       correoElectronico: '',
       telefono: '',
-      direccionNotificaciones: '',
+      direccionExacta: '',
+      idDistrito: 1,
+      idTipoIdentificacion: 2,
+      razonSocial: '',
+      nombreComercial: '',
+      fechaDeConstitucion: '2020-05-10',
+      idActividadEconomica: 1,
     },
   });
 
-  // Formulario Actualizar
-  const editForm = useForm<ActualizarForm>({
-    resolver: zodResolver(actualizarSchema),
-  });
-
-  // Formulario Representante Legal
   const repForm = useForm<RepresentanteForm>({
     resolver: zodResolver(representanteSchema),
     defaultValues: {
-      nombreRepresentante: '',
-      apellido1Representante: '',
-      apellido2Representante: '',
-      tomoFolioRegistro: '',
-      cedulaRepresentante: '',
-      fechaVencimientoPoder: '2028-12-31',
+      idPersonaJuridica: 1,
+      idPersonaFisica: 1,
+      idCargoRepresentacion: 1,
+      fechaDeInicio: new Date().toISOString().slice(0, 10),
+      fechaFin: '',
     },
   });
 
-  const registrarFisicoMut = useMutation({
-    mutationFn: (dto: FisicoForm) => contribuyenteApi.registrarFisico(dto),
+  const editForm = useForm<ActualizarContribuyenteForm>({
+    resolver: zodResolver(actualizarContribuyenteSchema),
+  });
+
+  const registrarFisicaMut = useMutation({
+    mutationFn: (dto: PersonaFisicaForm) => contribuyenteApi.registrarPersonaFisica(dto),
     onSuccess: (res) => {
-      toast.success(`${res.message || 'Contribuyente físico registrado'} (ID #${res.data})`);
-      fisicoForm.reset();
-      setActiveTab('padron');
+      toast.success(`${res.message || 'Persona física registrada'} (ID #${res.data})`);
+      fisicaForm.reset();
+      setOpenFisicaModal(false);
       queryClient.invalidateQueries({ queryKey: ['contribuyentes'] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const registrarJuridicoMut = useMutation({
-    mutationFn: (dto: JuridicoForm) =>
-      contribuyenteApi.registrarJuridico({
-        ...dto,
-        nombreFantasia: dto.nombreFantasia || null,
-      }),
+  const registrarJuridicaMut = useMutation({
+    mutationFn: (dto: PersonaJuridicaForm) => contribuyenteApi.registrarPersonaJuridica(dto),
     onSuccess: (res) => {
-      toast.success(`${res.message || 'Contribuyente jurídico registrado'} (ID #${res.data})`);
-      juridicoForm.reset();
-      setActiveTab('padron');
-      queryClient.invalidateQueries({ queryKey: ['contribuyentes'] });
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const actualizarMut = useMutation({
-    mutationFn: ({ id, dto }: { id: number; dto: ActualizarForm }) =>
-      contribuyenteApi.actualizar(id, dto),
-    onSuccess: (res) => {
-      toast.success(res.message || 'Contribuyente actualizado correctamente.');
-      setEditingContribuyente(null);
+      toast.success(`${res.message || 'Persona jurídica registrada'} (ID #${res.data})`);
+      juridicaForm.reset();
+      setOpenJuridicaModal(false);
       queryClient.invalidateQueries({ queryKey: ['contribuyentes'] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
   const registrarRepMut = useMutation({
-    mutationFn: ({ id, dto }: { id: number; dto: RepresentanteForm }) =>
-      contribuyenteApi.registrarRepresentanteLegal(id, dto),
+    mutationFn: (dto: RepresentanteForm) =>
+      contribuyenteApi.registrarRepresentanteLegal({
+        ...dto,
+        fechaFin: dto.fechaFin ? dto.fechaFin : null,
+      }),
     onSuccess: (res) => {
-      toast.success(res.message || 'Representante legal registrado en la base de datos.');
-      setRepLegalTarget(null);
-      repForm.reset();
+      toast.success(res.message || 'Representante legal vinculado exitosamente.');
+      setOpenRepModal(false);
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const openEditModal = (row: VwPadronContribuyente) => {
-    setEditingContribuyente(row);
-    editForm.reset({
-      correoElectronico: row.correoElectronico ?? '',
-      telefono: row.telefono ?? '',
-      direccionNotificaciones: row.direccionNotificaciones ?? '',
-      estadoContribuyente: row.estadoContribuyente,
-    });
-  };
+  const actualizarMut = useMutation({
+    mutationFn: ({ id, dto }: { id: number; dto: ActualizarContribuyenteForm }) =>
+      contribuyenteApi.actualizar(id, dto),
+    onSuccess: (res) => {
+      toast.success(res.message || 'Contribuyente actualizado.');
+      setEditingContribuyente(null);
+      queryClient.invalidateQueries({ queryKey: ['contribuyentes'] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
-  // Combinar resultados cuando se usa búsqueda sp_consultar_contribuyente o vw_padron_contribuyentes
-  const listaBase: VwPadronContribuyente[] =
-    searchApplied.trim().length > 0
-      ? // sp_consultar_contribuyente devuelve exactamente las columnas de vw_padron_contribuyentes
-        (buscarQuery.data ?? [])
-      : padronQuery.data ?? [];
-
-  const listaFiltrada = listaBase.filter((item) => {
-    if (tipoFiltro === 'TODOS') return true;
-    const t = (item.tipoPersona || '').toUpperCase();
-    if (tipoFiltro === 'FISICO') return t.includes('FÍS') || t.includes('FIS');
-    if (tipoFiltro === 'JURIDICO') return t.includes('JUR');
-    return true;
+  const asociarInmuebleMut = useMutation({
+    mutationFn: () => {
+      if (!activeContribuyente) throw new Error('Seleccione un contribuyente.');
+      const pct = Number(asociarPorcentaje);
+      if (Number.isNaN(pct) || pct <= 0 || pct > 100) {
+        throw new Error('El porcentaje de participación debe estar entre 0.01% y 100%.');
+      }
+      return inmuebleApi.asociarPropietario(asociarIdInmueble, {
+        idContribuyente: activeContribuyente.idContribuyente,
+        porcentajeParticipacion: pct,
+      });
+    },
+    onSuccess: (res) => {
+      toast.success(
+        res.message || 'Inmueble asociado exitosamente con su porcentaje de participación.'
+      );
+      queryClient.invalidateQueries({ queryKey: ['contribuyentes'] });
+      queryClient.invalidateQueries({ queryKey: ['inmuebles'] });
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   return (
-    <div className="flex flex-col" style={{ gap: '2rem' }}>
+    <div className="space-y-6">
       <PageHeader
-        title="Padrón de contribuyentes"
-        subtitle="Administre personas físicas, organizaciones y representantes legales del cantón."
-        badge={`${padronQuery.data?.length ?? 0} registros`}
+        title="Padrón de Contribuyentes y Bienes Inmuebles"
+        subtitle="Gestión de Personas Físicas, Personas Jurídicas, Representantes Legales y Derechos de Copropiedad."
+        badge={`${padronQuery.data?.length ?? 0} contribuyentes`}
         icon={<Users className="h-6 w-6" />}
         actions={
           <>
             <Button
-              variant="outline"
-              size="sm"
+              variant="secondary"
               onClick={() => queryClient.invalidateQueries({ queryKey: ['contribuyentes'] })}
             >
               <RefreshCw className="h-4 w-4" /> Actualizar
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                exportToCsv('padron_contribuyentes_nicoya.csv', listaFiltrada as unknown as Record<string, unknown>[])
-              }
-              disabled={listaFiltrada.length === 0}
-            >
-              <Download className="h-4 w-4" /> Exportar CSV
+            <Button variant="secondary" onClick={() => setOpenRepModal(true)}>
+              <UserCheck className="h-4 w-4" /> Representante Legal
+            </Button>
+            <Button variant="secondary" onClick={() => setOpenJuridicaModal(true)}>
+              <Building2 className="h-4 w-4" /> + Persona Jurídica
+            </Button>
+            <Button onClick={() => setOpenFisicaModal(true)}>
+              <UserPlus className="h-4 w-4" /> + Persona Física
             </Button>
           </>
         }
       />
 
-      <nav className="grid gap-3 rounded-2xl border border-sigemun-border bg-white p-3 shadow-card sm:grid-cols-3" aria-label="Secciones del padrón">
-        <Button
-          variant={activeTab === 'padron' ? 'default' : 'outline'}
-          className="h-auto justify-start px-4 py-3"
-          onClick={() => setActiveTab('padron')}
-        >
-          <Users className="h-4 w-4" /> Consultar padrón
-        </Button>
-        <Button
-          variant={activeTab === 'fisico' ? 'default' : 'outline'}
-          className="h-auto justify-start px-4 py-3"
-          onClick={() => setActiveTab('fisico')}
-        >
-          <UserPlus className="h-4 w-4" /> Registrar persona física
-        </Button>
-        <Button
-          variant={activeTab === 'juridico' ? 'default' : 'outline'}
-          className="h-auto justify-start px-4 py-3"
-          onClick={() => setActiveTab('juridico')}
-        >
-          <Building className="h-4 w-4" /> Registrar persona jurídica
-        </Button>
-      </nav>
+      {/* SECCIÓN SUPERIOR DEL WIREFRAME: TARJETA DEL CONTRIBUYENTE SELECCIONADO + BIENES INMUEBLES Y PANEL DERECHO ASOCIAR INMUEBLE */}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        {/* Columna Izquierda / Central (8 cols) */}
+        <div className="space-y-6 xl:col-span-8">
+          {/* Tarjeta Superior: Persona Física | Persona Jurídica y Datos del Contribuyente */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5E7EB] pb-3">
+                <div className="flex items-center gap-2">
+                  {[
+                    { id: 'TODAS', label: 'Todos' },
+                    { id: 'FISICA', label: 'Persona Física' },
+                    { id: 'JURIDICA', label: 'Persona Jurídica' },
+                  ].map((tab) => {
+                    const active = tipoPersonaTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setTipoPersonaTab(tab.id as typeof tipoPersonaTab)}
+                        className={`rounded-[10px] px-3.5 py-2 text-xs font-bold transition-colors ${
+                          active
+                            ? 'bg-[#171717] text-white'
+                            : 'border border-[#D1D5DB] bg-white text-[#171717] hover:bg-[#F3F4F6]'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
 
-      {/* TAB 1: PADRÓN GENERAL Y BÚSQUEDA */}
-      {activeTab === 'padron' && (
-        <div className="flex flex-col" style={{ gap: '1.5rem' }}>
-          <Card className="overflow-hidden">
-            <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
-              <CardTitle className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-sigemun-primary" /> Buscar contribuyentes
-              </CardTitle>
-              <CardDescription>Consulte por identificación, nombre, razón social o correo electrónico.</CardDescription>
+                <Badge variant={activeContribuyente?.activo !== false ? 'success' : 'danger'}>
+                  {activeContribuyente?.activo !== false ? 'Al Día · Activo' : 'Inactivo'}
+                </Badge>
+              </div>
             </CardHeader>
-            <CardContent className="pt-6 sm:pt-6">
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px_auto] lg:items-end">
-                <div className="flex-1">
-                  <label className="mb-2 block text-sm font-semibold text-sigemun-text">
-                    Criterio de búsqueda
-                  </label>
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-sigemun-muted" />
-                    <Input
-                      placeholder="Cédula de identidad/jurídica, nombre, razón social o correo..."
-                      value={criterioBusqueda}
-                      onChange={(e) => setCriterioBusqueda(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') setSearchApplied(criterioBusqueda);
-                      }}
-                      className="pl-9"
-                    />
+
+            <CardContent>
+              {activeContribuyente ? (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <p className="text-xs font-medium text-[#6B7280]">Cédula / Identificación</p>
+                    <p className="mt-0.5 font-mono text-base font-bold text-[#171717]">
+                      {activeContribuyente.identificacion}
+                    </p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <p className="text-xs font-medium text-[#6B7280]">
+                      Nombre Completo / Razón Social
+                    </p>
+                    <p className="mt-0.5 text-base font-bold text-[#171717]">
+                      {activeContribuyente.nombreCompletoORazonSocial}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-[#6B7280]">Tipo de Contribuyente</p>
+                    <p className="mt-0.5 text-sm font-semibold text-[#1E3A8A]">
+                      {activeContribuyente.tipoPersona}
+                    </p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <p className="text-xs font-medium text-[#6B7280]">Correo Electrónico</p>
+                    <p className="mt-0.5 text-sm font-medium text-[#171717]">
+                      {activeContribuyente.correoElectronico}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-[#6B7280]">Teléfono</p>
+                    <p className="mt-0.5 font-mono text-sm font-semibold text-[#171717]">
+                      {activeContribuyente.telefono}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-[#6B7280]">Distrito</p>
+                    <p className="mt-0.5 text-sm font-semibold text-[#171717]">
+                      {activeContribuyente.nombreDistrito}
+                    </p>
                   </div>
                 </div>
-                <div className="w-full">
-                  <label className="mb-2 block text-sm font-semibold text-sigemun-text">
-                    Tipo de persona
-                  </label>
-                  <Select
-                    value={tipoFiltro}
-                    onChange={(e) => setTipoFiltro(e.target.value as typeof tipoFiltro)}
-                  >
-                    <option value="TODOS">Todos los tipos</option>
-                    <option value="FISICO">Persona Física</option>
-                    <option value="JURIDICO">Persona Jurídica</option>
-                  </Select>
+              ) : (
+                <p className="text-xs text-[#6B7280]">
+                  Seleccione un contribuyente del padrón inferior.
+                </p>
+              )}
+
+              {detalleContribuyenteQuery.data?.[0]?.actividadEconomica && (
+                <div className="mt-4 rounded-[10px] border border-[#BFDBFE] bg-[#EFF6FF] p-3 text-xs text-[#1E3A8A]">
+                  <strong>Actividad Económica:</strong>{' '}
+                  {detalleContribuyenteQuery.data[0].actividadEconomica} ·{' '}
+                  <strong>Constitución:</strong>{' '}
+                  {formatDate(detalleContribuyenteQuery.data[0].fechaNacimientoOConstitucion)}
                 </div>
-                <div className="flex gap-2">
-                  <Button type="button" onClick={() => setSearchApplied(criterioBusqueda)}>
-                    <Search className="h-4 w-4" /> Buscar
-                  </Button>
-                  {searchApplied && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setCriterioBusqueda('');
-                        setSearchApplied('');
-                      }}
-                    >
-                      Limpiar
-                    </Button>
-                  )}
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
-          {padronQuery.isLoading || buscarQuery.isLoading ? (
-            <LoadingState message="Consultando padrón de contribuyentes en SQL Server..." />
+          {/* Tarjeta Media del Wireframe: Bienes Inmuebles y Derechos de Propiedad */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Bienes Inmuebles y Derechos de Propiedad</CardTitle>
+                <CardDescription>
+                  Propiedades registradas a nombre de{' '}
+                  <strong>
+                    {activeContribuyente?.nombreCompletoORazonSocial ?? 'este contribuyente'}
+                  </strong>
+                </CardDescription>
+              </div>
+              <Badge variant="blue">
+                {inmueblesContribuyenteQuery.data?.length ?? 0} finca(s)
+              </Badge>
+            </CardHeader>
+
+            <CardContent className="p-0">
+              {inmueblesContribuyenteQuery.isLoading ? (
+                <div className="p-6">
+                  <LoadingState message="Consultando propiedades del contribuyente..." />
+                </div>
+              ) : (inmueblesContribuyenteQuery.data ?? []).length === 0 ? (
+                <div className="p-6">
+                  <EmptyState
+                    title="Sin propiedades asociadas"
+                    description="Utilice el panel derecho 'Asociar Inmueble' para registrar derechos de propiedad."
+                  />
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC] font-bold uppercase text-[#4B5563]">
+                        <th className="px-4 py-3.5">#</th>
+                        <th className="px-4 py-3.5">Número de Finca</th>
+                        <th className="px-4 py-3.5">Plano Catastro</th>
+                        <th className="px-4 py-3.5">Distrito</th>
+                        <th className="px-4 py-3.5">Valor Fiscal (₡)</th>
+                        <th className="px-4 py-3.5">Tipo de Uso</th>
+                        <th className="px-4 py-3.5">Porcentaje de Participación (%)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E7EB]">
+                      {(inmueblesContribuyenteQuery.data ?? []).map((inm, idx) => (
+                        <tr key={inm.idInmueble} className="hover:bg-[#F8FAFC]">
+                          <td className="px-4 py-3 font-mono font-bold text-[#6B7280]">
+                            {idx + 1}
+                          </td>
+                          <td className="px-4 py-3 font-mono font-bold text-[#1E3A8A]">
+                            Finca {inm.numeroFinca}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-[#4B5563]">
+                            Plano {inm.planoCatastro}
+                          </td>
+                          <td className="px-4 py-3 font-medium text-[#171717]">
+                            {inm.nombreDistrito}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-[#171717]">
+                            {formatCurrencyCRC(inm.valorFiscal)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant="neutral">{inm.descripcionUso}</Badge>
+                          </td>
+                          <td className="px-4 py-3 font-bold text-[#15803D]">
+                            {inm.porcentajeParticipacion}%
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Columna Derecha (4 cols): Asociar Inmueble (Exacta al Wireframe) */}
+        <div className="xl:col-span-4">
+          <Card className="sticky top-20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Link2 className="h-5 w-5 text-[#1D4ED8]" /> Asociar Inmueble
+              </CardTitle>
+              <CardDescription>
+                Vincular finca en copropiedad a{' '}
+                <strong>{activeContribuyente?.nombreCompletoORazonSocial ?? '—'}</strong>
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <FormField label="Número de Finca (Catastro Municipal)" required>
+                <Select
+                  value={asociarIdInmueble}
+                  onChange={(e) => {
+                    const id = Number(e.target.value);
+                    setAsociarIdInmueble(id);
+                    const found = (catastroGeneralQuery.data ?? []).find(
+                      (f) => f.idInmueble === id
+                    );
+                    if (found) {
+                      setAsociarPlanoOpcional(found.planoCatastro);
+                    }
+                  }}
+                >
+                  {(catastroGeneralQuery.data ?? []).map((f) => (
+                    <option key={f.idInmueble} value={f.idInmueble}>
+                      Finca {f.numeroFinca} — {f.nombreDistrito}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+
+              <FormField label="Plano Catastro (opcional)">
+                <Input
+                  placeholder="Ej. G-1234567-2026"
+                  value={asociarPlanoOpcional}
+                  onChange={(e) => setAsociarPlanoOpcional(e.target.value)}
+                />
+              </FormField>
+
+              <FormField
+                label="Porcentaje de Participación (%)"
+                required
+                hint="La suma de derechos sobre una misma finca no puede superar el 100%."
+              >
+                <Input
+                  type="number"
+                  min={0.01}
+                  max={100}
+                  step="0.01"
+                  value={asociarPorcentaje}
+                  onChange={(e) => setAsociarPorcentaje(e.target.value)}
+                />
+              </FormField>
+
+              <Button
+                type="button"
+                className="w-full"
+                disabled={!activeContribuyente || asociarInmuebleMut.isPending}
+                onClick={() => asociarInmuebleMut.mutate()}
+              >
+                <Plus className="h-4 w-4" />
+                {asociarInmuebleMut.isPending ? 'Guardando...' : 'Guardar Asociación'}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* TABLA GENERAL DEL PADRÓN DE CONTRIBUYENTES */}
+      <Card>
+        <CardHeader className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <CardTitle>Listado General del Padrón Municipal</CardTitle>
+            <CardDescription>
+              Haga clic en cualquier fila para inspeccionar sus bienes inmuebles y datos arriba.
+            </CardDescription>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="w-64">
+              <SearchInput
+                value={busqueda}
+                onChange={setBusqueda}
+                placeholder="Buscar por cédula o nombre..."
+              />
+            </div>
+            <div className="w-48">
+              <Select
+                value={filtroDistrito}
+                onChange={(e) => setFiltroDistrito(e.target.value)}
+              >
+                <option value="TODOS">Todos los distritos</option>
+                {(distritosQuery.data ?? []).map((d) => (
+                  <option key={d.idDistrito} value={d.nombreDistrito}>
+                    {d.nombreDistrito}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          {padronQuery.isLoading ? (
+            <div className="p-6">
+              <LoadingState message="Cargando padrón de contribuyentes..." />
+            </div>
           ) : padronQuery.isError ? (
-            <ErrorState error={padronQuery.error} onRetry={() => padronQuery.refetch()} />
-          ) : buscarQuery.isError ? (
-            <ErrorState error={buscarQuery.error} onRetry={() => buscarQuery.refetch()} />
-          ) : listaFiltrada.length === 0 ? (
-            <EmptyState
-              title="No se encontraron contribuyentes"
-              description="Intente con otro criterio de búsqueda o registre un nuevo contribuyente."
-            />
+            <div className="p-6">
+              <ErrorState error={padronQuery.error} onRetry={() => padronQuery.refetch()} />
+            </div>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-sigemun-border bg-white shadow-card" role="region" aria-label="Listado de contribuyentes" tabIndex={0}>
-              <table className="w-full min-w-[1180px] border-collapse text-left text-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
-                    <th scope="col" className="px-5 py-4">ID</th>
-                    <th scope="col" className="px-4 py-4">Tipo</th>
-                    <th scope="col" className="px-4 py-4">Identificación</th>
-                    <th scope="col" className="px-4 py-4">Nombre o razón social</th>
-                    <th scope="col" className="px-4 py-4">Contacto</th>
-                    <th scope="col" className="px-4 py-4">Dirección de notificaciones</th>
-                    <th scope="col" className="px-4 py-4">Registro</th>
-                    <th scope="col" className="px-4 py-4">Estado</th>
-                    <th scope="col" className="px-5 py-4 text-right">Acciones</th>
+                  <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC] font-bold uppercase text-[#4B5563]">
+                    <th className="px-4 py-3.5">ID</th>
+                    <th className="px-4 py-3.5">Cédula / ID</th>
+                    <th className="px-4 py-3.5">Nombre Completo / Razón Social</th>
+                    <th className="px-4 py-3.5">Tipo Persona</th>
+                    <th className="px-4 py-3.5">Distrito</th>
+                    <th className="px-4 py-3.5">Contacto</th>
+                    <th className="px-4 py-3.5">Estado</th>
+                    <th className="px-4 py-3.5 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-sigemun-border">
-                  {listaFiltrada.map((c) => {
-                    const isJuridica = (c.tipoPersona || '').toUpperCase().includes('JUR');
+                <tbody className="divide-y divide-[#E5E7EB]">
+                  {padronFiltrado.map((row) => {
+                    const isSelected = activeContribuyente?.idContribuyente === row.idContribuyente;
                     return (
-                      <tr key={c.idContribuyente} className="even:bg-sigemun-surface transition-colors hover:bg-sigemun-sky-muted/55">
-                        <td className="px-5 py-4 font-mono font-bold text-sigemun-primary">
-                          #{c.idContribuyente}
+                      <tr
+                        key={row.idContribuyente}
+                        onClick={() => setSelectedContribuyenteId(row.idContribuyente)}
+                        className={`cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'bg-[#EFF6FF] shadow-[inset_3px_0_0_#1D4ED8]'
+                            : 'hover:bg-[#F8FAFC]'
+                        }`}
+                      >
+                        <td className="px-4 py-3 font-mono font-bold text-[#171717]">
+                          #{row.idContribuyente}
+                        </td>
+                        <td className="px-4 py-3 font-mono font-semibold text-[#1E3A8A]">
+                          {row.identificacion}
+                        </td>
+                        <td className="px-4 py-3 font-bold text-[#171717]">
+                          {row.nombreCompletoORazonSocial}
                         </td>
                         <td className="px-4 py-3">
-                          <Badge variant={isJuridica ? 'accent' : 'info'}>
-                            {c.tipoPersona}
+                          <Badge
+                            variant={
+                              row.tipoPersona.toLowerCase().includes('jur') ? 'blue' : 'neutral'
+                            }
+                          >
+                            {row.tipoPersona}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3 font-mono font-semibold">
-                          {c.identificacionOficial || '—'}
+                        <td className="px-4 py-3">{row.nombreDistrito}</td>
+                        <td className="px-4 py-3">
+                          <p>{row.correoElectronico}</p>
+                          <p className="font-mono text-[#6B7280]">{row.telefono}</p>
                         </td>
                         <td className="px-4 py-3">
-                          <p className="font-semibold text-sigemun-text">
-                            {c.nombreORazonSocial || '—'}
-                          </p>
-                          {c.nombreFantasia && (
-                            <p className="text-xs text-sigemun-muted">
-                              Fantasía: {c.nombreFantasia}
-                            </p>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-xs">
-                          <p className="font-medium text-sigemun-text">{c.correoElectronico}</p>
-                          <p className="text-sigemun-muted">{c.telefono}</p>
-                        </td>
-                        <td className="px-4 py-3 max-w-xs truncate text-xs text-sigemun-muted">
-                          {c.direccionNotificaciones}
-                        </td>
-                        <td className="px-4 py-3 text-xs whitespace-nowrap">
-                          {formatDate(c.fechaRegistro)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge variant={c.estadoContribuyente ? 'success' : 'danger'}>
-                            {c.estadoContribuyente ? 'Activo' : 'Inactivo'}
+                          <Badge variant={row.activo ? 'success' : 'danger'}>
+                            {row.activo ? 'Activo' : 'Inactivo'}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <td
+                          className="px-4 py-3 text-right whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <div className="inline-flex items-center gap-1.5">
                             <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openEditModal(c)}
-                              title="Editar contacto y estado"
+                              variant="secondary"
+                              onClick={() => {
+                                setSelectedContribuyenteId(row.idContribuyente);
+                                setViewingContribuyente(row);
+                              }}
+                              title="Ver expediente integral del contribuyente"
+                            >
+                              <Eye className="h-3.5 w-3.5" /> Ver
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              onClick={() => {
+                                setEditingContribuyente(row);
+                                const dMatch = distritosQuery.data?.find(
+                                  (d) => d.nombreDistrito === row.nombreDistrito
+                                );
+                                editForm.reset({
+                                  correoElectronico: row.correoElectronico,
+                                  telefono: row.telefono,
+                                  direccionExacta: row.direccionExacta,
+                                  idDistrito: dMatch?.idDistrito ?? 1,
+                                  activo: row.activo,
+                                });
+                              }}
                             >
                               <Edit3 className="h-3.5 w-3.5" /> Editar
                             </Button>
-                            {isJuridica && (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => setRepLegalTarget(c)}
-                                title="Registrar representante legal"
-                              >
-                                <UserCheck className="h-3.5 w-3.5" /> Rep. Legal
-                              </Button>
-                            )}
                           </div>
                         </td>
                       </tr>
@@ -428,239 +805,443 @@ export function ContribuyentesPage() {
               </table>
             </div>
           )}
-        </div>
-      )}
+        </CardContent>
+      </Card>
 
-      {/* TAB 2: REGISTRAR PERSONA FÍSICA */}
-      {activeTab === 'fisico' && (
-        <Card className="max-w-3xl">
-          <CardHeader>
-            <CardTitle>Registrar Contribuyente — Persona Física (CU-01)</CardTitle>
-            <CardDescription>
-              Ejecuta <code className="font-mono">POST /api/contribuyente/fisico</code> (
-              <code className="font-mono">dbo.sp_registrar_contribuyente_fisico</code>)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form
-              onSubmit={fisicoForm.handleSubmit((v) => registrarFisicoMut.mutate(v))}
-              className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+      {/* MODAL 1: REGISTRAR PERSONA FÍSICA */}
+      <Modal
+        open={openFisicaModal}
+        onClose={() => setOpenFisicaModal(false)}
+        title="Registrar Contribuyente — Persona Física"
+        description="Complete los campos de las tablas dbo.Contribuyente y dbo.Persona_Fisica."
+        maxWidth="max-w-2xl"
+      >
+        <form
+          onSubmit={fisicaForm.handleSubmit((dto) => registrarFisicaMut.mutate(dto))}
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+        >
+          <FormField
+            label="Tipo de Identificación"
+            required
+            error={fisicaForm.formState.errors.idTipoIdentificacion?.message}
+          >
+            <Select {...fisicaForm.register('idTipoIdentificacion')}>
+              {(tiposIdQuery.data ?? []).map((t) => (
+                <option key={t.idTipoIdentificacion} value={t.idTipoIdentificacion}>
+                  {t.codigoTipoIdentificacion} — {t.descripcion}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+
+          <FormField
+            label="Número de Identificación (Cédula)"
+            required
+            error={fisicaForm.formState.errors.identificacion?.message}
+          >
+            <div className="flex gap-2">
+              <Input
+                placeholder="Ej. 508570485"
+                {...fisicaForm.register('identificacion')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleConsultarHaciendaFisica();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={buscandoHaciendaFisica}
+                onClick={handleConsultarHaciendaFisica}
+                title="Autocompletar nombres desde el Ministerio de Hacienda"
+              >
+                <Search className="h-4 w-4 text-[#1D4ED8]" />
+                {buscandoHaciendaFisica ? '...' : 'Hacienda'}
+              </Button>
+            </div>
+          </FormField>
+
+          {haciendaFisicaResumen && (
+            <div className="sm:col-span-2 flex items-center gap-2 rounded-[8px] border border-[#BFDBFE] bg-[#EFF6FF] px-3.5 py-2 text-xs text-[#1E3A8A]">
+              <ShieldCheck className="h-4 w-4 text-[#1D4ED8] shrink-0" />
+              <span className="font-semibold">{haciendaFisicaResumen}</span>
+            </div>
+          )}
+
+          <FormField
+            label="Nombre"
+            required
+            error={fisicaForm.formState.errors.nombre?.message}
+          >
+            <Input placeholder="Nombre" {...fisicaForm.register('nombre')} />
+          </FormField>
+
+          <FormField
+            label="Primer Apellido"
+            required
+            error={fisicaForm.formState.errors.primerApellido?.message}
+          >
+            <Input placeholder="Primer apellido" {...fisicaForm.register('primerApellido')} />
+          </FormField>
+
+          <FormField
+            label="Segundo Apellido"
+            error={fisicaForm.formState.errors.segundoApellido?.message}
+          >
+            <Input placeholder="Segundo apellido" {...fisicaForm.register('segundoApellido')} />
+          </FormField>
+
+          <FormField
+            label="Fecha de Nacimiento (dd/MM/yyyy)"
+            required
+            error={fisicaForm.formState.errors.fechaDeNacimiento?.message}
+          >
+            <Calendar
+              value={fisicaForm.watch('fechaDeNacimiento')}
+              onChange={(iso) =>
+                fisicaForm.setValue('fechaDeNacimiento', iso, { shouldValidate: true })
+              }
+            />
+          </FormField>
+
+          <FormField
+            label="Género"
+            required
+            error={fisicaForm.formState.errors.idGenero?.message}
+          >
+            <Select {...fisicaForm.register('idGenero')}>
+              {(generosQuery.data ?? []).map((g) => (
+                <option key={g.idGenero} value={g.idGenero}>
+                  {g.codigoGenero}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+
+          <FormField
+            label="Estado Civil"
+            required
+            error={fisicaForm.formState.errors.idEstadoCivil?.message}
+          >
+            <Select {...fisicaForm.register('idEstadoCivil')}>
+              {(estadosCivilesQuery.data ?? []).map((ec) => (
+                <option key={ec.idEstadoCivil} value={ec.idEstadoCivil}>
+                  {ec.codigoEstadoCivil}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+
+          <FormField
+            label="Correo Electrónico"
+            required
+            error={fisicaForm.formState.errors.correoElectronico?.message}
+          >
+            <Input
+              type="email"
+              placeholder="ciudadano@correo.cr"
+              {...fisicaForm.register('correoElectronico')}
+            />
+          </FormField>
+
+          <FormField
+            label="Teléfono"
+            required
+            error={fisicaForm.formState.errors.telefono?.message}
+          >
+            <Input placeholder="8888-0000" {...fisicaForm.register('telefono')} />
+          </FormField>
+
+          <FormField
+            label="Distrito del Cantón de Nicoya"
+            required
+            className="sm:col-span-2"
+            error={fisicaForm.formState.errors.idDistrito?.message}
+          >
+            <Select {...fisicaForm.register('idDistrito')}>
+              {(distritosQuery.data ?? []).map((d) => (
+                <option key={d.idDistrito} value={d.idDistrito}>
+                  {d.codigoDistrito} — {d.nombreDistrito}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+
+          <FormField
+            label="Dirección Exacta"
+            required
+            className="sm:col-span-2"
+            error={fisicaForm.formState.errors.direccionExacta?.message}
+          >
+            <Textarea
+              placeholder="Señas exactas de residencia en Nicoya..."
+              {...fisicaForm.register('direccionExacta')}
+            />
+          </FormField>
+
+          <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setOpenFisicaModal(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={registrarFisicaMut.isPending}>
+              {registrarFisicaMut.isPending ? 'Guardando...' : 'Guardar Persona Física'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL 2: REGISTRAR PERSONA JURÍDICA */}
+      <Modal
+        open={openJuridicaModal}
+        onClose={() => setOpenJuridicaModal(false)}
+        title="Registrar Contribuyente — Persona Jurídica"
+        description="Complete los campos de las tablas dbo.Contribuyente y dbo.Persona_Juridica."
+        maxWidth="max-w-2xl"
+      >
+        <form
+          onSubmit={juridicaForm.handleSubmit((dto) => registrarJuridicaMut.mutate(dto))}
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+        >
+          <FormField
+            label="Tipo de Identificación"
+            required
+            error={juridicaForm.formState.errors.idTipoIdentificacion?.message}
+          >
+            <Select {...juridicaForm.register('idTipoIdentificacion')}>
+              {(tiposIdQuery.data ?? []).map((t) => (
+                <option key={t.idTipoIdentificacion} value={t.idTipoIdentificacion}>
+                  {t.codigoTipoIdentificacion} — {t.descripcion}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+
+          <FormField
+            label="Cédula Jurídica (10 dígitos)"
+            required
+            error={juridicaForm.formState.errors.identificacion?.message}
+          >
+            <div className="flex gap-2">
+              <Input
+                placeholder="Ej. 3101123456"
+                {...juridicaForm.register('identificacion')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleConsultarHaciendaJuridica();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={buscandoHaciendaJuridica}
+                onClick={handleConsultarHaciendaJuridica}
+                title="Autocompletar Razón Social desde el Ministerio de Hacienda"
+              >
+                <Search className="h-4 w-4 text-[#1D4ED8]" />
+                {buscandoHaciendaJuridica ? '...' : 'Hacienda'}
+              </Button>
+            </div>
+          </FormField>
+
+          {haciendaJuridicaResumen && (
+            <div className="sm:col-span-2 flex items-center gap-2 rounded-[8px] border border-[#BFDBFE] bg-[#EFF6FF] px-3.5 py-2 text-xs text-[#1E3A8A]">
+              <ShieldCheck className="h-4 w-4 text-[#1D4ED8] shrink-0" />
+              <span className="font-semibold">{haciendaJuridicaResumen}</span>
+            </div>
+          )}
+
+          <FormField
+            label="Razón Social"
+            required
+            className="sm:col-span-2"
+            error={juridicaForm.formState.errors.razonSocial?.message}
+          >
+            <Input
+              placeholder="Ej. Inversiones Agroindustriales del Golfo S.A."
+              {...juridicaForm.register('razonSocial')}
+            />
+          </FormField>
+
+          <FormField
+            label="Nombre Comercial"
+            required
+            error={juridicaForm.formState.errors.nombreComercial?.message}
+          >
+            <Input
+              placeholder="Ej. AgroGolfo Nicoya"
+              {...juridicaForm.register('nombreComercial')}
+            />
+          </FormField>
+
+          <FormField
+            label="Fecha de Constitución (dd/MM/yyyy)"
+            required
+            error={juridicaForm.formState.errors.fechaDeConstitucion?.message}
+          >
+            <Calendar
+              value={juridicaForm.watch('fechaDeConstitucion')}
+              onChange={(iso) =>
+                juridicaForm.setValue('fechaDeConstitucion', iso, { shouldValidate: true })
+              }
+            />
+          </FormField>
+
+          <FormField
+            label="Actividad Económica (CIIU)"
+            required
+            className="sm:col-span-2"
+            error={juridicaForm.formState.errors.idActividadEconomica?.message}
+          >
+            <Select {...juridicaForm.register('idActividadEconomica')}>
+              {(actividadesQuery.data ?? []).map((a) => (
+                <option key={a.idActividadEconomica} value={a.idActividadEconomica}>
+                  {a.codigoCiiu} — {a.descripcion}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+
+          <FormField
+            label="Correo Electrónico"
+            required
+            error={juridicaForm.formState.errors.correoElectronico?.message}
+          >
+            <Input
+              type="email"
+              placeholder="facturacion@empresa.cr"
+              {...juridicaForm.register('correoElectronico')}
+            />
+          </FormField>
+
+          <FormField
+            label="Teléfono"
+            required
+            error={juridicaForm.formState.errors.telefono?.message}
+          >
+            <Input placeholder="2685-0000" {...juridicaForm.register('telefono')} />
+          </FormField>
+
+          <FormField
+            label="Distrito"
+            required
+            className="sm:col-span-2"
+            error={juridicaForm.formState.errors.idDistrito?.message}
+          >
+            <Select {...juridicaForm.register('idDistrito')}>
+              {(distritosQuery.data ?? []).map((d) => (
+                <option key={d.idDistrito} value={d.idDistrito}>
+                  {d.codigoDistrito} — {d.nombreDistrito}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+
+          <FormField
+            label="Dirección Exacta"
+            required
+            className="sm:col-span-2"
+            error={juridicaForm.formState.errors.direccionExacta?.message}
+          >
+            <Textarea
+              placeholder="Domicilio social exacto..."
+              {...juridicaForm.register('direccionExacta')}
+            />
+          </FormField>
+
+          <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setOpenJuridicaModal(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={registrarJuridicaMut.isPending}>
+              {registrarJuridicaMut.isPending ? 'Guardando...' : 'Guardar Persona Jurídica'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL 3: VINCULAR REPRESENTANTE LEGAL */}
+      <Modal
+        open={openRepModal}
+        onClose={() => setOpenRepModal(false)}
+        title="Vincular Representante Legal (dbo.Representante_Legal)"
+        description="Asocia una Persona Física existente como representante legal de una Persona Jurídica."
+      >
+        <form
+          onSubmit={repForm.handleSubmit((dto) => registrarRepMut.mutate(dto))}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <FormField
+              label="ID Persona Jurídica"
+              required
+              error={repForm.formState.errors.idPersonaJuridica?.message}
             >
-              <FormField
-                label="Cédula de Identidad"
-                required
-                error={fisicoForm.formState.errors.cedulaIdentidad?.message}
-              >
-                <Input
-                  placeholder="Ej. 5-0412-0891"
-                  {...fisicoForm.register('cedulaIdentidad')}
-                />
-              </FormField>
-
-              <FormField
-                label="Fecha de Nacimiento"
-                required
-                error={fisicoForm.formState.errors.fechaNacimiento?.message}
-              >
-                <Input type="date" {...fisicoForm.register('fechaNacimiento')} />
-              </FormField>
-
-              <FormField
-                label="Nombre"
-                required
-                error={fisicoForm.formState.errors.nombre?.message}
-              >
-                <Input placeholder="Nombre" {...fisicoForm.register('nombre')} />
-              </FormField>
-
-              <FormField
-                label="Primer Apellido"
-                required
-                error={fisicoForm.formState.errors.apellido1Fisico?.message}
-              >
-                <Input placeholder="Primer apellido" {...fisicoForm.register('apellido1Fisico')} />
-              </FormField>
-
-              <FormField
-                label="Segundo Apellido"
-                required
-                error={fisicoForm.formState.errors.apellido2Fisico?.message}
-              >
-                <Input placeholder="Segundo apellido" {...fisicoForm.register('apellido2Fisico')} />
-              </FormField>
-
-              <FormField
-                label="Teléfono"
-                required
-                error={fisicoForm.formState.errors.telefono?.message}
-              >
-                <Input placeholder="Ej. 8888-9999" {...fisicoForm.register('telefono')} />
-              </FormField>
-
-              <FormField
-                label="Correo Electrónico"
-                required
-                className="sm:col-span-2"
-                error={fisicoForm.formState.errors.correoElectronico?.message}
-              >
-                <Input
-                  type="email"
-                  placeholder="correo@ejemplo.cr"
-                  {...fisicoForm.register('correoElectronico')}
-                />
-              </FormField>
-
-              <FormField
-                label="Dirección Exacta para Notificaciones"
-                required
-                className="sm:col-span-2"
-                error={fisicoForm.formState.errors.direccionNotificaciones?.message}
-              >
-                <Input
-                  placeholder="Barrio, distrito y señas en Nicoya..."
-                  {...fisicoForm.register('direccionNotificaciones')}
-                />
-              </FormField>
-
-              <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => setActiveTab('padron')}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={registrarFisicoMut.isPending}>
-                  {registrarFisicoMut.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" /> Guardando...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4" /> Registrar Persona Física
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* TAB 3: REGISTRAR PERSONA JURÍDICA */}
-      {activeTab === 'juridico' && (
-        <Card className="max-w-3xl">
-          <CardHeader>
-            <CardTitle>Registrar Contribuyente — Persona Jurídica (CU-02)</CardTitle>
-            <CardDescription>
-              Ejecuta <code className="font-mono">POST /api/contribuyente/juridico</code> (
-              <code className="font-mono">dbo.sp_registrar_contribuyente_juridico</code>)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form
-              onSubmit={juridicoForm.handleSubmit((v) => registrarJuridicoMut.mutate(v))}
-              className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+              <Input type="number" min={1} {...repForm.register('idPersonaJuridica')} />
+            </FormField>
+            <FormField
+              label="ID Persona Física"
+              required
+              error={repForm.formState.errors.idPersonaFisica?.message}
             >
-              <FormField
-                label="Cédula Jurídica"
-                required
-                error={juridicoForm.formState.errors.cedulaJuridica?.message}
-              >
-                <Input
-                  placeholder="Ej. 3-101-765432"
-                  {...juridicoForm.register('cedulaJuridica')}
-                />
-              </FormField>
+              <Input type="number" min={1} {...repForm.register('idPersonaFisica')} />
+            </FormField>
+          </div>
 
-              <FormField
-                label="Fecha de Constitución"
-                required
-                error={juridicoForm.formState.errors.fechaConstitucion?.message}
-              >
-                <Input type="date" {...juridicoForm.register('fechaConstitucion')} />
-              </FormField>
+          <FormField
+            label="Cargo de Representación"
+            required
+            error={repForm.formState.errors.idCargoRepresentacion?.message}
+          >
+            <Select {...repForm.register('idCargoRepresentacion')}>
+              {(cargosQuery.data ?? []).map((c) => (
+                <option key={c.idCargoRepresentacion} value={c.idCargoRepresentacion}>
+                  {c.nombreCargo}
+                </option>
+              ))}
+            </Select>
+          </FormField>
 
-              <FormField
-                label="Razón Social"
-                required
-                className="sm:col-span-2"
-                error={juridicoForm.formState.errors.razonSocial?.message}
-              >
-                <Input
-                  placeholder="Nombre legal de la sociedad o entidad"
-                  {...juridicoForm.register('razonSocial')}
-                />
-              </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField
+              label="Fecha de Inicio (dd/MM/yyyy)"
+              required
+              error={repForm.formState.errors.fechaDeInicio?.message}
+            >
+              <Calendar
+                value={repForm.watch('fechaDeInicio')}
+                onChange={(iso) =>
+                  repForm.setValue('fechaDeInicio', iso, { shouldValidate: true })
+                }
+              />
+            </FormField>
+            <FormField label="Fecha Fin (Opcional)">
+              <Calendar
+                value={repForm.watch('fechaFin') ?? ''}
+                onChange={(iso) => repForm.setValue('fechaFin', iso)}
+              />
+            </FormField>
+          </div>
 
-              <FormField
-                label="Nombre de Fantasía / Comercial (Opcional)"
-                error={juridicoForm.formState.errors.nombreFantasia?.message}
-              >
-                <Input
-                  placeholder="Nombre comercial"
-                  {...juridicoForm.register('nombreFantasia')}
-                />
-              </FormField>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setOpenRepModal(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={registrarRepMut.isPending}>
+              {registrarRepMut.isPending ? 'Vinculando...' : 'Guardar Representante'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
-              <FormField
-                label="Teléfono"
-                required
-                error={juridicoForm.formState.errors.telefono?.message}
-              >
-                <Input placeholder="Ej. 2685-0000" {...juridicoForm.register('telefono')} />
-              </FormField>
-
-              <FormField
-                label="Correo Electrónico"
-                required
-                className="sm:col-span-2"
-                error={juridicoForm.formState.errors.correoElectronico?.message}
-              >
-                <Input
-                  type="email"
-                  placeholder="facturacion@empresa.cr"
-                  {...juridicoForm.register('correoElectronico')}
-                />
-              </FormField>
-
-              <FormField
-                label="Domicilio Social / Dirección de Notificaciones"
-                required
-                className="sm:col-span-2"
-                error={juridicoForm.formState.errors.direccionNotificaciones?.message}
-              >
-                <Input
-                  placeholder="Dirección exacta en Nicoya..."
-                  {...juridicoForm.register('direccionNotificaciones')}
-                />
-              </FormField>
-
-              <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => setActiveTab('padron')}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={registrarJuridicoMut.isPending}>
-                  {registrarJuridicoMut.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" /> Guardando...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4" /> Registrar Persona Jurídica
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* MODAL: ACTUALIZAR CONTRIBUYENTE */}
+      {/* MODAL 4: EDITAR CONTRIBUYENTE */}
       <Modal
         open={Boolean(editingContribuyente)}
         onClose={() => setEditingContribuyente(null)}
-        title={`Actualizar Contribuyente #${editingContribuyente?.idContribuyente ?? ''}`}
-        description={
-          editingContribuyente?.nombreORazonSocial || editingContribuyente?.identificacionOficial || ''
-        }
+        title={`Editar Contribuyente #${editingContribuyente?.idContribuyente ?? ''}`}
       >
         {editingContribuyente && (
           <form
@@ -686,114 +1267,271 @@ export function ContribuyentesPage() {
             </FormField>
 
             <FormField
-              label="Dirección de Notificaciones"
+              label="Distrito"
               required
-              error={editForm.formState.errors.direccionNotificaciones?.message}
+              error={editForm.formState.errors.idDistrito?.message}
             >
-              <Input {...editForm.register('direccionNotificaciones')} />
+              <Select {...editForm.register('idDistrito')}>
+                {(distritosQuery.data ?? []).map((d) => (
+                  <option key={d.idDistrito} value={d.idDistrito}>
+                    {d.codigoDistrito} — {d.nombreDistrito}
+                  </option>
+                ))}
+              </Select>
             </FormField>
 
-            <label className="flex items-center gap-2.5 text-sm font-medium text-sigemun-text">
+            <FormField
+              label="Dirección Exacta"
+              required
+              error={editForm.formState.errors.direccionExacta?.message}
+            >
+              <Textarea {...editForm.register('direccionExacta')} />
+            </FormField>
+
+            <label className="flex items-center gap-2 text-sm font-medium text-[#171717]">
               <input
                 type="checkbox"
-                className="h-4 w-4 rounded border-sigemun-border text-sigemun-primary"
-                {...editForm.register('estadoContribuyente')}
+                className="h-4 w-4 rounded border-[#D1D5DB] accent-[#171717]"
+                {...editForm.register('activo')}
               />
-              Contribuyente Activo en el Padrón Municipal
+              Contribuyente Activo
             </label>
 
-            <div className="flex justify-end gap-2 pt-3">
+            <div className="flex justify-end gap-2 pt-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => setEditingContribuyente(null)}
               >
                 Cancelar
               </Button>
               <Button type="submit" disabled={actualizarMut.isPending}>
-                {actualizarMut.isPending ? 'Guardando...' : 'Guardar Cambios'}
+                {actualizarMut.isPending ? 'Actualizando...' : 'Guardar Cambios'}
               </Button>
             </div>
           </form>
         )}
       </Modal>
 
-      {/* MODAL: REGISTRAR REPRESENTANTE LEGAL (CU-03) */}
+      {/* MODAL 5: VER EXPEDIENTE INTEGRAL DEL CONTRIBUYENTE */}
       <Modal
-        open={Boolean(repLegalTarget)}
-        onClose={() => setRepLegalTarget(null)}
-        title={`Registrar Representante Legal (CU-03)`}
-        description={`Persona Jurídica #${repLegalTarget?.idContribuyente}: ${
-          repLegalTarget?.nombreORazonSocial ?? ''
-        }`}
+        open={Boolean(viewingContribuyente)}
+        onClose={() => setViewingContribuyente(null)}
+        title="Expediente Integral del Contribuyente"
+        description="Consulta oficial consolidada: Padrón Municipal, Bienes Inmuebles, Trámites y Ministerio de Hacienda."
+        maxWidth="max-w-4xl"
       >
-        {repLegalTarget && (
-          <form
-            onSubmit={repForm.handleSubmit((dto) =>
-              registrarRepMut.mutate({ id: repLegalTarget.idContribuyente, dto })
+        {viewingContribuyente && (
+          <div className="space-y-6">
+            {/* Cabecera con datos clave y estado */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-[12px] border border-[#BFDBFE] bg-[#EFF6FF] p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#1E3A8A] text-white font-bold text-lg">
+                  {viewingContribuyente.tipoPersona === 'Física' ? 'PF' : 'PJ'}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#171717]">
+                    {viewingContribuyente.nombreCompletoORazonSocial}
+                  </h3>
+                  <p className="font-mono text-xs font-semibold text-[#1E3A8A]">
+                    Identificación: {viewingContribuyente.identificacion} · ID Sistema #{viewingContribuyente.idContribuyente}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={viewingContribuyente.activo !== false ? 'success' : 'danger'}>
+                  {viewingContribuyente.activo !== false ? 'Padrón Activo' : 'Inactivo'}
+                </Badge>
+                <Badge variant="blue">{viewingContribuyente.tipoPersona}</Badge>
+                {cargandoHaciendaView ? (
+                  <Badge variant="outline">Consultando Hacienda...</Badge>
+                ) : haciendaViewInfo ? (
+                  <Badge variant={haciendaViewInfo.moroso ? 'danger' : 'success'}>
+                    Hacienda: {haciendaViewInfo.moroso ? 'Moroso' : 'Al Día'}
+                  </Badge>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Cuadrícula de Datos Generales */}
+            <div className="rounded-[10px] border border-[#E5E7EB] bg-white p-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#4B5563] mb-3">
+                Información de Contacto y Domicilio Fiscal
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                <div>
+                  <span className="text-[#6B7280]">Correo Electrónico:</span>
+                  <p className="font-medium text-[#171717] mt-0.5 break-all">
+                    {viewingContribuyente.correoElectronico || 'No registrado'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[#6B7280]">Teléfono:</span>
+                  <p className="font-mono font-semibold text-[#171717] mt-0.5">
+                    {viewingContribuyente.telefono || 'No registrado'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[#6B7280]">Distrito Cantonal:</span>
+                  <p className="font-medium text-[#171717] mt-0.5">
+                    {viewingContribuyente.nombreDistrito || 'Nicoya'}
+                  </p>
+                </div>
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <span className="text-[#6B7280]">Dirección de Notificaciones:</span>
+                  <p className="font-medium text-[#171717] mt-0.5">
+                    {viewingContribuyente.direccionExacta || viewingContribuyente.direccionNotificaciones || 'No especificada'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Validación en Tiempo Real con Ministerio de Hacienda */}
+            {haciendaViewInfo && (
+              <div className="rounded-[10px] border border-[#E5E7EB] bg-[#F8FAFC] p-4 text-xs">
+                <div className="flex items-center gap-2 mb-2 font-bold text-[#1E3A8A]">
+                  <ShieldCheck className="h-4 w-4 text-[#1D4ED8]" />
+                  <span>Validación Oficial Ministerio de Hacienda (API Cédulas Costa Rica)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-[#6B7280]">Nombre Oficial en Hacienda:</span>
+                    <p className="font-semibold text-[#171717]">{haciendaViewInfo.nombre}</p>
+                  </div>
+                  <div>
+                    <span className="text-[#6B7280]">Estado Tributario:</span>
+                    <p className="font-semibold text-[#171717]">{haciendaViewInfo.estadoTributario}</p>
+                  </div>
+                  {haciendaViewInfo.actividades && haciendaViewInfo.actividades.length > 0 && (
+                    <div className="sm:col-span-2">
+                      <span className="text-[#6B7280]">Actividades Económicas:</span>
+                      <ul className="mt-1 list-disc list-inside text-[#374151]">
+                        {haciendaViewInfo.actividades.map((act, i) => (
+                          <li key={i}>{act.codigo} - {act.descripcion} ({act.estado})</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2"
-          >
-            <FormField
-              label="Cédula del Representante"
-              required
-              error={repForm.formState.errors.cedulaRepresentante?.message}
-            >
-              <Input placeholder="5-0000-0000" {...repForm.register('cedulaRepresentante')} />
-            </FormField>
 
-            <FormField
-              label="Tomo / Folio / Asiento Registro"
-              required
-              error={repForm.formState.errors.tomoFolioRegistro?.message}
-            >
-              <Input placeholder="Tomo 2025 Folio 44" {...repForm.register('tomoFolioRegistro')} />
-            </FormField>
+            {/* Bienes Inmuebles Registrados */}
+            <div className="rounded-[10px] border border-[#E5E7EB] overflow-hidden">
+              <div className="bg-[#F8FAFC] px-4 py-2.5 border-b border-[#E5E7EB] flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#4B5563]">
+                  Bienes Inmuebles Registrados en Catastro
+                </span>
+                <Badge variant="blue">
+                  {viewInmueblesQuery.data?.length ?? 0} finca(s)
+                </Badge>
+              </div>
+              {(viewInmueblesQuery.data ?? []).length === 0 ? (
+                <div className="p-4 text-center text-xs text-[#6B7280]">
+                  No registra propiedades inscritas a su nombre en el cantón de Nicoya.
+                </div>
+              ) : (
+                <div className="overflow-x-auto max-h-48 overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC] text-[11px] font-bold text-[#6B7280]">
+                        <th className="px-3 py-2">Finca</th>
+                        <th className="px-3 py-2">Plano</th>
+                        <th className="px-3 py-2">Distrito</th>
+                        <th className="px-3 py-2">Uso</th>
+                        <th className="px-3 py-2">Valor Fiscal</th>
+                        <th className="px-3 py-2">% Part.</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E7EB]">
+                      {viewInmueblesQuery.data!.map((inm) => (
+                        <tr key={inm.idInmueble} className="hover:bg-[#F8FAFC]">
+                          <td className="px-3 py-2 font-mono font-bold text-[#1E3A8A]">{inm.numeroFinca}</td>
+                          <td className="px-3 py-2 font-mono text-[11px]">{inm.planoCatastro}</td>
+                          <td className="px-3 py-2">{inm.nombreDistrito}</td>
+                          <td className="px-3 py-2">{inm.descripcionUso}</td>
+                          <td className="px-3 py-2 font-bold">{formatCurrencyCRC(inm.valorFiscal)}</td>
+                          <td className="px-3 py-2 font-bold text-[#15803D]">{inm.porcentajeParticipacion}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
 
-            <FormField
-              label="Nombre"
-              required
-              error={repForm.formState.errors.nombreRepresentante?.message}
-            >
-              <Input {...repForm.register('nombreRepresentante')} />
-            </FormField>
+            {/* Trámites y Expedientes */}
+            <div className="rounded-[10px] border border-[#E5E7EB] overflow-hidden">
+              <div className="bg-[#F8FAFC] px-4 py-2.5 border-b border-[#E5E7EB] flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#4B5563]">
+                  Trámites y Solicitudes Municipales
+                </span>
+                <Badge variant="neutral">
+                  {viewTramitesQuery.data?.length ?? 0} trámite(s)
+                </Badge>
+              </div>
+              {(viewTramitesQuery.data ?? []).length === 0 ? (
+                <div className="p-4 text-center text-xs text-[#6B7280]">
+                  No registra trámites activos ni finalizados en la plataforma de expedientes.
+                </div>
+              ) : (
+                <div className="overflow-x-auto max-h-48 overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC] text-[11px] font-bold text-[#6B7280]">
+                        <th className="px-3 py-2">Expediente</th>
+                        <th className="px-3 py-2">Trámite</th>
+                        <th className="px-3 py-2">Fecha Radicación</th>
+                        <th className="px-3 py-2">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E7EB]">
+                      {viewTramitesQuery.data!.map((tr) => (
+                        <tr key={tr.idTramite} className="hover:bg-[#F8FAFC]">
+                          <td className="px-3 py-2 font-mono font-bold text-[#1E3A8A]">{tr.numeroExpediente}</td>
+                          <td className="px-3 py-2 font-medium">{tr.nombreTramite}</td>
+                          <td className="px-3 py-2">{formatDate(tr.fechaRadicacion)}</td>
+                          <td className="px-3 py-2">
+                            <Badge variant={tr.estadoActual?.toUpperCase().includes('APR') ? 'success' : 'blue'}>
+                              {tr.estadoActual}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
 
-            <FormField
-              label="Primer Apellido"
-              required
-              error={repForm.formState.errors.apellido1Representante?.message}
-            >
-              <Input {...repForm.register('apellido1Representante')} />
-            </FormField>
-
-            <FormField
-              label="Segundo Apellido"
-              required
-              error={repForm.formState.errors.apellido2Representante?.message}
-            >
-              <Input {...repForm.register('apellido2Representante')} />
-            </FormField>
-
-            <FormField
-              label="Fecha Vencimiento del Poder"
-              required
-              error={repForm.formState.errors.fechaVencimientoPoder?.message}
-            >
-              <Input type="date" {...repForm.register('fechaVencimientoPoder')} />
-            </FormField>
-
-            <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => setRepLegalTarget(null)}>
-                Cancelar
+            {/* Botones de acción al pie */}
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#E5E7EB]">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  const target = viewingContribuyente;
+                  setViewingContribuyente(null);
+                  setEditingContribuyente(target);
+                  const dMatch = distritosQuery.data?.find((d) => d.nombreDistrito === target.nombreDistrito);
+                  editForm.reset({
+                    correoElectronico: target.correoElectronico,
+                    telefono: target.telefono,
+                    direccionExacta: target.direccionExacta,
+                    idDistrito: dMatch?.idDistrito ?? 1,
+                    activo: target.activo,
+                  });
+                }}
+              >
+                <Edit3 className="h-4 w-4" /> Editar Contribuyente
               </Button>
-              <Button type="submit" disabled={registrarRepMut.isPending}>
-                {registrarRepMut.isPending ? 'Registrando...' : 'Registrar Representante'}
+              <Button type="button" onClick={() => setViewingContribuyente(null)}>
+                Cerrar
               </Button>
             </div>
-          </form>
+          </div>
         )}
       </Modal>
     </div>
   );
 }
-
