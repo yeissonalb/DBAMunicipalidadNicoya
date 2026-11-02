@@ -1,4 +1,5 @@
-﻿import { useMemo, useRef, useState } from 'react';
+﻿import { DocumentPreviewButton } from '@/components/common/DocumentPreviewButton';
+import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -9,7 +10,6 @@ import {
   CircleDollarSign,
   Clock,
   CreditCard,
-  ExternalLink,
   FileDown,
   FileText,
   Loader2,
@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { usePortalAuth } from './PortalAuth';
 import { portalApi } from '@/services/portalApi';
-import { BACKEND_ORIGIN } from '@/services/httpClient';
 import type {
   CiudadanoTokenDto,
   SpEstadoCuentaResultDto,
@@ -56,48 +55,87 @@ export function PortalHomePage() {
   const [pestana, setPestana] = useState<Pestana>('tramites');
 
   return (
-    <div className="flex min-h-screen flex-col bg-sigemun-bg">
-      <header className="border-b border-white/10 bg-sigemun-navy text-white shadow-lg">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-6">
+    <div className="flex min-h-screen flex-col bg-[#F8FAFC] text-[#171717]">
+      {/* CABECERA TOPBAR INSTITUCIONAL (ESTILO SIGEMUN) */}
+      <header className="sticky top-0 z-30 border-b border-[#E5E7EB] bg-white shadow-xs">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <img src="/images/logo2.png" alt="" className="h-12 w-12 rounded-2xl object-contain shadow-md ring-1 ring-white/25" />
-            <div>
-              <p className="text-lg font-extrabold tracking-wide">Portal Ciudadano</p>
-              <p className="text-xs text-sigemun-sky">Municipalidad de Nicoya · Guanacaste</p>
+            <img
+              src="/images/escudo-nicoya.jpg"
+              alt="Escudo Oficial Municipalidad de Nicoya"
+              className="h-10 w-10 rounded-[10px] border border-[#E5E7EB] bg-white object-contain p-0.5 shadow-xs"
+            />
+            <img
+              src="/images/nicoya-azul.jpg"
+              alt="Nicoya Azul"
+              className="hidden h-9 w-auto max-w-[145px] rounded-[6px] object-contain sm:block"
+            />
+            <div className="border-l border-[#E5E7EB] pl-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#1D4ED8]">
+                Portal de Contribuyentes
+              </p>
+              <p className="text-sm font-bold text-[#171717]">
+                Municipalidad de Nicoya · Guanacaste
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-2 pl-4">
-            <div className="text-right">
-              <p className="text-sm font-semibold">{ciudadano?.nombreORazonSocial}</p>
-              <p className="font-mono text-[11px] text-white/65">Cédula {ciudadano?.identificacion}</p>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 rounded-full border border-[#D1D5DB] bg-white p-1.5 pr-3 shadow-xs">
+              <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-[#1D4ED8] text-xs font-bold text-white shadow-xs">
+                {(ciudadano?.nombreORazonSocial || 'CI').slice(0, 2).toUpperCase()}
+                <span
+                  className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#15803D] ring-2 ring-white"
+                  title="Sesión activa"
+                />
+              </div>
+              <div className="hidden flex-col sm:flex text-left">
+                <span className="text-xs font-bold leading-tight text-[#171717]">
+                  {ciudadano?.nombreORazonSocial}
+                </span>
+                <span className="font-mono text-[10px] font-medium leading-tight text-[#4B5563]">
+                  Cédula: {ciudadano?.identificacion}
+                </span>
+              </div>
             </div>
-            <Button variant="outline" size="sm" onClick={logout} className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white">
-              <LogOut className="h-4 w-4" /> Salir
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={logout}
+              className="rounded-[10px] text-xs font-semibold text-[#DC2626] hover:bg-[#FEF2F2] hover:border-[#FCA5A5]"
+            >
+              <LogOut className="h-3.5 w-3.5" /> Salir
             </Button>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 pb-4 sm:px-6" aria-label="Secciones del portal">
-          {(
-            [
-              ['tramites', 'Mis trámites', <FileText key="i" className="h-4 w-4" />],
-              ['inmuebles', 'Mis inmuebles', <Building2 key="i" className="h-4 w-4" />],
-              ['cuenta', 'Estado de cuenta y facturas', <Receipt key="i" className="h-4 w-4" />],
-            ] as const
-          ).map(([id, label, icon]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setPestana(id)}
-              className={`inline-flex items-center gap-2 whitespace-nowrap rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all ${
-                pestana === id
-                  ? 'border-white bg-white text-sigemun-primary shadow-md'
-                  : 'border-white/10 bg-white/[0.04] text-white/80 hover:border-white/20 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              {icon} {label}
-            </button>
-          ))}
-        </nav>
+
+        {/* NAVEGACIÓN DE SECCIONES (PESTAÑAS ESTILO SIGEMUN) */}
+        <div className="border-t border-[#E5E7EB] bg-[#F8FAFC]">
+          <nav className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-2.5 sm:px-6" aria-label="Secciones del portal">
+            {(
+              [
+                ['tramites', 'Mis Trámites', <FileText key="t" className="h-4 w-4" />],
+                ['inmuebles', 'Mis Inmuebles', <Building2 key="i" className="h-4 w-4" />],
+                ['cuenta', 'Estado de Cuenta y Facturas', <Receipt key="c" className="h-4 w-4" />],
+              ] as const
+            ).map(([id, label, icon]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setPestana(id)}
+                className={`flex items-center gap-2 rounded-[10px] px-4 py-2 text-xs font-bold transition-all ${
+                  pestana === id
+                    ? 'bg-[#1D4ED8] text-white shadow-xs'
+                    : 'border border-[#D1D5DB] bg-white text-[#171717] hover:bg-[#F3F4F6]'
+                }`}
+              >
+                {icon}
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
       </header>
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:py-10">
@@ -106,8 +144,8 @@ export function PortalHomePage() {
         {pestana === 'cuenta' && ciudadano && <EstadoCuenta ciudadano={ciudadano} />}
       </main>
 
-      <footer className="border-t border-sigemun-border bg-white py-4 text-center text-[11px] text-sigemun-muted">
-        Municipalidad de Nicoya · Guanacaste, Costa Rica
+      <footer className="border-t border-[#E5E7EB] bg-white py-4 text-center text-xs text-[#6B7280]">
+        Municipalidad de Nicoya · Guanacaste, Costa Rica · Sistema de Gestión Municipal SIGEMUN
       </footer>
     </div>
   );
@@ -186,7 +224,8 @@ function MisTramites() {
     );
 
   const etapa = activo ? etapaActual(historialQuery.data, activo) : 0;
-  const cerrado = Boolean(activo?.fechaResolucionFinal);
+  const estadoFinal = /^(APR|RECH)$|aprobado|rechazado/i.test(activo?.estadoActual || '');
+  const cerrado = Boolean(activo?.fechaResolucionFinal) || estadoFinal;
   const historialOrdenado = [...(historialQuery.data ?? [])].sort((a, b) => b.fechaCambio.localeCompare(a.fechaCambio));
 
   return (
@@ -194,10 +233,10 @@ function MisTramites() {
       <input ref={inputRef} type="file" accept={ACEPTADOS} className="hidden" onChange={onArchivo} />
 
       {/* Lista */}
-      <aside className="overflow-hidden rounded-2xl border border-sigemun-border bg-white shadow-card lg:sticky lg:top-6">
-        <div className="border-b border-sigemun-border bg-gradient-to-r from-sigemun-bg to-white p-5">
-          <p className="text-base font-bold text-sigemun-text">Mis expedientes</p>
-          <p className="mt-1 text-xs text-sigemun-muted">{tramites.length} trámite(s) asociado(s) a su cuenta</p>
+      <aside className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-card lg:sticky lg:top-6">
+        <div className="border-b border-[#E5E7EB] bg-gradient-to-r from-sigemun-bg to-white p-5">
+          <p className="text-base font-bold text-[#171717]">Mis expedientes</p>
+          <p className="mt-1 text-xs text-[#6B7280]">{tramites.length} trámite(s) asociado(s) a su cuenta</p>
         </div>
         <div className="space-y-2 p-3">
           {tramites.map((t) => (
@@ -207,16 +246,16 @@ function MisTramites() {
             onClick={() => setIdSel(t.idTramite)}
             className={`group w-full rounded-xl border p-4 text-left transition-all ${
               t.idTramite === activo?.idTramite
-                ? 'border-sigemun-primary bg-sigemun-sky-muted shadow-[inset_3px_0_0_var(--sigemun-primary)]'
-                : 'border-transparent bg-sigemun-bg hover:border-sigemun-border hover:bg-white'
+                ? 'border-[#1D4ED8] bg-[#EFF6FF] shadow-[inset_3px_0_0_var(--sigemun-primary)]'
+                : 'border-transparent bg-[#F8FAFC] hover:border-[#E5E7EB] hover:bg-white'
             }`}
           >
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-mono text-xs font-bold text-sigemun-primary">{t.numeroExpediente}</p>
-                <p className="mt-1 text-sm font-semibold leading-snug text-sigemun-text">{t.nombreTramite}</p>
+                <p className="font-mono text-xs font-bold text-[#1D4ED8]">{t.numeroExpediente}</p>
+                <p className="mt-1 text-sm font-semibold leading-snug text-[#171717]">{t.nombreTramite}</p>
               </div>
-              <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-sigemun-muted transition-transform group-hover:translate-x-0.5" />
+              <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-[#6B7280] transition-transform group-hover:translate-x-0.5" />
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <Badge variant={t.fechaResolucionFinal ? 'success' : 'accent'}>{t.estadoActual}</Badge>
@@ -231,7 +270,7 @@ function MisTramites() {
       {activo && (
         <div className="space-y-5">
           <Card className="overflow-hidden">
-            <CardHeader className="border-b border-sigemun-border bg-gradient-to-r from-white via-white to-sigemun-bg">
+            <CardHeader className="border-b border-[#E5E7EB] bg-gradient-to-r from-white via-white to-sigemun-bg">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <CardTitle className="text-xl">{activo.nombreTramite}</CardTitle>
@@ -255,21 +294,21 @@ function MisTramites() {
                       hecho
                         ? 'border-emerald-200 bg-emerald-50/70'
                         : actual
-                          ? 'border-sigemun-sky bg-sigemun-bg'
-                          : 'border-sigemun-border bg-sigemun-surface'
+                          ? 'border-[#BFDBFE] bg-[#F8FAFC]'
+                          : 'border-[#E5E7EB] bg-[#F8FAFC]'
                     }`}>
                       <span
                         className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
                           hecho
-                            ? 'bg-sigemun-primary text-white'
+                            ? 'bg-[#1D4ED8] text-white'
                             : actual
-                              ? 'bg-sigemun-medium text-white ring-4 ring-sigemun-medium/20'
-                              : 'bg-sigemun-sky-muted text-sigemun-muted'
+                              ? 'bg-[#1E3A8A] text-white ring-4 ring-sigemun-medium/20'
+                              : 'bg-[#EFF6FF] text-[#6B7280]'
                         }`}
                       >
                         {hecho ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
                       </span>
-                      <span className={`mt-1.5 text-[11px] font-semibold ${actual ? 'text-sigemun-primary' : 'text-sigemun-text'}`}>
+                      <span className={`mt-1.5 text-[11px] font-semibold ${actual ? 'text-[#1D4ED8]' : 'text-[#171717]'}`}>
                         {nombre}
                       </span>
                     </li>
@@ -281,13 +320,13 @@ function MisTramites() {
                 <Dato titulo="Estado actual" valor={activo.estadoActual ?? '—'} />
                 <Dato
                   titulo={cerrado ? 'Resuelto el' : 'Fecha estimada'}
-                  valor={formatDate(cerrado ? activo.fechaResolucionFinal : activo.fechaResolucionEstimada)}
+                  valor={cerrado && !activo.fechaResolucionFinal ? 'Pendiente de formalizar cierre' : formatDate(cerrado ? activo.fechaResolucionFinal : activo.fechaResolucionEstimada)}
                 />
                 <Dato
                   titulo="Plazo"
                   valor={
                     cerrado
-                      ? `${activo.diasTranscurridos ?? 0} días de gestión`
+                      ? (activo.fechaResolucionFinal ? `${activo.diasTranscurridos ?? 0} días de gestión` : 'Cierre administrativo pendiente')
                       : activo.diasRestantesSla != null
                         ? activo.diasRestantesSla >= 0
                           ? `${activo.diasRestantesSla} días restantes`
@@ -302,7 +341,7 @@ function MisTramites() {
           <div className="grid gap-5 xl:grid-cols-2">
             {/* Requisitos */}
             <Card className="overflow-hidden">
-              <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
+              <CardHeader className="border-b border-[#E5E7EB] bg-[#F8FAFC]">
                 <CardTitle className="text-base">Requisitos</CardTitle>
                 <CardDescription>PDF, imagen u Office · máximo 10 MB.</CardDescription>
               </CardHeader>
@@ -312,18 +351,18 @@ function MisTramites() {
                 ) : requisitosQuery.isError ? (
                   <ErrorState error={requisitosQuery.error} onRetry={() => requisitosQuery.refetch()} />
                 ) : (requisitosQuery.data ?? []).length === 0 ? (
-                  <p className="text-xs text-sigemun-muted">Este trámite no tiene requisitos definidos.</p>
+                  <p className="text-xs text-[#6B7280]">Este trámite no tiene requisitos definidos.</p>
                 ) : (
                   (requisitosQuery.data ?? []).map((r) => {
                     const subiendo = subirMut.isPending && requisitoDestino === r.idRequisito;
                     return (
-                      <div key={r.idRequisito} className="flex flex-col items-start justify-between gap-3 rounded-xl border border-sigemun-border bg-white p-4 transition-colors hover:bg-sigemun-surface sm:flex-row">
+                      <div key={r.idRequisito} className="flex flex-col items-start justify-between gap-3 rounded-xl border border-[#E5E7EB] bg-white p-4 transition-colors hover:bg-[#F8FAFC] sm:flex-row">
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-sigemun-text">
+                          <p className="text-sm font-semibold text-[#171717]">
                             {r.nombreRequisito}
                             {r.esObligatorio && <span className="ml-1 text-red-600">*</span>}
                           </p>
-                          {r.descripcion && <p className="text-[11px] text-sigemun-muted">{r.descripcion}</p>}
+                          {r.descripcion && <p className="text-[11px] text-[#6B7280]">{r.descripcion}</p>}
                           <div className="mt-1">
                             {r.presentado ? (
                               <Badge variant="success">
@@ -343,37 +382,40 @@ function MisTramites() {
                             onClick={() => elegirArchivo(r.idRequisito)}
                           >
                             {subiendo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                            {r.presentado ? 'Reemplazar' : 'Subir requisito'}
+                            {r.presentado ? 'Aportar nueva versión' : 'Subir requisito'}
                           </Button>
                         )}
                       </div>
                     );
                   })
                 )}
+                <div className="rounded-lg bg-blue-50 border border-blue-200 p-2.5 text-[11px] text-blue-900 leading-relaxed my-2">
+                  <strong>Aviso de legalidad:</strong> Presentar un documento acredita su entrega digital para revisión técnica por parte del analista municipal; no equivale a la aprobación automática del requisito.
+                </div>
                 {cerrado && (
-                  <p className="text-[11px] text-sigemun-muted">El trámite ya fue resuelto; no admite más documentos.</p>
+                  <p className="text-[11px] text-[#6B7280]">El trámite ya fue resuelto; no admite más documentos.</p>
                 )}
               </CardContent>
             </Card>
 
             {/* Historial */}
             <Card className="overflow-hidden">
-              <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
+              <CardHeader className="border-b border-[#E5E7EB] bg-[#F8FAFC]">
                 <CardTitle className="text-base">Historial</CardTitle>
               </CardHeader>
               <CardContent>
                 {historialQuery.isLoading ? (
                   <LoadingState message="Consultando historial..." />
                 ) : historialOrdenado.length === 0 ? (
-                  <p className="text-xs text-sigemun-muted">Sin movimientos registrados.</p>
+                  <p className="text-xs text-[#6B7280]">Sin movimientos registrados.</p>
                 ) : (
-                  <ol className="relative space-y-4 border-l border-sigemun-border pl-4">
+                  <ol className="relative space-y-4 border-l border-[#E5E7EB] pl-4">
                     {historialOrdenado.map((h) => (
                       <li key={h.idHistorial} className="relative text-xs">
-                        <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-sigemun-primary" />
-                        <p className="font-semibold text-sigemun-text">{h.nombreEstado}</p>
-                        <p className="text-[10px] text-sigemun-muted">{formatDateTime(h.fechaCambio)}</p>
-                        {h.observaciones && <p className="mt-0.5 text-sigemun-muted">{h.observaciones}</p>}
+                        <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-[#1D4ED8]" />
+                        <p className="font-semibold text-[#171717]">{h.nombreEstado}</p>
+                        <p className="text-[10px] text-[#6B7280]">{formatDateTime(h.fechaCambio)}</p>
+                        {h.observaciones && <p className="mt-0.5 text-[#6B7280]">{h.observaciones}</p>}
                       </li>
                     ))}
                   </ol>
@@ -384,30 +426,32 @@ function MisTramites() {
 
           {/* Documentos */}
           <Card className="overflow-hidden">
-            <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
+            <CardHeader className="border-b border-[#E5E7EB] bg-[#F8FAFC]">
               <CardTitle className="text-base">Documentos del expediente</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {(archivosQuery.data ?? []).length === 0 ? (
-                <p className="text-xs text-sigemun-muted">Aún no hay documentos.</p>
+                <p className="text-xs text-[#6B7280]">Aún no hay documentos.</p>
               ) : (
                 (archivosQuery.data ?? []).map((a) => (
-                  <div key={a.idArchivoAdjunto} className="flex items-center justify-between rounded-lg border border-sigemun-border p-2.5 text-xs">
+                  <div key={a.idArchivoAdjunto} className="flex items-center justify-between rounded-lg border border-[#E5E7EB] p-2.5 text-xs">
                     <div className="min-w-0 pr-2">
                       <p className="truncate font-semibold">{a.nombreOriginal}</p>
-                      <p className="text-[10px] text-sigemun-muted">
+                      <p className="text-[10px] text-[#6B7280]">
                         {a.nombreRequisito ?? 'Adjunto general'} · {formatBytes(a.pesoBytes)} · {formatDate(a.fechaSubida)}
                       </p>
                     </div>
-                    <a
-                      href={`${BACKEND_ORIGIN}/${a.rutaAlmacenamiento}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-sigemun-primary hover:underline"
-                      title="Abrir documento"
+                    <div className="flex flex-wrap items-center gap-2">
+                    <DocumentPreviewButton key={`${activo!.idTramite}-${a.idArchivoAdjunto}`} nombre={a.nombreOriginal || ''} obtenerArchivo={() => portalApi.obtenerArchivoBlob(activo!.idTramite, a.idArchivoAdjunto)} />
+                    <button
+                      type="button"
+                      onClick={() => portalApi.descargarArchivoBlob(activo!.idTramite, a.idArchivoAdjunto, a.nombreOriginal ?? "documento.pdf")}
+                      className="inline-flex items-center gap-1 text-[#1D4ED8] hover:underline font-semibold"
+                      title="Descargar documento seguro"
                     >
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
+                      <FileDown className="h-4 w-4" /> Descargar
+                    </button>
+                    </div>
                   </div>
                 ))
               )}
@@ -421,9 +465,9 @@ function MisTramites() {
 
 function Dato({ titulo, valor }: { titulo: string; valor: string }) {
   return (
-    <div className="rounded-xl border border-sigemun-border bg-sigemun-bg p-4">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-sigemun-muted">{titulo}</p>
-      <p className="mt-0.5 text-sm font-semibold text-sigemun-text">{valor}</p>
+    <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-4">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-[#6B7280]">{titulo}</p>
+      <p className="mt-0.5 text-sm font-semibold text-[#171717]">{valor}</p>
     </div>
   );
 }
@@ -442,19 +486,19 @@ function MisInmuebles() {
     <div className="mx-auto grid w-full max-w-3xl gap-5">
       {(q.data ?? []).map((i) => (
         <Card key={i.idInmueble} className="overflow-hidden shadow-elevated">
-          <CardHeader className="border-b border-sigemun-border bg-gradient-to-r from-sigemun-bg via-white to-white">
+          <CardHeader className="border-b border-[#E5E7EB] bg-gradient-to-r from-sigemun-bg via-white to-white">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sigemun-primary text-sigemun-sky shadow-sm">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#1D4ED8] text-[#93C5FD] shadow-sm">
                 <Building2 className="h-6 w-6" />
               </div>
               <div className="min-w-0">
-                <CardDescription className="text-[10px] font-bold uppercase tracking-[0.12em] text-sigemun-muted">
+                <CardDescription className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#6B7280]">
                   Propiedad registrada
                 </CardDescription>
-                <CardTitle className="mt-1 font-mono text-lg text-sigemun-primary">
+                <CardTitle className="mt-1 font-mono text-lg text-[#1D4ED8]">
                   Finca {i.numeroFinca}
                 </CardTitle>
-                <p className="mt-1 text-sm text-sigemun-muted">
+                <p className="mt-1 text-sm text-[#6B7280]">
                   {i.nombreDistrito} · {i.usoSuelo}
                 </p>
               </div>
@@ -467,10 +511,10 @@ function MisInmuebles() {
               <Dato titulo="Área de terreno" valor={`${formatNumber(i.areaTerrenoM2, 2)} m²`} />
               <Dato titulo="Área de construcción" valor={`${formatNumber(i.areaConstruccionM2, 2)} m²`} />
             </div>
-            <div className="flex flex-col gap-1 rounded-xl border border-sigemun-border bg-sigemun-surface px-4 py-3 text-xs text-sigemun-muted sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-1 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3 text-xs text-[#6B7280] sm:flex-row sm:items-center sm:justify-between">
               <span>{i.direccionExacta}</span>
               {i.planoCatastrado && (
-                <span className="shrink-0 rounded-full bg-sigemun-sky-muted px-3 py-1 font-mono font-semibold text-sigemun-primary">
+                <span className="shrink-0 rounded-full bg-[#EFF6FF] px-3 py-1 font-mono font-semibold text-[#1D4ED8]">
                   Plano {i.planoCatastrado}
                 </span>
               )}
@@ -503,7 +547,10 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
   }, [cuentaQuery.data]);
 
   const pendientes = deudas.filter((d) => !['PAG', 'ANU'].includes((d.codigoEstadoDeuda ?? '').toUpperCase()));
-  const totalAdeudado = (facturasQuery.data ?? []).reduce((acc, f) => acc + (f.saldoPendiente ?? 0), 0);
+  const saldoFacturado = (facturasQuery.data ?? []).filter(f => (f.estadoFactura || '').toUpperCase() !== 'ANULADA').reduce((acc, f) => acc + (f.saldoPendiente ?? 0), 0);
+  const deudasFacturadas = new Set((cuentaQuery.data ?? []).filter(d => d.idFactura && (d.estadoFactura || '').toUpperCase() !== 'ANULADA').map(d => d.idDeudaMunicipal));
+  const saldoSinFacturar = pendientes.filter(d => !deudasFacturadas.has(d.idDeudaMunicipal)).reduce((acc, d) => acc + (d.totalDeuda ?? ((d.montoPrincipal ?? 0) + (d.montoIntereses ?? 0) + (d.montoMultas ?? 0))), 0);
+  const totalAdeudado = saldoFacturado + saldoSinFacturar;
   const vencidas = pendientes.filter((d) => new Date(d.fechaDeVencimiento ?? '').getTime() < Date.now()).length;
 
   const pagoMut = useMutation({
@@ -531,8 +578,8 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
         <Card className="overflow-hidden border-red-100 bg-gradient-to-br from-white to-red-50/60">
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <div>
-              <CardDescription className="font-semibold text-sigemun-muted">Saldo pendiente</CardDescription>
-              <CardTitle className="mt-2 text-2xl font-extrabold text-red-700">{formatCurrencyCRC(totalAdeudado)}</CardTitle>
+              <CardDescription className="font-semibold text-[#6B7280]">Saldo total pendiente</CardDescription>
+              <CardTitle className="mt-2 text-2xl font-extrabold text-red-700">{formatCurrencyCRC(totalAdeudado)}</CardTitle><p className="mt-2 text-xs">Facturado: {formatCurrencyCRC(saldoFacturado)} · Sin facturar: {formatCurrencyCRC(saldoSinFacturar)}</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 text-red-700">
               <CircleDollarSign className="h-6 w-6" />
@@ -542,10 +589,10 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
         <Card className="overflow-hidden border-amber-100 bg-gradient-to-br from-white to-amber-50/70">
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <div>
-              <CardDescription className="font-semibold text-sigemun-muted">Obligaciones pendientes</CardDescription>
-              <CardTitle className="mt-2 text-2xl font-extrabold text-sigemun-primary">{pendientes.length}</CardTitle>
+              <CardDescription className="font-semibold text-[#6B7280]">Obligaciones pendientes</CardDescription>
+              <CardTitle className="mt-2 text-2xl font-extrabold text-[#1D4ED8]">{pendientes.length}</CardTitle>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-sigemun-primary">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-[#1D4ED8]">
               <WalletCards className="h-6 w-6" />
             </div>
           </CardHeader>
@@ -553,10 +600,10 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
         <Card className="overflow-hidden border-emerald-100 bg-gradient-to-br from-white to-emerald-50/60">
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <div>
-              <CardDescription className="font-semibold text-sigemun-muted">Obligaciones vencidas</CardDescription>
-              <CardTitle className="mt-2 text-2xl font-extrabold text-sigemun-primary">{vencidas}</CardTitle>
+              <CardDescription className="font-semibold text-[#6B7280]">Obligaciones vencidas</CardDescription>
+              <CardTitle className="mt-2 text-2xl font-extrabold text-[#1D4ED8]">{vencidas}</CardTitle>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-sigemun-primary">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-[#1D4ED8]">
               <AlertTriangle className="h-6 w-6" />
             </div>
           </CardHeader>
@@ -564,25 +611,25 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
       </div>
 
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-sigemun-border bg-gradient-to-r from-sigemun-bg to-white">
+        <CardHeader className="border-b border-[#E5E7EB] bg-gradient-to-r from-sigemun-bg to-white">
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sigemun-primary text-sigemun-sky">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1D4ED8] text-[#93C5FD]">
               <Receipt className="h-5 w-5" />
             </div>
             <div>
               <CardTitle className="text-base">Facturas municipales</CardTitle>
-              <CardDescription className="mt-1">Consulte sus facturas, pague con SINPE Móvil o descargue el comprobante.</CardDescription>
+              <CardDescription className="mt-1">Consulte sus facturas, reporte una transferencia para verificación o descargue el comprobante.</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0 sm:p-0">
           {(facturasQuery.data ?? []).length === 0 ? (
-            <p className="p-4 text-xs text-sigemun-muted">No tiene facturas emitidas.</p>
+            <p className="p-4 text-xs text-[#6B7280]">No tiene facturas emitidas.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
+                  <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC] text-[11px] font-bold uppercase tracking-[0.08em] text-[#6B7280]">
                     <th className="px-3 py-2.5">Factura</th>
                     <th className="px-3 py-2.5">Emisión</th>
                     <th className="px-3 py-2.5">Periodo / Finca</th>
@@ -594,12 +641,12 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
                 </thead>
                 <tbody className="divide-y divide-sigemun-border">
                   {(facturasQuery.data ?? []).map((f) => (
-                    <tr key={f.idFactura} className="transition-colors even:bg-sigemun-surface hover:bg-sigemun-bg">
-                      <td className="px-3 py-2.5 font-mono font-bold text-sigemun-primary">#{f.idFactura}</td>
+                    <tr key={f.idFactura} className="transition-colors even:bg-[#F8FAFC] hover:bg-[#F8FAFC]">
+                      <td className="px-3 py-2.5 font-mono font-bold text-[#1D4ED8]">#{f.idFactura}</td>
                       <td className="px-3 py-2.5">{formatDate(f.fechaEmision)}</td>
                       <td className="px-3 py-2.5">
                         <p>{f.periodoDeuda ?? '—'}</p>
-                        <p className="font-mono text-[11px] text-sigemun-muted">{f.numeroFinca ?? ''}</p>
+                        <p className="font-mono text-[11px] text-[#6B7280]">{f.numeroFinca ?? ''}</p>
                       </td>
                       <td className="px-3 py-2.5">{formatCurrencyCRC(f.totalAPagar)}</td>
                       <td className="px-3 py-2.5 font-semibold">{formatCurrencyCRC(f.saldoPendiente)}</td>
@@ -617,7 +664,7 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
                                 setMonto(String(f.saldoPendiente));
                               }}
                             >
-                              <CreditCard className="h-3.5 w-3.5" /> Pagar en línea
+                              <CreditCard className="h-3.5 w-3.5" /> Reportar transferencia
                             </Button>
                           )}
                           <Button
@@ -645,9 +692,9 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
       </Card>
 
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-sigemun-border bg-gradient-to-r from-sigemun-bg to-white">
+        <CardHeader className="border-b border-[#E5E7EB] bg-gradient-to-r from-sigemun-bg to-white">
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sigemun-sky-muted text-sigemun-primary">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EFF6FF] text-[#1D4ED8]">
               <FileText className="h-5 w-5" />
             </div>
             <div>
@@ -658,12 +705,12 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
         </CardHeader>
         <CardContent className="p-0 sm:p-0">
           {deudas.length === 0 ? (
-            <p className="p-4 text-xs text-sigemun-muted">Está al día: no registra obligaciones.</p>
+            <p className="p-4 text-xs text-[#6B7280]">Está al día: no registra obligaciones.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-sigemun-border bg-sigemun-bg text-[11px] font-bold uppercase tracking-[0.08em] text-sigemun-muted">
+                  <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC] text-[11px] font-bold uppercase tracking-[0.08em] text-[#6B7280]">
                     <th className="px-3 py-2.5">Tributo / Periodo</th>
                     <th className="px-3 py-2.5">Finca</th>
                     <th className="px-3 py-2.5">Vencimiento</th>
@@ -679,10 +726,10 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
                       new Date(d.fechaDeVencimiento ?? '').getTime() < Date.now() &&
                       !['PAG', 'ANU'].includes((d.codigoEstadoDeuda ?? '').toUpperCase());
                     return (
-                      <tr key={d.idDeudaMunicipal} className="transition-colors even:bg-sigemun-surface hover:bg-sigemun-bg">
+                      <tr key={d.idDeudaMunicipal} className="transition-colors even:bg-[#F8FAFC] hover:bg-[#F8FAFC]">
                         <td className="px-3 py-2.5">
                           <p className="font-semibold">{d.nombreTributo}</p>
-                          <p className="text-[11px] text-sigemun-muted">{d.periodoDeuda}</p>
+                          <p className="text-[11px] text-[#6B7280]">{d.periodoDeuda}</p>
                         </td>
                         <td className="px-3 py-2.5 font-mono text-xs">{d.numeroFinca ?? '—'}</td>
                         <td className="px-3 py-2.5">
@@ -712,8 +759,8 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
       <Modal
         open={Boolean(facturaPago)}
         onClose={() => !pagoMut.isPending && setFacturaPago(null)}
-        title="Pago en línea con SINPE Móvil"
-        description={`Factura #${facturaPago?.idFactura ?? ''} · Registro seguro de transferencia`}
+        title="Reportar Comprobante de Transferencia / SINPE Móvil"
+        description={`Factura #${facturaPago?.idFactura ?? ''} · Notificación de transferencia para verificación en Tesorería`}
         maxWidth="max-w-xl"
       >
         {facturaPago && (
@@ -724,14 +771,14 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
               if (montoValido && comprobante.trim()) pagoMut.mutate();
             }}
           >
-            <div className="flex flex-col gap-4 rounded-2xl border border-sigemun-border bg-gradient-to-br from-sigemun-bg to-white p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 rounded-2xl border border-[#E5E7EB] bg-gradient-to-br from-sigemun-bg to-white p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sigemun-primary text-sigemun-sky shadow-sm">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#1D4ED8] text-[#93C5FD] shadow-sm">
                   <CreditCard className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-sigemun-muted">Saldo pendiente de la factura</p>
-                  <p className="mt-0.5 text-2xl font-extrabold text-sigemun-primary">
+                  <p className="text-xs font-semibold text-[#6B7280]">Saldo pendiente de la factura</p>
+                  <p className="mt-0.5 text-2xl font-extrabold text-[#1D4ED8]">
                     {formatCurrencyCRC(facturaPago.saldoPendiente)}
                   </p>
                 </div>
@@ -739,7 +786,7 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
               <Badge variant="accent">Abono parcial permitido</Badge>
             </div>
 
-            <div className="rounded-xl border border-sigemun-border p-4 sm:p-5">
+            <div className="rounded-xl border border-[#E5E7EB] p-4 sm:p-5">
               <div className="space-y-4">
                 <FormField label="Número de comprobante SINPE" required>
                   <Input
@@ -769,18 +816,18 @@ function EstadoCuenta({ ciudadano }: { ciudadano: CiudadanoTokenDto }) {
                   />
                 </FormField>
               </div>
-              <p className="mt-4 rounded-lg bg-sigemun-bg px-3 py-2.5 text-[11px] leading-relaxed text-sigemun-muted">
-                Realice primero la transferencia al SINPE Móvil institucional y luego registre aquí el comprobante emitido por su banco.
+              <p className="mt-4 rounded-lg bg-[#F8FAFC] px-3 py-2.5 text-[11px] leading-relaxed text-[#6B7280]">
+                Aviso de cobro municipal: Este reporte no reduce su saldo de inmediato. Su comprobante queda registrado en estado "Pendiente de verificación" y el saldo de la factura se actualizará una vez el cajero en Tesorería confirme la acreditación bancaria.
               </p>
             </div>
 
-            <div className="flex flex-col-reverse gap-2 border-t border-sigemun-border pt-4 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-2 border-t border-[#E5E7EB] pt-4 sm:flex-row sm:justify-end">
               <Button type="button" variant="outline" disabled={pagoMut.isPending} onClick={() => setFacturaPago(null)}>
                 Cancelar
               </Button>
               <Button type="submit" className="sm:min-w-40" disabled={!montoValido || !comprobante.trim() || pagoMut.isPending}>
                 {pagoMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                Registrar pago
+                Reportar transferencia
               </Button>
             </div>
           </form>

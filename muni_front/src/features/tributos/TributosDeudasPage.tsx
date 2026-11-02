@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,7 +23,7 @@ import {
 } from '@/services/api';
 import type { SpDeudasContribuyenteResultDto } from '@/types/api';
 import { PageHeader } from '@/components/common/PageHeader';
-import { EmptyState, LoadingState } from '@/components/common/StateFeedback';
+import { EmptyState, ErrorState, LoadingState } from '@/components/common/StateFeedback';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
@@ -43,32 +43,18 @@ const registrarDeudaSchema = z.object({
   fechaDeVencimiento: z.string().min(1, 'Fecha de vencimiento requerida'),
   idInmueble: z.coerce.number().int().min(1, 'Indique el ID del inmueble'),
   idTipoTributo: z.coerce.number().int().min(1, 'Seleccione el tipo de tributo'),
-  codigoEstadoDeuda: z.string().min(1),
+  codigoEstadoDeuda: z.string().min(1, 'Seleccione un estado inicial'),
 });
 
 type RegistrarDeudaForm = z.infer<typeof registrarDeudaSchema>;
 
-function generarClaveHacienda50(idDeuda: number): string {
-  const now = new Date();
-  const dd = String(now.getDate()).padStart(2, '0');
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const yy = String(now.getFullYear()).slice(-2);
-  const consecutivo = String(idDeuda).padStart(10, '0');
-  const rand = String(Math.floor(10000000 + Math.random() * 90000000));
-  const base = `506${dd}${mm}${yy}00301014200000001${consecutivo}1${rand}`;
-  return base.slice(0, 50).padEnd(50, '0');
-}
-
-function getEstatusLegalLabel(codigo: string, diasMora: number | null | undefined): string {
-  if (codigo === 'PAG') return 'Cancelada / Condonada';
-  if (codigo === 'ARR') return 'Arreglo de Pago';
-  if (codigo === 'VENC') return (diasMora ?? 0) > 15 ? 'En Cobro Judicial' : 'Cobro Administrativo';
-  return 'Cobro Administrativo';
+function getEstatusLegalLabel(codigo: string, _diasMora: number | null | undefined): string {
+  return ({ PAG: 'Cancelada', ARR: 'Arreglo de pago', VENC: 'Vencida', PEND: 'Pendiente' } as Record<string,string>)[codigo] || codigo;
 }
 
 export function TributosDeudasPage() {
   const queryClient = useQueryClient();
-  const [selectedContribuyenteId, setSelectedContribuyenteId] = useState<number>(1);
+  const [selectedContribuyenteId, setSelectedContribuyenteId] = useState<number>(0);
   const [selectedDeudaId, setSelectedDeudaId] = useState<number | null>(null);
   const [openDeudaModal, setOpenDeudaModal] = useState(false);
   const [facturarDeudaTarget, setFacturarDeudaTarget] =
@@ -78,9 +64,9 @@ export function TributosDeudasPage() {
   const [tasaInteresOpcional, setTasaInteresOpcional] = useState<string>('');
 
   // Panel Derecho del Wireframe: Actualizar Estatus Legal (CU-PC-08)
-  const [nuevoEstatusLegal, setNuevoEstatusLegal] = useState<string>('VENC');
-  const [etiquetaLegalHumana, setEtiquetaLegalHumana] = useState<string>('En Cobro Judicial');
-  const [numeroResolucion, setNumeroResolucion] = useState<string>('RES-ALC-2026-089');
+  const [nuevoEstatusLegal, setNuevoEstatusLegal] = useState<string>('');
+  const [etiquetaLegalHumana, setEtiquetaLegalHumana] = useState<string>('');
+  const [numeroResolucion, setNumeroResolucion] = useState<string>('');
   const [justificacionLegal, setJustificacionLegal] = useState<string>('');
   const [openConfirmLegalDialog, setOpenConfirmLegalDialog] = useState(false);
 
@@ -122,14 +108,14 @@ export function TributosDeudasPage() {
     }
     return {
       idContribuyente: selectedContribuyenteId,
-      identificacion: '1-1234-5678',
-      nombreCompletoORazonSocial: 'Juan Pérez Rodríguez',
+      identificacion: '',
+      nombreCompletoORazonSocial: selectedContribuyenteId ? 'Datos del contribuyente no disponibles' : 'Seleccione un contribuyente',
     };
   }, [padronQuery.data, estadoCuentaGeneralQuery.data, selectedContribuyenteId]);
 
   const deudasList = deudasContribuyenteQuery.data ?? [];
   const selectedDeuda =
-    deudasList.find((d) => d.idDeudaMunicipal === selectedDeudaId) ?? deudasList[0] ?? null;
+    deudasList.find((d) => d.idDeudaMunicipal === selectedDeudaId) ?? null;
 
   // 3 KPIs Superiores del Wireframe: Deuda Principal, Intereses y Multas Moratorias, Saldo Total Adeudado
   const kpiDeudaPrincipal = deudasList
@@ -147,14 +133,14 @@ export function TributosDeudasPage() {
   const deudaForm = useForm<RegistrarDeudaForm>({
     resolver: zodResolver(registrarDeudaSchema),
     defaultValues: {
-      periodoDeuda: 'II Trimestre 2026',
-      montoPrincipal: 45000,
+      periodoDeuda: '',
+      montoPrincipal: undefined,
       montoIntereses: 0,
       montoMultas: 0,
-      fechaDeVencimiento: '2026-06-30',
-      idInmueble: 1,
-      idTipoTributo: 1,
-      codigoEstadoDeuda: 'PEND',
+      fechaDeVencimiento: '',
+      idInmueble: undefined,
+      idTipoTributo: 0,
+      codigoEstadoDeuda: '',
     },
   });
 
@@ -189,7 +175,7 @@ export function TributosDeudasPage() {
 
   const cambiarEstadoDeudaMut = useMutation({
     mutationFn: async () => {
-      if (!selectedDeuda) throw new Error('Seleccione una deuda de la tabla.');
+      if (!selectedDeuda || !nuevoEstatusLegal || !numeroResolucion.trim() || !justificacionLegal.trim()) throw new Error('Seleccione una deuda y complete el estado, resolución y justificación.');
       const res = await tributoDeudaApi.actualizarEstadoDeuda(selectedDeuda.idDeudaMunicipal, {
         codigoEstadoDeuda: nuevoEstatusLegal as 'PEND' | 'PAG' | 'VENC' | 'ARR',
       });
@@ -228,6 +214,19 @@ export function TributosDeudasPage() {
     },
   });
 
+  useEffect(() => {
+    setSelectedDeudaId(null);
+    setFacturarDeudaTarget(null);
+    setTasaInteresOpcional('');
+  }, [selectedContribuyenteId]);
+  useEffect(() => {
+    setNuevoEstatusLegal('');
+    setEtiquetaLegalHumana('');
+    setNumeroResolucion('');
+    setJustificacionLegal('');
+    setOpenConfirmLegalDialog(false);
+  }, [selectedContribuyenteId, selectedDeudaId]);
+
   const generarFacturaMut = useMutation({
     mutationFn: () => {
       if (!facturarDeudaTarget) throw new Error('Seleccione una deuda.');
@@ -254,9 +253,9 @@ export function TributosDeudasPage() {
       `Fecha de Emisión        : ${formatDate(new Date())}`,
       `Contribuyente           : ${contribuyenteSeleccionado.nombreCompletoORazonSocial}`,
       `Cédula / Identificación : ${contribuyenteSeleccionado.identificacion}`,
-      `Deuda Principal         : ${formatCurrencyCRC(kpiDeudaPrincipal)}`,
-      `Intereses y Multas      : ${formatCurrencyCRC(kpiInteresesMultas)}`,
-      `Saldo Total Adeudado    : ${formatCurrencyCRC(kpiSaldoTotalAdeudado)}`,
+      `Deuda Principal         : ${selectedContribuyenteId && deudasContribuyenteQuery.isSuccess ? formatCurrencyCRC(kpiDeudaPrincipal) : '—'}`,
+      `Intereses y Multas      : ${selectedContribuyenteId && deudasContribuyenteQuery.isSuccess ? formatCurrencyCRC(kpiInteresesMultas) : '—'}`,
+      `Saldo Total Adeudado    : ${selectedContribuyenteId && deudasContribuyenteQuery.isSuccess ? formatCurrencyCRC(kpiSaldoTotalAdeudado) : '—'}`,
       '====================================================================',
     ].join('\r\n');
     const blob = new Blob([texto], { type: 'text/plain;charset=utf-8' });
@@ -289,7 +288,7 @@ export function TributosDeudasPage() {
             >
               <RefreshCw className="h-4 w-4" /> Actualizar
             </Button>
-            <Button onClick={() => setOpenDeudaModal(true)}>
+            <Button onClick={() => { deudaForm.reset(); setOpenDeudaModal(true); }}>
               <Plus className="h-4 w-4" /> Registrar Deuda
             </Button>
           </>
@@ -327,7 +326,7 @@ export function TributosDeudasPage() {
               <span className="text-blue-100">Deuda:</span>
               <span className="inline-flex items-center gap-1 rounded-[6px] bg-[#FEF2F2] px-2.5 py-0.5 font-bold text-[#DC2626]">
                 <AlertCircle className="h-3.5 w-3.5" />
-                {kpiSaldoTotalAdeudado > 0 ? 'En Cobro Administrativo' : 'Al Día'}
+                {!selectedContribuyenteId ? 'Sin consultar' : deudasContribuyenteQuery.isError ? 'Consulta fallida' : deudasContribuyenteQuery.isLoading ? 'Consultando...' : kpiSaldoTotalAdeudado > 0 ? 'Con saldo pendiente' : 'Sin saldo pendiente'}
               </span>
             </div>
 
@@ -339,6 +338,7 @@ export function TributosDeudasPage() {
                   setSelectedDeudaId(null);
                 }}
               >
+                <option value={0}>— Seleccione un contribuyente —</option>
                 {(padronQuery.data ?? []).map((p) => (
                   <option key={p.idContribuyente} value={p.idContribuyente}>
                     #{p.idContribuyente} — {p.nombreCompletoORazonSocial}
@@ -358,7 +358,7 @@ export function TributosDeudasPage() {
               Deuda Principal
             </p>
             <p className="mt-2 text-3xl font-extrabold text-[#171717]">
-              {formatCurrencyCRC(kpiDeudaPrincipal)}
+              {selectedContribuyenteId && deudasContribuyenteQuery.isSuccess ? formatCurrencyCRC(kpiDeudaPrincipal) : '—'}
             </p>
           </CardContent>
         </Card>
@@ -369,7 +369,7 @@ export function TributosDeudasPage() {
               Intereses y Multas Moratorias
             </p>
             <p className="mt-2 text-3xl font-extrabold text-[#B45309]">
-              {formatCurrencyCRC(kpiInteresesMultas)}
+              {selectedContribuyenteId && deudasContribuyenteQuery.isSuccess ? formatCurrencyCRC(kpiInteresesMultas) : '—'}
             </p>
           </CardContent>
         </Card>
@@ -380,7 +380,7 @@ export function TributosDeudasPage() {
               Saldo Total Adeudado
             </p>
             <p className="mt-2 text-3xl font-extrabold text-[#1E3A8A]">
-              {formatCurrencyCRC(kpiSaldoTotalAdeudado)}
+              {selectedContribuyenteId && deudasContribuyenteQuery.isSuccess ? formatCurrencyCRC(kpiSaldoTotalAdeudado) : '—'}
             </p>
           </CardContent>
         </Card>
@@ -409,14 +409,18 @@ export function TributosDeudasPage() {
                     onChange={(e) => setTasaInteresOpcional(e.target.value)}
                   />
                 </div>
-                <Button onClick={handleEmitirCertificacionOficial}>
+                <Button disabled={!selectedContribuyenteId || !deudasContribuyenteQuery.isSuccess} onClick={handleEmitirCertificacionOficial}>
                   <FileCheck2 className="h-4 w-4" /> Emitir Certificación Oficial
                 </Button>
               </div>
             </CardHeader>
 
             <CardContent className="p-0">
-              {deudasContribuyenteQuery.isLoading ? (
+              {!selectedContribuyenteId ? (
+                <div className="p-6"><EmptyState title="Seleccione un contribuyente para consultar sus obligaciones" /></div>
+              ) : deudasContribuyenteQuery.isError ? (
+                <div className="p-6"><ErrorState error={deudasContribuyenteQuery.error} onRetry={() => deudasContribuyenteQuery.refetch()} /></div>
+              ) : deudasContribuyenteQuery.isLoading ? (
                 <div className="p-6">
                   <LoadingState message="Consultando deudas del contribuyente..." />
                 </div>
@@ -508,7 +512,7 @@ export function TributosDeudasPage() {
                                 <Button
                                   onClick={() => {
                                     setFacturarDeudaTarget(d);
-                                    setClaveHacienda(generarClaveHacienda50(d.idDeudaMunicipal));
+                                    setClaveHacienda('');
                                     setDescuentosFactura('0');
                                   }}
                                   title="Emitir factura electrónica Hacienda"
@@ -548,7 +552,7 @@ export function TributosDeudasPage() {
                     </div>
                     <p className="font-bold text-[#171717]">{t.nombreTributo}</p>
                     <p className="text-[#4B5563]">
-                      <strong>Tasa Base:</strong> {formatNumber(t.tasaBase, 4)} ·{' '}
+                      <strong>{t.tarifa != null ? 'Tarifa:' : 'Monto fijo:'}</strong> {t.tarifa != null ? formatNumber(t.tarifa, 4) : t.montoFijo != null ? formatCurrencyCRC(t.montoFijo) : 'No configurado'} ·{' '}
                       {t.nombreDepartamento}
                     </p>
                   </div>
@@ -576,18 +580,18 @@ export function TributosDeudasPage() {
             <CardContent className="space-y-4">
               <FormField label="Nuevo Estado" required>
                 <Select
-                  value={`${nuevoEstatusLegal}::${etiquetaLegalHumana}`}
+                  value={nuevoEstatusLegal ? `${nuevoEstatusLegal}::${etiquetaLegalHumana}` : ''}
+                  disabled={!selectedDeuda}
                   onChange={(e) => {
                     const [code, label] = e.target.value.split('::');
                     setNuevoEstatusLegal(code);
-                    setEtiquetaLegalHumana(label);
+                    setEtiquetaLegalHumana(label || '');
                   }}
                 >
-                  <option value="VENC::En Cobro Judicial">En Cobro Judicial (VENC)</option>
-                  <option value="PEND::Cobro Administrativo">Cobro Administrativo (PEND)</option>
+                  <option value="">— Seleccione un estado —</option>
+                  <option value="VENC::Vencida">Vencida (VENC)</option>
+                  <option value="PEND::Pendiente">Pendiente (PEND)</option>
                   <option value="ARR::Arreglo de Pago">Arreglo de Pago (ARR)</option>
-                  <option value="PAG::Prescrita">Prescrita (PAG)</option>
-                  <option value="PAG::Condonada">Condonada (PAG)</option>
                 </Select>
               </FormField>
 
@@ -610,7 +614,7 @@ export function TributosDeudasPage() {
               <Button
                 className="w-full"
                 disabled={
-                  !selectedDeuda ||
+                  !selectedDeuda || !nuevoEstatusLegal ||
                   !numeroResolucion.trim() ||
                   !justificacionLegal.trim() ||
                   cambiarEstadoDeudaMut.isPending
@@ -671,6 +675,7 @@ export function TributosDeudasPage() {
             error={deudaForm.formState.errors.idTipoTributo?.message}
           >
             <Select {...deudaForm.register('idTipoTributo')}>
+              <option value={0}>— Seleccione un tributo —</option>
               {(tiposTributoQuery.data ?? []).map((t) => (
                 <option key={t.idTipoTributo} value={t.idTipoTributo}>
                   {t.codigoTributo} — {t.nombreTributo}
@@ -714,6 +719,7 @@ export function TributosDeudasPage() {
             error={deudaForm.formState.errors.codigoEstadoDeuda?.message}
           >
             <Select {...deudaForm.register('codigoEstadoDeuda')}>
+              <option value="">— Seleccione un estado inicial —</option>
               <option value="PEND">PEND — Pendiente</option>
               <option value="VENC">VENC — Vencida</option>
               <option value="ARR">ARR — Arreglo de Pago</option>

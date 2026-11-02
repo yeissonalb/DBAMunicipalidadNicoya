@@ -1,7 +1,12 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Services.TipoTramiteService.Dto
 {
+    public class ReglaInmuebleDto
+    {
+        [Required] public bool? RequiereInmueble { get; set; }
+        [Required, StringLength(255)] public string Motivo { get; set; } = "";
+    }
     public class TipoTramiteDto
     {
         [Required, StringLength(100)]

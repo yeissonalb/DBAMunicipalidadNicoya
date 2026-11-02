@@ -7,9 +7,11 @@ namespace Services.TramiteService
 {
     public interface ISvTramite
     {
+        Task<BaseResponse<List<CotejoRequisitoDto>>> ConsultarCotejoAsync(int idTramite);
+        Task<BaseResponse<object>> RevisarArchivoAsync(int idTramite, RevisarArchivoDto dto, int idUsuario);
         Task<BaseResponse<List<VwTramitesSeguimiento>>> ObtenerSeguimientoAsync();
         Task<BaseResponse<List<VwHistorialTramitesDetallado>>> ObtenerHistorialDetalladoAsync();
-        Task<BaseResponse<int>> RegistrarAsync(RegistrarTramiteDto dto, int idUsuario);
+        Task<BaseResponse<TramiteRadicadoResultadoDto>> RegistrarAsync(RegistrarTramiteDto dto, int idUsuario);
         Task<BaseResponse<List<SpConsultarTramiteResultDto>>> ConsultarAsync(string? numeroExpediente, int? idContribuyente);
         Task<BaseResponse<object>> ActualizarAsync(int idTramite, ActualizarTramiteDto dto, int idUsuarioSesion);
 
@@ -21,10 +23,13 @@ namespace Services.TramiteService
 
         Task<BaseResponse<List<SpArchivoTramiteResultDto>>> ConsultarArchivosAsync(int idTramite);
         Task<BaseResponse<List<SpRequisitoTramiteEstadoResultDto>>> ConsultarRequisitosEstadoAsync(int idTramite);
-        Task<BaseResponse<object>> CambiarEstadoAsync(int idTramite, CambiarEstadoTramiteDto dto);
+        Task<BaseResponse<object>> CambiarEstadoAsync(int idTramite, CambiarEstadoTramiteDto dto, int? idUsuario = null);
         Task<BaseResponse<List<SpEstadosTramiteResultDto>>> ConsultarEstadosAsync();
         Task<BaseResponse<List<SpHistorialTramiteResultDto>>> ConsultarHistorialAsync(int idTramite);
-        Task<BaseResponse<object>> RegistrarResolucionAsync(int idTramite, ResolucionTramiteDto dto);
+        Task<BaseResponse<object>> RegistrarResolucionAsync(int idTramite, ResolucionTramiteDto dto, int? idUsuario = null);
         Task<BaseResponse<List<SpTramitesPorContribuyenteResultDto>>> ConsultarPorContribuyenteAsync(int idContribuyente);
+
+        /// <summary>Descarga segura de archivo verificando que pertenece al expediente.</summary>
+        Task<BaseResponse<DescargaArchivoDto>> ObtenerArchivoParaDescargaAsync(int idTramite, int idArchivoAdjunto, string webRootPath);
     }
 }

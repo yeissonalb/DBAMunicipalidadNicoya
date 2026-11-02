@@ -1,4 +1,4 @@
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 using Services.genericResponse;
 
 namespace MunicipalidadAPI.Middlewares
@@ -33,6 +33,7 @@ namespace MunicipalidadAPI.Middlewares
                 var error = ex.Errors.Cast<SqlError>().FirstOrDefault(e => e.Class > 10);
                 var numero = error?.Number ?? ex.Number;
                 var mensaje = error?.Message ?? ex.Message;
+                if (numero == 50064) mensaje = "Error: Cédula o contraseña incorrectas.";
 
                 var status = numero switch
                 {

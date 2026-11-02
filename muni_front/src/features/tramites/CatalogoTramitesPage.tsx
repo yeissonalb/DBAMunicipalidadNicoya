@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,7 +21,7 @@ import { FormField } from '@/components/forms/FormField';
 const registrarTipoTramiteSchema = z.object({
   nombreTramite: z.string().trim().min(3, 'Nombre requerido').max(150),
   descripcion: z.string().trim().min(5, 'Descripción requerida').max(300),
-  diasSlaMaximo: z.coerce.number().int().min(1, 'SLA debe ser al menos 1 día hábil').max(365),
+  diasSlaMaximo: z.coerce.number().int().min(1, 'SLA debe ser al menos 1 día natural').max(365),
   idDepartamento: z.coerce.number().int().min(1, 'Seleccione departamento responsable'),
 });
 
@@ -41,10 +41,19 @@ export function CatalogoTramitesPage() {
     MODULE_PERMISSIONS.CATALOGO_TRAMITES_WRITE
   );
 
-  const [selectedTipoId, setSelectedTipoId] = useState<number>(1);
+  const [selectedTipoId, setSelectedTipoId] = useState<number>(0);
   const [openTipoModal, setOpenTipoModal] = useState(false);
   const [openReqModal, setOpenReqModal] = useState(false);
 
+  const [regla, setRegla] = useState('');
+  const [motivoRegla, setMotivoRegla] = useState('');
+  const esAdmin = (session?.roles ?? []).includes('Administrador del Sistema');
+  useEffect(() => { setRegla(''); setMotivoRegla(''); }, [selectedTipoId]);
+  const configurarRegla = useMutation({
+    mutationFn: () => tipoTramiteApi.configurarInmueble(selectedTipoId, regla === 'SI', motivoRegla.trim()),
+    onSuccess: () => { toast.success('Regla de inmueble guardada.'); setRegla(''); setMotivoRegla(''); queryClient.invalidateQueries({ queryKey: ['tipos-tramite'] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const tiposQuery = useQuery({
     queryKey: ['tipos-tramite', 'listar'],
     queryFn: () => tipoTramiteApi.listar(),
@@ -194,6 +203,16 @@ export function CatalogoTramitesPage() {
                 )}
               </CardHeader>
               <CardContent>
+                {selectedTipo && <div className="mb-5 space-y-3 rounded border p-3">
+                  <p>Inmueble: <strong>{selectedTipo.requiereInmueble == null ? 'Pendiente de configurar' : selectedTipo.requiereInmueble ? 'Obligatorio' : 'Opcional'}</strong></p>
+                  {esAdmin && <>
+                    <Select value={regla} onChange={e => setRegla(e.target.value)}>
+                      <option value="">— Defina la regla documentada —</option><option value="SI">Requiere inmueble</option><option value="NO">No requiere inmueble</option>
+                    </Select>
+                    <Input maxLength={255} value={motivoRegla} onChange={e => setMotivoRegla(e.target.value)} placeholder="Justificación o referencia del requisito aprobado" />
+                    <Button disabled={!regla || !motivoRegla.trim() || configurarRegla.isPending} onClick={() => configurarRegla.mutate()}>Guardar regla de inmueble</Button>
+                  </>}
+                </div>}
                 {requisitosQuery.isLoading ? (
                   <p className="text-xs text-[#6B7280]">Cargando requisitos...</p>
                 ) : !requisitosQuery.data || requisitosQuery.data.length === 0 ? (
@@ -261,7 +280,7 @@ export function CatalogoTramitesPage() {
           </FormField>
 
           <FormField
-            label="Plazo Máximo de Resolución (SLA en días hábiles)"
+            label="Plazo Máximo de Resolución (SLA en días naturales)"
             required
             error={tipoForm.formState.errors.diasSlaMaximo?.message}
           >

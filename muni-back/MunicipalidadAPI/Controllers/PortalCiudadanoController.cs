@@ -10,8 +10,8 @@ using Services.TramiteService.Dto;
 namespace MunicipalidadAPI.Controllers
 {
     /// <summary>
-    /// Portal ciudadano (wireframe p. 113). Solo tokens emitidos por POST /api/auth/ciudadano/login.
-    /// El id del contribuyente sale SIEMPRE del JWT; la BD valida la pertenencia de cada recurso.
+    /// Portal ciudadano autoservicio. Solo tokens emitidos por POST /api/auth/ciudadano/login.
+    /// El id del contribuyente sale SIEMPRE del JWT; la BD y el backend validan la pertenencia de cada recurso.
     /// </summary>
     [ApiController]
     [Route("api/portal")]
@@ -47,6 +47,20 @@ namespace MunicipalidadAPI.Controllers
         [HttpGet("tramites/{idTramite:int}/archivos")]
         public async Task<IActionResult> Archivos(int idTramite) => Ok(await _svPortal.ArchivosTramiteAsync(IdContribuyente, idTramite));
 
+        /// <summary>Descarga protegida de archivo de un trámite propio.</summary>
+        [HttpGet("tramites/{idTramite:int}/archivos/{idArchivo:int}/descargar")]
+        public async Task<IActionResult> DescargarArchivo(int idTramite, int idArchivo)
+        {
+            var info = await _svPortal.ObtenerArchivoParaDescargaAsync(IdContribuyente, idTramite, idArchivo, WebRoot);
+            if (!info.Success || info.Data is null)
+                return NotFound(new BaseResponse<object> { Success = false, Message = info.Message });
+
+            if (!System.IO.File.Exists(info.Data.RutaFisica))
+                return NotFound(new BaseResponse<object> { Success = false, Message = "El archivo físico no se encuentra en el servidor." });
+
+            return PhysicalFile(info.Data.RutaFisica, info.Data.ContentType, info.Data.NombreOriginal);
+        }
+
         /// <summary>Subir un requisito faltante (multipart/form-data, campo "Archivo").</summary>
         [HttpPost("tramites/{idTramite:int}/requisitos/{idRequisito:int}/archivo")]
         [Consumes("multipart/form-data")]
@@ -81,7 +95,12 @@ namespace MunicipalidadAPI.Controllers
         [HttpGet("facturas")]
         public async Task<IActionResult> MisFacturas() => Ok(await _svPortal.MisFacturasAsync(IdContribuyente));
 
-        /// <summary>Pago en línea SINPE Móvil de una factura propia (sp_ciudadano_pagar_factura_sinpe).</summary>
+        /// <summary>Reporta comprobante de transferencia bancaria / SINPE (pendiente de verificación por el cajero).</summary>
+        [HttpPost("facturas/{idFactura:int}/reportar-transferencia")]
+        public async Task<IActionResult> ReportarTransferencia(int idFactura, [FromBody] ReportarTransferenciaDto dto)
+            => StatusCode(StatusCodes.Status201Created, await _svPortal.ReportarTransferenciaAsync(IdContribuyente, idFactura, dto));
+
+        /// <summary>Compatibilidad: reporte de transferencia SINPE (no reduce saldo de inmediato).</summary>
         [HttpPost("facturas/{idFactura:int}/pago-sinpe")]
         public async Task<IActionResult> PagarSinpe(int idFactura, [FromBody] PagoSinpeDto dto)
             => StatusCode(StatusCodes.Status201Created, await _svPortal.PagarFacturaSinpeAsync(IdContribuyente, idFactura, dto));

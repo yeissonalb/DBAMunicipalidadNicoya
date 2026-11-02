@@ -1,482 +1,90 @@
 ﻿import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import {
-  Banknote,
-  Check,
-  CheckCircle2,
-  CreditCard,
-  Landmark,
-  Receipt,
-  RefreshCw,
-  Smartphone,
-} from 'lucide-react';
-import { facturacionPagoApi, tributoDeudaApi } from '@/services/api';
-import type { VwFacturasPendiente } from '@/types/api';
+import { facturacionPagoApi, type CajaFactura, type CajaReporte } from '@/services/api';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/common/StateFeedback';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/Select';
-import { SearchInput } from '@/components/ui/SearchInput';
-import { Badge } from '@/components/ui/badge';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FormField } from '@/components/forms/FormField';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatCurrencyCRC, formatDate } from '@/lib/utils';
 
 export function PagosMunicipalesPage() {
-  const queryClient = useQueryClient();
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroTributo, setFiltroTributo] = useState('TODOS');
-  const [selectedFacturaId, setSelectedFacturaId] = useState<number | null>(null);
-
-  // Estado del formulario de pago (Panel derecho del Wireframe Caja y Facturación Municipal)
-  const [selectedMedioPagoId, setSelectedMedioPagoId] = useState<number>(1);
-  const [comprobante, setComprobante] = useState<string>('');
-  const [montoPrincipalInput, setMontoPrincipalInput] = useState<string>('');
-  const [montoInteresInput, setMontoInteresInput] = useState<string>('0');
-  const [montoRecargoInput, setMontoRecargoInput] = useState<string>('0');
-  const [openConfirmModal, setOpenConfirmModal] = useState(false);
-
-  // Buscador puntual de factura por clave Hacienda
-  const [consultaClaveHacienda, setConsultaClaveHacienda] = useState('');
-
-  const facturasPendientesQuery = useQuery({
-    queryKey: ['facturacion', 'facturas-pendientes'],
-    queryFn: () => tributoDeudaApi.facturasPendientes(),
-  });
-
-  const mediosPagoQuery = useQuery({
-    queryKey: ['facturacion', 'medios-pago'],
-    queryFn: () => facturacionPagoApi.mediosPago(),
-  });
-
-  const consultarFacturaPuntualQuery = useQuery({
-    queryKey: ['facturacion', 'consulta-factura', consultaClaveHacienda],
-    queryFn: () => facturacionPagoApi.consultarFactura(consultaClaveHacienda.trim()),
-    enabled: consultaClaveHacienda.trim().length >= 3,
-  });
-
-  const tributosUnicos = Array.from(
-    new Set((facturasPendientesQuery.data ?? []).map((f) => f.nombreTributo))
-  );
-
-  const facturasFiltradas = (facturasPendientesQuery.data ?? []).filter((f) => {
-    if (filtroTributo !== 'TODOS' && f.nombreTributo !== filtroTributo) return false;
-    if (!busqueda.trim()) return true;
-    const q = busqueda.trim().toLowerCase();
-    return (
-      f.claveNumericaHacienda.toLowerCase().includes(q) ||
-      (f.contribuyente || '').toLowerCase().includes(q) ||
-      f.numeroFinca.toLowerCase().includes(q) ||
-      f.nombreTributo.toLowerCase().includes(q) ||
-      String(f.idFactura) === q
-    );
-  });
-
-  const selectedFactura: VwFacturasPendiente | null =
-    facturasFiltradas.find((f) => f.idFactura === selectedFacturaId) ??
-    facturasFiltradas[0] ??
-    null;
-
-  const selectFacturaAndPrefill = (f: VwFacturasPendiente) => {
-    setSelectedFacturaId(f.idFactura);
-    setMontoPrincipalInput(String(f.saldoPendiente));
-    setMontoInteresInput('0');
-    setMontoRecargoInput('0');
-    setComprobante(`COMP-NIC-${new Date().getFullYear()}-${f.idFactura}`);
-  };
-
-  const principalNum = Number(montoPrincipalInput) || (selectedFactura?.saldoPendiente ?? 0);
-  const interesNum = Number(montoInteresInput) || 0;
-  const recargoNum = Number(montoRecargoInput) || 0;
-  const montoTotalPagar = Number((principalNum + interesNum + recargoNum).toFixed(2));
-
-  const registrarYAplicarPagoMut = useMutation({
-    mutationFn: async () => {
-      if (!selectedFactura) throw new Error('Seleccione una factura pendiente.');
-      if (montoTotalPagar <= 0) throw new Error('El monto a pagar debe ser mayor a cero.');
-      if (!comprobante.trim()) throw new Error('Ingrese el número de comprobante o referencia.');
-
-      const pagoRes = await facturacionPagoApi.registrarPago({
-        idContribuyente: selectedFactura.idContribuyente,
-        idMedioPago: selectedMedioPagoId,
-        montoTotalPagado: montoTotalPagar,
-        comprobante: comprobante.trim(),
-      });
-
-      const nuevoIdPago = pagoRes.data;
-
-      await facturacionPagoApi.aplicarPago(nuevoIdPago, {
-        idFactura: selectedFactura.idFactura,
-        montoPrincipal: principalNum,
-        montoInteres: interesNum,
-        montoRecargo: recargoNum,
-      });
-
-      return nuevoIdPago;
-    },
-    onSuccess: (idPago) => {
-      toast.success(
-        `Pago #${idPago} registrado y aplicado exitosamente a la Factura #${selectedFactura?.idFactura}.`
-      );
-      setOpenConfirmModal(false);
-      setComprobante('');
-      queryClient.invalidateQueries({ queryKey: ['facturacion'] });
-      queryClient.invalidateQueries({ queryKey: ['tributos'] });
-    },
-    onError: (err: Error) => {
-      toast.error(err.message);
-      setOpenConfirmModal(false);
-    },
-  });
-
-  const getMedioIcon = (nombre: string) => {
-    const u = nombre.toUpperCase();
-    if (u.includes('EFECTIVO')) return <Banknote className="h-4 w-4" />;
-    if (u.includes('TARJETA')) return <CreditCard className="h-4 w-4" />;
-    if (u.includes('SINPE')) return <Smartphone className="h-4 w-4" />;
-    return <Landmark className="h-4 w-4" />;
-  };
-
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Caja y Facturación Municipal"
-        subtitle="Selección de saldos pendientes por facturar, clave numérica de Hacienda (50 dígitos) y registro de pago en ventanilla."
-        badge={`${facturasFiltradas.length} saldos pendientes`}
-        icon={<Receipt className="h-6 w-6" />}
-        actions={
-          <Button
-            variant="secondary"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['facturacion'] })}
-          >
-            <RefreshCw className="h-4 w-4" /> Actualizar Caja
-          </Button>
-        }
-      />
-
-      {facturasPendientesQuery.isLoading ? (
-        <LoadingState message="Consultando saldos y facturas pendientes en SQL Server..." />
-      ) : facturasPendientesQuery.isError ? (
-        <ErrorState
-          error={facturasPendientesQuery.error}
-          onRetry={() => facturasPendientesQuery.refetch()}
-        />
-      ) : (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-          {/* COLUMNA IZQUIERDA (8 COLS): SALDOS PENDIENTES POR FACTURAR + RESUMEN Y CLAVE HACIENDA */}
-          <div className="space-y-6 xl:col-span-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Saldos Pendientes por Facturar</CardTitle>
-                <CardDescription>
-                  Marque una obligación pendiente para cargar su importe y clave numérica de
-                  Hacienda en la caja recaudadora.
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <div className="flex-1">
-                    <SearchInput
-                      value={busqueda}
-                      onChange={setBusqueda}
-                      placeholder="Buscar por contribuyente, finca, tributo o clave..."
-                    />
-                  </div>
-                  <div className="w-full sm:w-56">
-                    <Select
-                      value={filtroTributo}
-                      onChange={(e) => setFiltroTributo(e.target.value)}
-                    >
-                      <option value="TODOS">Filtrar: Todos los tributos</option>
-                      {tributosUnicos.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                </div>
-
-                {facturasFiltradas.length === 0 ? (
-                  <EmptyState
-                    title="No hay facturas pendientes de cobro"
-                    description="Puede emitir nuevas facturas desde el módulo de Estado de Cuenta y Cobro."
-                  />
-                ) : (
-                  <div className="overflow-x-auto rounded-[10px] border border-[#E5E7EB]">
-                    <table className="w-full text-left text-xs">
-                      <thead>
-                        <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC] font-bold uppercase text-[#4B5563]">
-                          <th className="px-3.5 py-3 w-10 text-center">Sel.</th>
-                          <th className="px-3.5 py-3">Tributo</th>
-                          <th className="px-3.5 py-3">Finca</th>
-                          <th className="px-3.5 py-3">Vencimiento</th>
-                          <th className="px-3.5 py-3">Principal (₡)</th>
-                          <th className="px-3.5 py-3">Abonado (₡)</th>
-                          <th className="px-3.5 py-3 text-right">Total Saldo</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#E5E7EB]">
-                        {facturasFiltradas.map((f) => {
-                          const isSelected = selectedFactura?.idFactura === f.idFactura;
-                          return (
-                            <tr
-                              key={f.idFactura}
-                              onClick={() => selectFacturaAndPrefill(f)}
-                              className={`cursor-pointer transition-colors ${
-                                isSelected ? 'bg-[#EFF6FF]' : 'hover:bg-[#F8FAFC]'
-                              }`}
-                            >
-                              <td className="px-3.5 py-3 text-center">
-                                <span
-                                  className={`inline-flex h-5 w-5 items-center justify-center rounded-[6px] border ${
-                                    isSelected
-                                      ? 'border-[#1D4ED8] bg-[#1D4ED8] text-white'
-                                      : 'border-[#D1D5DB] bg-white text-transparent'
-                                  }`}
-                                >
-                                  <Check className="h-3.5 w-3.5" />
-                                </span>
-                              </td>
-                              <td className="px-3.5 py-3">
-                                <p className="font-bold text-[#171717]">
-                                  {f.nombreTributo} {f.periodoDeuda}
-                                </p>
-                                <p className="text-[11px] text-[#6B7280]">
-                                  {f.contribuyente || `Contribuyente #${f.idContribuyente}`} ·
-                                  Factura #{f.idFactura}
-                                </p>
-                              </td>
-                              <td className="px-3.5 py-3 font-mono font-semibold text-[#1E3A8A]">
-                                {f.numeroFinca}
-                              </td>
-                              <td className="px-3.5 py-3 whitespace-nowrap">
-                                {formatDate(f.fechaDeVencimiento)}
-                              </td>
-                              <td className="px-3.5 py-3">{formatCurrencyCRC(f.subtotal)}</td>
-                              <td className="px-3.5 py-3 text-[#15803D]">
-                                {formatCurrencyCRC(f.totalAbonado)}
-                              </td>
-                              <td className="px-3.5 py-3 text-right font-extrabold text-[#171717]">
-                                {formatCurrencyCRC(f.saldoPendiente)}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* TARJETA INFERIOR IZQUIERDA DEL WIREFRAME: SUBTOTAL, INTERESES, TOTAL A PAGAR Y CLAVE NUMÉRICA HACIENDA */}
-            {selectedFactura && (
-              <Card>
-                <CardContent className="space-y-4 pt-6">
-                  <div className="space-y-2 border-b border-[#E5E7EB] pb-4 text-sm">
-                    <div className="flex items-center justify-between text-[#4B5563]">
-                      <span>Subtotal:</span>
-                      <span className="font-semibold text-[#171717]">
-                        {formatCurrencyCRC(selectedFactura.subtotal)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[#4B5563]">
-                      <span>Intereses / Recargos:</span>
-                      <span className="font-semibold text-[#171717]">
-                        {formatCurrencyCRC(interesNum + recargoNum)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between pt-2 text-lg font-extrabold text-[#171717]">
-                      <span>Total a Pagar</span>
-                      <span>Total a Pagar: {formatCurrencyCRC(montoTotalPagar)}</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-xs font-bold text-[#171717]">
-                      Clave Numérica Hacienda (Factura Electrónica)
-                    </label>
-                    <div className="rounded-[10px] border border-[#D1D5DB] bg-[#F8FAFC] px-4 py-3 font-mono text-xs font-semibold text-[#171717]">
-                      {selectedFactura.claveNumericaHacienda}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Verificador puntual de comprobante electrónico */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Verificar Comprobante Electrónico por Clave Hacienda</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Input
-                  placeholder="Pegue aquí la Clave Numérica de Hacienda de 50 dígitos..."
-                  value={consultaClaveHacienda}
-                  onChange={(e) => setConsultaClaveHacienda(e.target.value)}
-                  className="font-mono text-xs"
-                />
-                {consultarFacturaPuntualQuery.data &&
-                  consultarFacturaPuntualQuery.data.length > 0 && (
-                    <div className="rounded-[10px] border border-[#E5E7EB] bg-[#F8FAFC] p-3 text-xs">
-                      {consultarFacturaPuntualQuery.data.map((fc) => (
-                        <div key={fc.idFactura} className="flex justify-between">
-                          <span>
-                            Factura #{fc.idFactura} · {fc.nombreTributo} ({fc.periodoDeuda})
-                          </span>
-                          <Badge variant="blue">
-                            Saldo: {formatCurrencyCRC(fc.saldoPendiente)} ({fc.estadoFactura})
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* COLUMNA DERECHA (4 COLS): REGISTRO DE PAGO (EXACTO AL WIREFRAME) */}
-          <div className="xl:col-span-4">
-            <Card className="sticky top-20">
-              <CardHeader>
-                <CardTitle>Registro de Pago</CardTitle>
-                <CardDescription>
-                  Factura seleccionada: <strong>#{selectedFactura?.idFactura ?? '—'}</strong>
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-5">
-                {/* Píldoras de Método de Pago (Efectivo, Tarjeta, SINPE Móvil, Transferencia) */}
-                <div>
-                  <label className="mb-2 block text-xs font-semibold text-[#171717]">
-                    Método de pago
-                  </label>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {(mediosPagoQuery.data ?? []).map((mp) => {
-                      const active = mp.idMedioPago === selectedMedioPagoId;
-                      return (
-                        <button
-                          key={mp.idMedioPago}
-                          type="button"
-                          onClick={() => setSelectedMedioPagoId(mp.idMedioPago)}
-                          className={`flex h-[42px] items-center justify-center gap-2 rounded-[10px] border px-3 text-xs font-semibold transition-all ${
-                            active
-                              ? 'border-[#1D4ED8] bg-[#EFF6FF] text-[#1E3A8A] ring-2 ring-[#1D4ED8]/20'
-                              : 'border-[#D1D5DB] bg-white text-[#171717] hover:bg-[#F9FAFB]'
-                          }`}
-                        >
-                          {getMedioIcon(mp.nombreMedioPago)}
-                          <span className="truncate">{mp.nombreMedioPago}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <FormField label="Monto Recibido / Principal (₡)" required>
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    placeholder="₡ 0.00"
-                    value={montoPrincipalInput || (selectedFactura?.saldoPendiente ?? '')}
-                    onChange={(e) => setMontoPrincipalInput(e.target.value)}
-                  />
-                </FormField>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField label="Intereses (₡)">
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={montoInteresInput}
-                      onChange={(e) => setMontoInteresInput(e.target.value)}
-                    />
-                  </FormField>
-                  <FormField label="Recargos (₡)">
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={montoRecargoInput}
-                      onChange={(e) => setMontoRecargoInput(e.target.value)}
-                    />
-                  </FormField>
-                </div>
-
-                <FormField label="Comprobante Bancario" required>
-                  <Input
-                    maxLength={50}
-                    placeholder="Comprobante Bancario o Recibo"
-                    value={comprobante}
-                    onChange={(e) => setComprobante(e.target.value)}
-                  />
-                </FormField>
-
-                {selectedFactura && !comprobante && (
-                  <button
-                    type="button"
-                    onClick={() => selectFacturaAndPrefill(selectedFactura)}
-                    className="text-xs font-semibold text-[#1D4ED8] hover:underline"
-                  >
-                    Autocompletar monto y comprobante de Factura #{selectedFactura.idFactura}
-                  </button>
-                )}
-
-                <Button
-                  type="button"
-                  className="w-full"
-                  disabled={!selectedFactura || montoTotalPagar <= 0 || !comprobante.trim()}
-                  onClick={() => setOpenConfirmModal(true)}
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  Registrar Pago y Emitir Factura
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
-
-      {/* DIÁLOGO DE CONFIRMACIÓN DE PAGO */}
-      <ConfirmDialog
-        open={openConfirmModal}
-        onClose={() => setOpenConfirmModal(false)}
-        title="Confirmar Registro y Aplicación de Pago Municipal"
-        description="El pago se registrará en dbo.Pago_Municipal y se imputará a la factura seleccionada."
-        confirmLabel="Confirmar Pago Definitivo"
-        isPending={registrarYAplicarPagoMut.isPending}
-        onConfirm={() => registrarYAplicarPagoMut.mutate()}
-        impactSummary={
-          selectedFactura && (
-            <div className="space-y-1.5">
-              <p>
-                <strong>Contribuyente:</strong> {selectedFactura.contribuyente} (#
-                {selectedFactura.idContribuyente})
-              </p>
-              <p>
-                <strong>Factura Destino:</strong> #{selectedFactura.idFactura} —{' '}
-                {selectedFactura.nombreTributo} ({selectedFactura.periodoDeuda})
-              </p>
-              <p>
-                <strong>Comprobante:</strong> <code className="font-mono">{comprobante}</code>
-              </p>
-              <p>
-                <strong>Total a Cobrar:</strong>{' '}
-                <span className="font-extrabold text-[#1E3A8A]">
-                  {formatCurrencyCRC(montoTotalPagar)}
-                </span>
-              </p>
-            </div>
-          )
-        }
-      />
-    </div>
-  );
+ const qc = useQueryClient();
+ const [busqueda,setBusqueda] = useState('');
+ const [idFactura,setIdFactura] = useState<number | null>(null);
+ const [reporte,setReporte] = useState<CajaReporte | null>(null);
+ const [medio,setMedio] = useState(0);
+ const [monto,setMonto] = useState('');
+ const [comprobante,setComprobante] = useState('');
+ const [verificado,setVerificado] = useState(false);
+ const [confirmar,setConfirmar] = useState(false);
+ const [recibo,setRecibo] = useState<{ id: number; monto: number; factura: number; saldo: number } | null>(null);
+ const facturas = useQuery({queryKey:['facturacion','caja-facturas'],queryFn:()=>facturacionPagoApi.cajaFacturas()});
+ const reportes = useQuery({queryKey:['facturacion','caja-reportes'],queryFn:()=>facturacionPagoApi.cajaReportes()});
+ const medios = useQuery({queryKey:['facturacion','medios-pago'],queryFn:()=>facturacionPagoApi.mediosPago()});
+ const seleccionada = (facturas.data ?? []).find(f=>f.idFactura===idFactura);
+ const numero = Number(monto);
+ const medioElegido = (medios.data ?? []).find(m=>m.idMedioPago===medio);
+ const medioBancario = /SINPE|TRANSFER/i.test(medioElegido?.nombreMedioPago || '');
+ const montoValido = monto.trim()!=='' && Number.isFinite(numero) && numero>0 && numero<=(seleccionada?.saldoPendiente ?? 0) && Math.abs(numero*100-Math.round(numero*100))<0.000001;
+ const puedeCobrar = Boolean(seleccionada && medioElegido && montoValido && comprobante.trim() && verificado && (!reporte || medioBancario));
+ const seleccionar = (f: CajaFactura, r: CajaReporte | null = null) => {
+  setIdFactura(f.idFactura);setReporte(r);setMedio(0);setMonto(r ? String(r.monto) : '');
+  setComprobante(r?.comprobante ?? '');setVerificado(false);setConfirmar(false);setRecibo(null);
+ };
+ const cargarReporte = (r: CajaReporte) => {
+  const f = (facturas.data ?? []).find(f=>f.idFactura===r.idFactura);
+  if (!f) {toast.error('La factura del reporte no tiene saldo disponible o no pudo consultarse.');return;}
+  seleccionar(f,r);
+ };
+ const cobrar = useMutation({
+  mutationFn: async () => {
+   if (!puedeCobrar || !seleccionada) throw new Error('Revise factura, monto, medio, comprobante y confirmación de recepción.');
+   const f=seleccionada;
+   const res = await facturacionPagoApi.cobroCaja({idFactura:f.idFactura,montoPago:numero,idMedioPago:medio,comprobante:comprobante.trim(),idReporteAsociado:reporte?.idReporteTransferencia ?? null});
+   return {id:res.data.idPagoMunicipal,monto:res.data.montoPagado,factura:f.idFactura,saldo:Number((f.saldoPendiente-numero).toFixed(2))};
+  },
+  onSuccess: r=>{
+   setRecibo(r);setConfirmar(false);setIdFactura(null);setReporte(null);setMonto('');setComprobante('');setMedio(0);setVerificado(false);
+   toast.success(`Pago #${r.id} aplicado a factura #${r.factura}.`);
+   qc.invalidateQueries({queryKey:['facturacion']});qc.invalidateQueries({queryKey:['tributos']});
+  },
+  onError:(e:Error)=>{toast.error(e.message);setConfirmar(false);qc.invalidateQueries({queryKey:['facturacion']});},
+ });
+ const filtradas=(facturas.data ?? []).filter(f=>[String(f.idFactura),f.contribuyentes,f.numeroFinca,f.nombreTributo,f.periodoDeuda].some(v=>v.toLowerCase().includes(busqueda.trim().toLowerCase())));
+ return <div className="space-y-6">
+  <PageHeader title="Caja y pagos municipales" subtitle="Seleccione una factura existente o verifique un reporte ciudadano antes de aplicar el pago." actions={<Button variant="secondary" disabled={cobrar.isPending} onClick={()=>qc.invalidateQueries({queryKey:['facturacion']})}>Actualizar</Button>} />
+  {recibo && <Card><CardContent className="pt-6 space-y-2"><p className="font-semibold">Pago #{recibo.id} registrado y aplicado</p><p>Factura #{recibo.factura} · Abono: {formatCurrencyCRC(recibo.monto)} · Saldo resultante: {formatCurrencyCRC(recibo.saldo)}</p></CardContent></Card>}
+  <Card><CardHeader><CardTitle>Transferencias pendientes de verificación</CardTitle></CardHeader><CardContent className="space-y-3">
+   <p className="text-sm">El reporte ciudadano no acredita por sí mismo la recepción del dinero. Selecciónelo, verifique la recepción y confirme su aplicación.</p>
+   {reportes.isLoading ? <LoadingState message="Consultando reportes..." /> : reportes.isError ? <ErrorState error={reportes.error} onRetry={()=>reportes.refetch()} /> : !reportes.data?.length ? <p>No hay reportes pendientes.</p> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th className="p-2">Reporte / factura</th><th className="p-2">Contribuyente</th><th className="p-2">Referencia</th><th className="p-2">Monto</th><th className="p-2">Fecha</th><th className="p-2">Acción</th></tr></thead><tbody>
+    {reportes.data.map(r=><tr key={r.idReporteTransferencia} className="border-t"><td className="p-2">#{r.idReporteTransferencia} / #{r.idFactura}</td><td className="p-2">{r.contribuyente} (#{r.idContribuyente})</td><td className="p-2">{r.comprobante}</td><td className="p-2">{formatCurrencyCRC(r.monto)}</td><td className="p-2">{formatDate(r.fechaReporte)}</td><td className="p-2"><Button disabled={cobrar.isPending || facturas.isLoading || facturas.isError} onClick={()=>cargarReporte(r)}>Revisar reporte</Button></td></tr>)}
+   </tbody></table></div>}
+  </CardContent></Card>
+  <div className="grid gap-6 xl:grid-cols-3"><Card className="xl:col-span-2"><CardHeader><CardTitle>Facturas pendientes de cobro</CardTitle></CardHeader><CardContent className="space-y-4">
+   <Input value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar por factura, contribuyente, finca, tributo o periodo" aria-label="Buscar factura pendiente" />
+   {facturas.isLoading ? <LoadingState message="Consultando facturas..." /> : facturas.isError ? <ErrorState error={facturas.error} onRetry={()=>facturas.refetch()} /> : !filtradas.length ? <EmptyState title="No hay facturas pendientes con ese criterio" /> : <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr><th className="p-2">Factura / titular</th><th className="p-2">Tributo / finca</th><th className="p-2">Vencimiento</th><th className="p-2">Total</th><th className="p-2">Abonado</th><th className="p-2">Saldo</th><th className="p-2">Acción</th></tr></thead><tbody>
+    {filtradas.map(f=><tr key={f.idFactura} className={idFactura===f.idFactura?'border-t bg-blue-50':'border-t'}><td className="p-2">#{f.idFactura}<br />{f.contribuyentes}</td><td className="p-2">{f.nombreTributo}<br />{f.periodoDeuda}<br />{f.numeroFinca}</td><td className="p-2">{formatDate(f.fechaDeVencimiento)}</td><td className="p-2">{formatCurrencyCRC(f.totalAPagar)}</td><td className="p-2">{formatCurrencyCRC(f.totalAPagar-f.saldoPendiente)}</td><td className="p-2">{formatCurrencyCRC(f.saldoPendiente)}</td><td className="p-2"><Button variant="secondary" disabled={cobrar.isPending} onClick={()=>seleccionar(f)}>Seleccionar</Button></td></tr>)}
+   </tbody></table></div>}
+  </CardContent></Card>
+  <Card><CardHeader><CardTitle>Registrar y aplicar pago</CardTitle></CardHeader><CardContent className="space-y-4">
+   {!seleccionada ? <p>Seleccione explícitamente una factura o un reporte pendiente.</p> : <>
+    <p className="font-semibold">Factura #{seleccionada.idFactura} · Saldo {formatCurrencyCRC(seleccionada.saldoPendiente)}</p>
+    <p className="text-sm">{reporte ? `Reporte #${reporte.idReporteTransferencia} de ${reporte.contribuyente}` : seleccionada.contribuyentes}</p>
+    {medios.isError && <ErrorState error={medios.error} onRetry={()=>medios.refetch()} />}
+    <FormField label="Medio de pago" required><Select value={medio} disabled={cobrar.isPending || medios.isLoading} onChange={e=>setMedio(Number(e.target.value))}><option value={0}>— Seleccione un medio —</option>{(medios.data ?? []).filter(m=>!reporte || /SINPE|TRANSFER/i.test(m.nombreMedioPago)).map(m=><option key={m.idMedioPago} value={m.idMedioPago}>{m.nombreMedioPago}</option>)}</Select></FormField>
+    <FormField label="Monto recibido (₡)" required><Input type="number" min="0.01" step="0.01" max={seleccionada.saldoPendiente} value={monto} disabled={Boolean(reporte) || cobrar.isPending} onChange={e=>{setMonto(e.target.value);setVerificado(false);}} /></FormField>
+    <FormField label="Comprobante o referencia" required><Input value={comprobante} maxLength={50} disabled={Boolean(reporte) || cobrar.isPending} onChange={e=>{setComprobante(e.target.value);setVerificado(false);}} /></FormField>
+    {reporte && <p className="text-xs">Monto y referencia se toman del reporte y deben coincidir con lo recibido. No se modifican durante su aplicación.</p>}
+    <label className="flex gap-2 text-sm"><input type="checkbox" checked={verificado} disabled={cobrar.isPending} onChange={e=>setVerificado(e.target.checked)} />Confirmo que verifiqué la recepción del dinero correspondiente.</label>
+    <p>Saldo después del abono: {montoValido ? formatCurrencyCRC(seleccionada.saldoPendiente-numero) : '—'}</p>
+    <Button disabled={!puedeCobrar || cobrar.isPending} onClick={()=>setConfirmar(true)}>Confirmar y aplicar pago</Button>
+   </>}
+  </CardContent></Card></div>
+  <ConfirmDialog open={confirmar} onClose={()=>{if(!cobrar.isPending)setConfirmar(false);}} title="Confirmar aplicación del pago" description="Se registrará el dinero recibido y se aplicará a la factura existente en una sola operación." confirmLabel="Confirmar pago" isPending={cobrar.isPending} onConfirm={()=>cobrar.mutate()} impactSummary={<div className="space-y-2"><p>Factura #{idFactura} · {reporte?.contribuyente || seleccionada?.contribuyentes}</p><p>Referencia: {comprobante}</p><p>Monto: {formatCurrencyCRC(numero || 0)}</p><p>Saldo resultante: {formatCurrencyCRC((seleccionada?.saldoPendiente ?? 0)-(numero || 0))}</p></div>} />
+ </div>;
 }

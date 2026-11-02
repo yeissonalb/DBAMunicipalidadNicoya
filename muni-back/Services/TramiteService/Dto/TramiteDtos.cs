@@ -1,11 +1,16 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Services.TramiteService.Dto
 {
     public class RegistrarTramiteDto
     {
-        [Required, StringLength(30)]
-        public string NumeroExpediente { get; set; } = string.Empty;
+        [StringLength(255)] public string? ObservacionesIniciales { get; set; }
+        /// <summary>
+        /// Opcional: si no se suministra, el servidor SQL genera atómicamente un número
+        /// único y seguro ante concurrencia (EXP-NIC-YYYY-NNNNNN).
+        /// </summary>
+        [StringLength(30)]
+        public string? NumeroExpediente { get; set; }
 
         [Range(1, int.MaxValue)]
         public int IdTipoTramite { get; set; }
@@ -14,6 +19,12 @@ namespace Services.TramiteService.Dto
 
         [Range(1, int.MaxValue)]
         public int IdContribuyente { get; set; }
+    }
+
+    public class TramiteRadicadoResultadoDto
+    {
+        public int IdTramite { get; set; }
+        public string NumeroExpediente { get; set; } = string.Empty;
     }
 
     public class ActualizarTramiteDto
@@ -30,8 +41,8 @@ namespace Services.TramiteService.Dto
         [Required, StringLength(20)]
         public string CodigoEstado { get; set; } = string.Empty;
 
-        [StringLength(255)]
-        public string? Observaciones { get; set; }
+        [Required(ErrorMessage = "Debe registrar una observación o justificación técnica del cambio."), StringLength(255)]
+        public string Observaciones { get; set; } = string.Empty;
     }
 
     public class ResolucionTramiteDto
@@ -39,8 +50,8 @@ namespace Services.TramiteService.Dto
         [Required, RegularExpression("^(APR|RECH)$", ErrorMessage = "La resolución solo admite APR o RECH.")]
         public string CodigoEstado { get; set; } = string.Empty;
 
-        [StringLength(255)]
-        public string? Observaciones { get; set; }
+        [Required(ErrorMessage = "Debe fundamentar la resolución técnica del trámite."), StringLength(255)]
+        public string Observaciones { get; set; } = string.Empty;
     }
 
     /// <summary>Archivo ya recibido por el controlador, desacoplado de ASP.NET (IFormFile).</summary>
@@ -61,5 +72,12 @@ namespace Services.TramiteService.Dto
         public string RutaRelativa { get; set; } = string.Empty;
         public string Extension { get; set; } = string.Empty;
         public long PesoBytes { get; set; }
+    }
+
+    public class DescargaArchivoDto
+    {
+        public string RutaFisica { get; set; } = string.Empty;
+        public string NombreOriginal { get; set; } = string.Empty;
+        public string ContentType { get; set; } = string.Empty;
     }
 }

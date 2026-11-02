@@ -8,12 +8,12 @@ import {
   Download,
   FileCheck2,
   FileText,
+  Globe,
+  KeyRound,
   Receipt,
   Search,
-  ShieldCheck,
   Smartphone,
   Upload,
-  UserCheck,
 } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { normalizeRoleName, ROLES } from '@/features/auth/permissions';
@@ -26,6 +26,8 @@ import {
   tramiteApi,
   tributoDeudaApi,
 } from '@/services/api';
+import { PageHeader } from '@/components/common/PageHeader';
+import type { CodigoActivacionGeneradoDto } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/Select';
@@ -81,6 +83,7 @@ export function PortalCiudadanoPage() {
   const [openUploadModal, setOpenUploadModal] = useState(false);
   const [nombreArchivoSubir, setNombreArchivoSubir] = useState('requisito_pendiente_firmado.pdf');
   const [openSinpeModal, setOpenSinpeModal] = useState(false);
+  const [codigoActivacionGenerado, setCodigoActivacionGenerado] = useState<CodigoActivacionGeneradoDto | null>(null);
   const [telefonoSinpe, setTelefonoSinpe] = useState('8888-1234');
   const [comprobanteSinpe, setComprobanteSinpe] = useState(
     `SINPE-${Math.floor(100000 + Math.random() * 900000)}`
@@ -91,38 +94,37 @@ export function PortalCiudadanoPage() {
     queryFn: () => contribuyenteApi.padron(),
   });
 
-  // Aislamiento estricto de datos: Si el usuario autenticado es Ciudadano, vincular de forma automática y obligatoria a su perfil en la base de datos
+  // Atención en ventanilla: El funcionario busca explícitamente al ciudadano por cédula o nombre
   useEffect(() => {
-    if (!padronQuery.data || padronQuery.data.length === 0) return;
-
-    const userEmail = (session?.email || '').toLowerCase().trim();
-    const userName = (session?.userName || '').toLowerCase().trim();
-    const userFullName = (session?.nombreCompleto || session?.nombreFuncionario || '').toLowerCase().trim();
-    const cleanUserCed = userName.replace(/\D/g, '');
-
-    const matched = padronQuery.data.find((p) => {
-      const pEmail = (p.correoElectronico || '').toLowerCase().trim();
-      const pNombre = (p.nombreCompletoORazonSocial || '').toLowerCase().trim();
-      const pCed = (p.identificacion || '').replace(/\D/g, '');
-
-      return (
-        (userEmail && pEmail && pEmail === userEmail) ||
-        (userName && pEmail && pEmail.includes(userName)) ||
-        (cleanUserCed.length >= 9 && pCed && pCed === cleanUserCed) ||
-        (userFullName && pNombre && (pNombre === userFullName || pNombre.includes(userFullName) || userFullName.includes(pNombre)))
-      );
-    });
-
-    if (matched) {
-      if (matched.idContribuyente !== selectedContribuyenteId) {
-        setSelectedContribuyenteId(matched.idContribuyente);
-      }
-    } else if (isCitizen && selectedContribuyenteId === 0 && padronQuery.data.length > 0) {
-      setSelectedContribuyenteId(padronQuery.data[0].idContribuyente);
-    } else if (!isCitizen && selectedContribuyenteId === 0 && padronQuery.data.length > 0) {
+    if (selectedContribuyenteId === 0 && padronQuery.data && padronQuery.data.length > 0) {
+      // Seleccionar el primer registro como punto de partida si está vacío
       setSelectedContribuyenteId(padronQuery.data[0].idContribuyente);
     }
-  }, [isCitizen, padronQuery.data, session, selectedContribuyenteId]);
+  }, [padronQuery.data, selectedContribuyenteId]);
+
+  // Estado y emisión de activación de Cuenta Ciudadana para el contribuyente seleccionado
+  const cuentaCiudadanaQuery = useQuery({
+    queryKey: ['portal-ciudadano', 'cuenta-activa', selectedContribuyenteId],
+    queryFn: () => contribuyenteApi.consultarCuentaActiva(selectedContribuyenteId),
+    enabled: selectedContribuyenteId > 0,
+  });
+
+  const generarPinMut = useMutation({
+    mutationFn: async () => {
+      if (!selectedContribuyenteId) throw new Error('Seleccione un contribuyente.');
+      const res = await contribuyenteApi.generarCodigoActivacion(selectedContribuyenteId, {
+        duracionHoras: 48,
+        observacion: 'Emisión asistida desde Consulta y Atención a Contribuyentes',
+      });
+      return res.data;
+    },
+    onSuccess: (data) => {
+      setCodigoActivacionGenerado(data);
+      toast.success(`PIN de activación generado: ${data.codigoActivacion}`);
+      queryClient.invalidateQueries({ queryKey: ['portal-ciudadano', 'cuenta-activa'] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   const contribuyenteDetalleQuery = useQuery({
     queryKey: ['portal-ciudadano', 'contribuyente', selectedContribuyenteId],
@@ -339,92 +341,27 @@ export function PortalCiudadanoPage() {
 
   return (
     <div className="space-y-6">
-      {/* CABECERA OFICIAL DEL WIREFRAME: PORTAL CIUDADANO EN LÍNEA */}
-      <div className="overflow-hidden rounded-[12px] border border-[#E5E7EB] bg-white shadow-card">
-        <div className="flex flex-col justify-between gap-4 border-b border-[#E5E7EB] bg-white px-6 py-5 md:flex-row md:items-center">
-          <div className="flex items-center gap-4">
-            <img
-              src="/images/escudo-nicoya.jpg"
-              alt="Escudo Municipalidad de Nicoya"
-              className="h-14 w-14 rounded-full border border-[#D1D5DB] bg-white object-contain p-1"
-            />
-            <div>
-              <h1 className="text-xl font-extrabold tracking-tight text-[#171717] sm:text-2xl">
-                PORTAL CIUDADANO EN LÍNEA
-              </h1>
-              <p className="text-sm font-medium text-[#4B5563]">
-                Oficina virtual municipal · Municipalidad de Nicoya
-              </p>
-            </div>
-          </div>
-
-          {/* Tarjeta del Contribuyente Activo (Esquina superior derecha del Wireframe 1) */}
-          <div className="flex items-center gap-3 rounded-[12px] border border-[#D1D5DB] bg-[#F8FAFC] px-4 py-2.5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1E3A8A] text-xs font-bold text-white">
-              <UserCheck className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-[#171717]">
-                {contribuyenteActual.nombreCompleto}
-              </p>
-              <p className="font-mono text-xs font-semibold text-[#4B5563]">
-                Cédula: {contribuyenteActual.identificacion}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Barra de bienvenida, selector de contribuyente y pestañas del Portal */}
-        <div className="flex flex-col justify-between gap-4 bg-[#F8FAFC] px-6 py-4 lg:flex-row lg:items-center">
-          <div>
-            <h2 className="text-lg font-bold text-[#171717]">¡Bienvenido contribuyente!</h2>
-            <div className="mt-2 flex flex-wrap gap-2" role="tablist">
-              {[
-                { id: 'resumen', label: 'Mis Trámites' },
-                { id: 'inmuebles', label: 'Mis Inmuebles' },
-                { id: 'estado-cuenta', label: 'Estado de Cuenta y Facturas' },
-                { id: 'requisitos', label: 'Consultar Requisitos de Trámites' },
-              ].map((t) => {
-                const active = activeTab === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setActiveTab(t.id as typeof activeTab)}
-                    className={`rounded-[10px] px-3.5 py-2 text-xs font-semibold transition-colors ${
-                      active
-                        ? 'bg-[#171717] text-white'
-                        : 'border border-[#D1D5DB] bg-white text-[#171717] hover:bg-[#F3F4F6]'
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Identificación del perfil del ciudadano o selector de funcionario */}
-          {isCitizen ? (
-            <div className="flex flex-wrap items-center gap-2 rounded-[10px] border border-[#BFDBFE] bg-[#EFF6FF] px-3.5 py-2 text-xs font-semibold text-[#1E3A8A]">
-              <ShieldCheck className="h-4 w-4 text-[#1D4ED8]" />
-              <span>
-                Contribuyente Autenticado:{' '}
-                <strong>{contribuyenteActual.nombreCompleto}</strong> (ID{' '}
-                {contribuyenteActual.identificacion})
-              </span>
-              {haciendaInfo && (
-                <Badge variant={haciendaInfo.moroso ? 'danger' : 'success'}>
-                  Hacienda: {haciendaInfo.estadoTributario}{' '}
-                  {haciendaInfo.moroso ? '· MOROSO' : '· AL DÍA'}
-                </Badge>
-              )}
-            </div>
+      {/* ENCABEZADO INSTITUCIONAL ESTANDARIZADO (ESTILO SIGEMUN) */}
+      <PageHeader
+        title="Portal de Contribuyentes y Consulta Ciudadana"
+        subtitle="Ventanilla integral de consulta de expedientes, bienes inmuebles, estado de cuenta y requisitos municipales."
+        badge={
+          contribuyenteActual?.nombreCompleto
+            ? `${contribuyenteActual.nombreCompleto} · Cédula: ${contribuyenteActual.identificacion}`
+            : 'Atención Municipal'
+        }
+        icon={<Globe className="h-6 w-6" />}
+        actions={
+          isCitizen ? (
+            haciendaInfo ? (
+              <Badge variant={haciendaInfo.moroso ? 'danger' : 'success'}>
+                Hacienda: {haciendaInfo.estadoTributario}{' '}
+                {haciendaInfo.moroso ? '· MOROSO' : '· AL DÍA'}
+              </Badge>
+            ) : null
           ) : (
             <div className="flex flex-wrap items-center gap-2">
-              <div className="w-48">
+              <div className="w-44">
                 <Input
                   placeholder="Buscar por cédula..."
                   value={cedulaFiltro}
@@ -449,8 +386,70 @@ export function PortalCiudadanoPage() {
                 </div>
               )}
             </div>
-          )}
+          )
+        }
+      />
+
+      {/* BARRA DE NAVEGACIÓN DE SECCIONES (ESTILO SIGEMUN) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-[#E5E7EB] bg-white p-3 shadow-card">
+        <div className="flex flex-wrap items-center gap-2" role="tablist">
+          {[
+            { id: 'resumen', label: 'Mis Trámites', icon: <FileText className="h-4 w-4" /> },
+            { id: 'inmuebles', label: 'Mis Inmuebles', icon: <Building2 className="h-4 w-4" /> },
+            { id: 'estado-cuenta', label: 'Estado de Cuenta y Facturas', icon: <Receipt className="h-4 w-4" /> },
+            { id: 'requisitos', label: 'Consultar Requisitos', icon: <ClipboardList className="h-4 w-4" /> },
+          ].map((t) => {
+            const active = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setActiveTab(t.id as typeof activeTab)}
+                className={`flex items-center gap-2 rounded-[10px] px-4 py-2 text-xs font-bold transition-all ${
+                  active
+                    ? 'bg-[#1D4ED8] text-white shadow-xs'
+                    : 'border border-[#D1D5DB] bg-white text-[#171717] hover:bg-[#F8FAFC]'
+                }`}
+              >
+                {t.icon}
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
         </div>
+
+        {contribuyenteActual && (
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-2 rounded-[8px] bg-[#F8FAFC] border border-[#E5E7EB] px-3 py-1.5 text-xs">
+              <span className="text-[#6B7280]">Contribuyente:</span>
+              <strong className="font-bold text-[#171717]">{contribuyenteActual.nombreCompleto}</strong>
+              <span className="font-mono text-[#4B5563]">({contribuyenteActual.identificacion})</span>
+            </div>
+
+            {/* Estado de Cuenta Ciudadana y Activación Asistida */}
+            {cuentaCiudadanaQuery.data ? (
+              <Badge variant="success">Portal: Cuenta Activa</Badge>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Badge variant="warning">Portal: Sin activar</Badge>
+                {!isCitizen && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 border-[#1D4ED8] text-[#1D4ED8] hover:bg-[#EFF6FF] text-xs font-bold"
+                    disabled={generarPinMut.isPending}
+                    onClick={() => generarPinMut.mutate()}
+                  >
+                    <KeyRound className="h-3.5 w-3.5" />
+                    {generarPinMut.isPending ? 'Generando...' : 'Habilitar PIN'}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* VISTA 1 (WIREFRAME PRINCIPAL): MIS TRÁMITES EN CURSO + ESTADO DE CUENTA Y TRIBUTOS */}
@@ -501,7 +500,7 @@ export function PortalCiudadanoPage() {
                       </h3>
                       <p className="mt-0.5 text-xs text-[#4B5563]">
                         Fecha de radicación: {formatDate(tramiteActual.fechaRadicacion)} · Plazo SLA:{' '}
-                        {tramiteActual.diasResolucionMax} días hábiles
+                        {tramiteActual.diasResolucionMax} días naturales
                       </p>
                     </div>
                     <Badge
@@ -657,7 +656,7 @@ export function PortalCiudadanoPage() {
                 type="button"
                 className="w-full"
                 disabled={saldoTotalPorPagar <= 0}
-                onClick={() => setOpenSinpeModal(true)}
+                onClick={() => { window.location.href = "/pagos-municipales"; }}
               >
                 <Smartphone className="h-4 w-4" />
                 {saldoTotalPorPagar > 0 ? 'Pagar en Línea (SINPE Móvil)' : 'Cuenta al Día (Sin saldo por pagar)'}
@@ -836,7 +835,7 @@ export function PortalCiudadanoPage() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-[#171717]">{tt.nombreTramite}</span>
-                      <Badge variant="blue">SLA Máximo: {tt.diasSlaMaximo} días hábiles</Badge>
+                      <Badge variant="blue">SLA Máximo: {tt.diasSlaMaximo} días naturales</Badge>
                     </div>
                     <p className="text-[#4B5563]">{tt.descripcion}</p>
                     <p className="font-semibold text-[#1E3A8A]">
@@ -893,6 +892,44 @@ export function PortalCiudadanoPage() {
           </Card>
         </div>
       )}
+
+      {/* MODAL PIN DE ACTIVACIÓN EMITIDO */}
+      <Modal
+        open={Boolean(codigoActivacionGenerado)}
+        onClose={() => setCodigoActivacionGenerado(null)}
+        title="PIN de Activación para Cuenta Ciudadana"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-[#4B5563]">
+            Entregue este código temporal al ciudadano o representante para que complete la activación de su cuenta en el Portal de Contribuyentes:
+          </p>
+          <div className="rounded-[10px] border-2 border-dashed border-[#1D4ED8] bg-[#EFF6FF] p-4 text-center">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#1E3A8A]">Código PIN de un solo uso</p>
+            <p className="mt-1 font-mono text-2xl font-black tracking-widest text-[#1D4ED8]">
+              {codigoActivacionGenerado?.codigoActivacion}
+            </p>
+            <p className="mt-1 text-[11px] text-[#6B7280]">
+              Válido por 48 horas (vence el {codigoActivacionGenerado ? formatDate(codigoActivacionGenerado.fechaExpiracion) : ''})
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (codigoActivacionGenerado) {
+                  navigator.clipboard.writeText(codigoActivacionGenerado.codigoActivacion);
+                  toast.success('PIN copiado al portapapeles');
+                }
+              }}
+            >
+              Copiar PIN
+            </Button>
+            <Button onClick={() => setCodigoActivacionGenerado(null)}>
+              Entendido
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* MODAL: SUBIR REQUISITO FALTANTE */}
       <Modal

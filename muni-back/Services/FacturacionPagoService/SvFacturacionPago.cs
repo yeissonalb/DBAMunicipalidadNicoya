@@ -1,4 +1,4 @@
-using Entities.SpResults;
+﻿using Entities.SpResults;
 using Entities.Views;
 using Microsoft.EntityFrameworkCore;
 using Services.Common;
@@ -92,6 +92,37 @@ namespace Services.FacturacionPagoService
                 Sp.Int("@id_contribuyente", idContribuyente));
 
             return Respuesta.Ok(data);
+        }
+
+        public async Task<BaseResponse<List<CajaFacturaDto>>> ConsultarCajaFacturasAsync()
+            => Respuesta.Ok(await _context.Database.QuerySpAsync<CajaFacturaDto>("dbo.sp_caja_facturas_pendientes"));
+
+        public async Task<BaseResponse<List<CajaReporteDto>>> ConsultarCajaReportesAsync()
+            => Respuesta.Ok(await _context.Database.QuerySpAsync<CajaReporteDto>("dbo.sp_caja_reportes_pendientes"));
+
+        public async Task<BaseResponse<CajeroCobroResultadoDto>> CajeroCobroDirectoAsync(CajeroCobroDirectoDto dto, int idUsuarioCajero)
+        {
+            var pId = Sp.OutInt("@nuevo_id_pago");
+
+            await _context.Database.ExecSpAsync(
+                "dbo.sp_cajero_aplicar_pago",
+                Sp.Int("@id_factura", dto.IdFactura),
+                Sp.Decimal("@monto_pago", dto.MontoPago),
+                Sp.Int("@id_medio_pago", dto.IdMedioPago),
+                Sp.VarChar("@comprobante", dto.Comprobante.Trim(), 50),
+                Sp.Int("@id_usuario_cajero", idUsuarioCajero),
+                Sp.Int("@id_reporte_asociado", dto.IdReporteAsociado),
+                pId);
+
+            var idPago = Convert.ToInt32(pId.Value);
+
+            return Respuesta.Ok(new CajeroCobroResultadoDto
+            {
+                IdPagoMunicipal = idPago,
+                Comprobante = dto.Comprobante.Trim(),
+                MontoPagado = dto.MontoPago,
+                FechaPago = DateTime.UtcNow
+            }, "Pago confirmado y aplicado a la factura exitosamente.");
         }
     }
 }
