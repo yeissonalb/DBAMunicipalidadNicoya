@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MunicipalidadAPI.Constantes;
 using Services.TipoTramiteService;
@@ -8,12 +8,17 @@ namespace MunicipalidadAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = $"{Roles.Admin},{Roles.Analista},{Roles.Contribuyente},{Roles.Ciudadano},{Roles.CiudadanoContribuyente}")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Analista}")]
     public class TipoTramiteController : ControllerBase
     {
         private readonly ISvTipoTramite _svTipoTramite;
 
         public TipoTramiteController(ISvTipoTramite svTipoTramite) => _svTipoTramite = svTipoTramite;
+
+        [HttpPut("{idTipoTramite:int}/regla-inmueble")]
+        [Authorize(Roles = Roles.Admin)]
+        public async Task<IActionResult> ReglaInmueble(int idTipoTramite, [FromBody] ReglaInmuebleDto dto)
+            => Ok(await _svTipoTramite.ConfigurarInmuebleAsync(idTipoTramite, dto, AuthHelpers.GetIdUsuario(User)));
 
         /// <summary>sp_consultar_tipos_tramite.</summary>
         [HttpGet]

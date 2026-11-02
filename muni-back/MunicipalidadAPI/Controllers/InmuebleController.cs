@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MunicipalidadAPI.Constantes;
 using Services.InmuebleService;
@@ -8,7 +8,7 @@ namespace MunicipalidadAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = $"{Roles.Admin},{Roles.Analista},{Roles.Contribuyente},{Roles.Ciudadano},{Roles.CiudadanoContribuyente}")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Analista}")]
     public class InmuebleController : ControllerBase
     {
         private readonly ISvInmueble _svInmueble;

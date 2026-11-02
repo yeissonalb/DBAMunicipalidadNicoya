@@ -1,4 +1,4 @@
-﻿import * as React from 'react';
+import * as React from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Building2,
@@ -160,8 +160,8 @@ const NAV_ITEMS: NavItem[] = [
     moduleKey: 'DbaRespaldos',
   },
   {
-    section: 'Atención Ciudadana',
-    label: 'Portal Ciudadano en Línea',
+    section: 'Atención Interna',
+    label: 'Consulta y Atención a Contribuyentes',
     to: '/portal-ciudadano',
     icon: <Globe className="h-4 w-4" />,
     moduleKey: 'PortalCiudadano',

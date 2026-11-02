@@ -1,4 +1,4 @@
-namespace Services.TramiteService
+﻿namespace Services.TramiteService
 {
     /// <summary>Reglas de formato de archivo (validación de entrada, no de negocio).</summary>
     public static class ArchivoTramitePolicy
@@ -29,6 +29,35 @@ namespace Services.TramiteService
                 return $"Extensión no permitida. Permitidas: {string.Join(", ", ExtensionesPermitidas)}.";
 
             return null;
+        }
+
+        public static string? ResolverRutaProtegida(string webRootPath, string ruta)
+        {
+            if (string.IsNullOrWhiteSpace(ruta) || Path.IsPathRooted(ruta)) return null;
+            try
+            {
+                var carpeta = Path.GetFullPath(Path.Combine(webRootPath, "uploads", "tramites")) + Path.DirectorySeparatorChar;
+                var destino = Path.GetFullPath(Path.Combine(webRootPath, ruta.Replace('/', Path.DirectorySeparatorChar)));
+                return destino.StartsWith(carpeta, StringComparison.OrdinalIgnoreCase) ? destino : null;
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            { return null; }
+        }
+
+        public static string ObtenerContentType(string nombreArchivo)
+        {
+            var ext = Path.GetExtension(nombreArchivo).ToLowerInvariant();
+            return ext switch
+            {
+                ".pdf" => "application/pdf",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".doc" => "application/msword",
+                ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ".xls" => "application/vnd.ms-excel",
+                ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                _ => "application/octet-stream"
+            };
         }
     }
 }

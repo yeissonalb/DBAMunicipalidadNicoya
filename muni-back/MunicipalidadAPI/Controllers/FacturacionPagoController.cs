@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MunicipalidadAPI.Constantes;
 using Services.FacturacionPagoService;
@@ -8,7 +8,7 @@ namespace MunicipalidadAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = $"{Roles.Admin},{Roles.Cajero},{Roles.Contribuyente},{Roles.Ciudadano},{Roles.CiudadanoContribuyente}")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Cajero}")]
     public class FacturacionPagoController : ControllerBase
     {
         private readonly ISvFacturacionPago _svFacturacionPago;
@@ -43,7 +43,7 @@ namespace MunicipalidadAPI.Controllers
         [HttpGet("medios-pago")]
         public async Task<IActionResult> MediosPago() => Ok(await _svFacturacionPago.ConsultarMediosPagoAsync());
 
-        /// <summary>sp_registrar_pago_municipal.</summary>
+        /// <summary>sp_registrar_pago_municipal (Cajero).</summary>
         [HttpPost("pago")]
         public async Task<IActionResult> RegistrarPago([FromBody] RegistrarPagoMunicipalDto dto)
             => StatusCode(StatusCodes.Status201Created, await _svFacturacionPago.RegistrarPagoAsync(dto));
@@ -52,5 +52,17 @@ namespace MunicipalidadAPI.Controllers
         [HttpPost("pago/{idPagoMunicipal:int}/aplicar")]
         public async Task<IActionResult> AplicarPago(int idPagoMunicipal, [FromBody] AplicarPagoFacturaDto dto)
             => Ok(await _svFacturacionPago.AplicarPagoFacturaAsync(idPagoMunicipal, dto));
+
+        [HttpGet("cajero/facturas")]
+        public async Task<IActionResult> FacturasCaja() => Ok(await _svFacturacionPago.ConsultarCajaFacturasAsync());
+
+        [HttpGet("cajero/reportes")]
+        public async Task<IActionResult> ReportesCaja() => Ok(await _svFacturacionPago.ConsultarCajaReportesAsync());
+
+        /// <summary>Cobro y aplicación inmediata en ventanilla por Cajero (CU-PC-04 y CU-PC-05).</summary>
+        [HttpPost("cajero/cobro")]
+        public async Task<IActionResult> CobroCajero([FromBody] CajeroCobroDirectoDto dto)
+            => StatusCode(StatusCodes.Status201Created,
+                await _svFacturacionPago.CajeroCobroDirectoAsync(dto, AuthHelpers.GetIdUsuario(User)));
     }
 }

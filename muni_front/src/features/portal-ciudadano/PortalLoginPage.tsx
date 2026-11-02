@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { AlertCircle, CheckCircle2, Eye, EyeOff, IdCard, Loader2, Lock, Mail, UserPlus } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Eye, EyeOff, IdCard, KeyRound, Loader2, Lock, Mail, UserPlus } from 'lucide-react';
 import { usePortalAuth } from './PortalAuth';
 import { portalAuthApi } from '@/services/portalApi';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,8 @@ const loginSchema = z.object({
 const activarSchema = z
   .object({
     identificacion: z.string().trim().min(1, 'Ingrese su número de cédula.').max(50),
-    correoElectronico: z.string().trim().email('Correo electrónico no válido.').max(100),
+    codigoActivacion: z.string().trim().min(4, 'Ingrese el PIN o código de activación de un solo uso emitido por el funcionario.').max(64),
+    correoElectronico: z.string().trim().email('Correo electrónico no válido.').max(100).optional().or(z.literal('')),
     password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.').max(200),
     confirmar: z.string(),
   })
@@ -46,7 +47,7 @@ export function PortalLoginPage() {
   });
   const activarForm = useForm<ActivarValues>({
     resolver: zodResolver(activarSchema),
-    defaultValues: { identificacion: '', correoElectronico: '', password: '', confirmar: '' },
+    defaultValues: { identificacion: '', codigoActivacion: '', correoElectronico: '', password: '', confirmar: '' },
   });
 
   if (isAuthenticated) return <Navigate to="/portal" replace />;
@@ -70,10 +71,11 @@ export function PortalLoginPage() {
     try {
       const res = await portalAuthApi.activar({
         identificacion: v.identificacion,
-        correoElectronico: v.correoElectronico,
+        codigoActivacion: v.codigoActivacion,
+        correoElectronico: v.correoElectronico || undefined,
         password: v.password,
       });
-      toast.success(res.message || 'Cuenta activada.');
+      toast.success(res.message || 'Cuenta ciudadana activada exitosamente.');
       setActivada(true);
       loginForm.reset({ identificacion: v.identificacion, password: '' });
       activarForm.reset();
@@ -87,7 +89,7 @@ export function PortalLoginPage() {
 
   const campoPassword = (registro: UseFormRegisterReturn, id: string, auto: string) => (
     <div className="relative">
-      <Lock className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-sigemun-muted" />
+      <Lock className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#6B7280]" />
       <Input
         id={id}
         type={verPassword ? 'text' : 'password'}
@@ -99,7 +101,7 @@ export function PortalLoginPage() {
       <button
         type="button"
         onClick={() => setVerPassword((s) => !s)}
-        className="absolute right-3 top-2.5 text-sigemun-muted hover:text-sigemun-primary"
+        className="absolute right-3 top-2.5 text-[#6B7280] hover:text-[#1D4ED8]"
         aria-label={verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
       >
         {verPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -108,20 +110,32 @@ export function PortalLoginPage() {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-sigemun-bg">
-      <header className="bg-sigemun-navy text-white">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4 sm:px-6">
-          <img src="/images/logo2.png" alt="" className="h-10 w-10 rounded-xl object-contain ring-1 ring-white/25" />
-          <div>
-            <p className="text-base font-extrabold tracking-wide">Portal Ciudadano</p>
-            <p className="text-[11px] text-sigemun-sky">Municipalidad de Nicoya · Guanacaste</p>
+    <div
+      className="relative flex min-h-screen w-full flex-col justify-between bg-cover bg-center bg-no-repeat"
+      style={{
+        backgroundImage: "url('/images/iglesia-nicoya.jpg')",
+      }}
+    >
+      <div className="absolute inset-0 bg-[#0F172A]/70 backdrop-blur-[2px]" />
+      <header className="relative z-10 border-b border-white/10 bg-[#0F172A]/80 text-white backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-3">
+            <img src="/images/escudo-nicoya.jpg" alt="" className="h-10 w-10 rounded-[10px] border border-white/20 bg-white object-contain p-0.5" />
+            <img src="/images/nicoya-azul.jpg" alt="Nicoya Azul" className="hidden h-9 w-auto max-w-[130px] rounded-[6px] object-contain sm:block" />
+            <div className="border-l border-white/20 pl-3">
+              <p className="text-sm font-bold text-white">Portal de Contribuyentes</p>
+              <p className="text-[11px] text-[#93C5FD]">Municipalidad de Nicoya · Guanacaste</p>
+            </div>
           </div>
+          <Link to="/login" className="text-xs font-semibold text-white/80 hover:text-white hover:underline">
+            Acceso Funcionarios &rarr;
+          </Link>
         </div>
       </header>
 
-      <main className="flex flex-1 items-center justify-center px-4 py-8 sm:px-6 sm:py-10">
-        <div className="w-full max-w-md rounded-2xl border border-sigemun-border bg-white p-7 shadow-elevated">
-          <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-sigemun-bg p-1 text-sm font-semibold">
+      <main className="relative z-10 flex flex-1 items-center justify-center px-4 py-8 sm:px-6 sm:py-10">
+        <div className="w-full max-w-md rounded-2xl border border-[#E5E7EB] bg-white p-7 shadow-2xl">
+          <div className="mb-6 grid grid-cols-2 gap-2 rounded-[12px] border border-[#CBD5E1] bg-[#F1F5F9] p-1.5 text-sm font-bold shadow-xs">
             {(['login', 'activar'] as const).map((m) => (
               <button
                 key={m}
@@ -130,11 +144,23 @@ export function PortalLoginPage() {
                   setModo(m);
                   setError(null);
                 }}
-                className={`rounded-lg px-3 py-2 transition-colors ${
-                  modo === m ? 'bg-white text-sigemun-primary shadow-sm' : 'text-sigemun-muted hover:text-sigemun-primary'
+                className={`flex items-center justify-center gap-2 rounded-[9px] py-2.5 px-3 text-xs font-bold transition-all ${
+                  modo === m
+                    ? 'bg-[#1D4ED8] text-white shadow-md ring-1 ring-[#1D4ED8]'
+                    : 'bg-white text-[#374151] border border-[#E2E8F0] hover:bg-[#F8FAFC] hover:text-[#1D4ED8]'
                 }`}
               >
-                {m === 'login' ? 'Iniciar sesión' : 'Activar mi cuenta'}
+                {m === 'login' ? (
+                  <>
+                    <Lock className="h-4 w-4" />
+                    <span>Iniciar sesión</span>
+                  </>
+                ) : (
+                  <>
+                    <KeyRound className="h-4 w-4" />
+                    <span>Activar mi cuenta</span>
+                  </>
+                )}
               </button>
             ))}
           </div>
@@ -162,7 +188,7 @@ export function PortalLoginPage() {
                 error={loginForm.formState.errors.identificacion?.message}
               >
                 <div className="relative">
-                  <IdCard className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-sigemun-muted" />
+                  <IdCard className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#6B7280]" />
                   <Input
                     id="p-ident"
                     autoComplete="username"
@@ -180,47 +206,61 @@ export function PortalLoginPage() {
               >
                 {campoPassword(loginForm.register('password'), 'p-pass', 'current-password')}
               </FormField>
-              <Button type="submit" className="h-11 w-full" disabled={enviando}>
-                {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ingresar'}
+              <Button type="submit" className="h-11 w-full bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white font-bold" disabled={enviando}>
+                {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ingresar al Portal'}
               </Button>
-              <p className="text-center text-xs text-sigemun-muted">
-                ¿Primera vez?{' '}
-                <button type="button" className="font-semibold text-sigemun-primary hover:underline" onClick={() => setModo('activar')}>
+              <p className="text-center text-xs text-[#6B7280]">
+                ¿Tiene un código de activación emitido en ventanilla?{' '}
+                <button type="button" className="font-semibold text-[#1D4ED8] hover:underline" onClick={() => setModo('activar')}>
                   Active su cuenta
-                </button>{' '}
-                con la cédula y el correo registrados en la Municipalidad.
+                </button>
               </p>
             </form>
           ) : (
             <form onSubmit={activarForm.handleSubmit(onActivar)} className="space-y-4" noValidate>
-              <p className="text-xs text-sigemun-muted">
-                Verificaremos que su cédula y correo coincidan con el padrón municipal. Si su correo
-                cambió, actualícelo primero en la plataforma de servicio al cliente.
-              </p>
+              <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900 space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <KeyRound className="h-4 w-4 text-blue-700" /> Activación asistida y segura
+                </p>
+                <p>
+                  Para activar su cuenta ingrese su número de identificación oficial y el código PIN de un solo uso
+                  emitido por un funcionario autorizado en ventanilla municipal.
+                </p>
+              </div>
               <FormField
-                label="Número de cédula"
+                label="Número de cédula oficial"
                 htmlFor="a-ident"
                 required
                 error={activarForm.formState.errors.identificacion?.message}
               >
                 <div className="relative">
-                  <IdCard className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-sigemun-muted" />
+                  <IdCard className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#6B7280]" />
                   <Input id="a-ident" className="pl-9" placeholder="Ej. 5-0321-0456" {...activarForm.register('identificacion')} />
                 </div>
               </FormField>
               <FormField
-                label="Correo registrado"
-                htmlFor="a-mail"
+                label="Código o PIN de activación asistida"
+                htmlFor="a-token"
                 required
-                error={activarForm.formState.errors.correoElectronico?.message}
+                error={activarForm.formState.errors.codigoActivacion?.message}
               >
                 <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-sigemun-muted" />
-                  <Input id="a-mail" type="email" className="pl-9" {...activarForm.register('correoElectronico')} />
+                  <KeyRound className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#6B7280]" />
+                  <Input id="a-token" className="pl-9 uppercase font-mono tracking-wider font-semibold" placeholder="Ej. ACT-NIC-A1B2C3D4" {...activarForm.register('codigoActivacion')} />
                 </div>
               </FormField>
               <FormField
-                label="Nueva contraseña"
+                label="Correo de contacto (Opcional)"
+                htmlFor="a-mail"
+                error={activarForm.formState.errors.correoElectronico?.message}
+              >
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[#6B7280]" />
+                  <Input id="a-mail" type="email" className="pl-9" placeholder="correo@ejemplo.com" {...activarForm.register('correoElectronico')} />
+                </div>
+              </FormField>
+              <FormField
+                label="Establecer contraseña personal"
                 htmlFor="a-pass"
                 required
                 error={activarForm.formState.errors.password?.message}
@@ -235,21 +275,21 @@ export function PortalLoginPage() {
               >
                 {campoPassword(activarForm.register('confirmar'), 'a-conf', 'new-password')}
               </FormField>
-              <Button type="submit" className="h-11 w-full" disabled={enviando}>
+              <Button type="submit" className="h-11 w-full bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white font-bold" disabled={enviando}>
                 {enviando ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <>
-                    <UserPlus className="h-4 w-4" /> Activar cuenta
+                    <UserPlus className="h-4 w-4" /> Activar mi Cuenta Ciudadana
                   </>
                 )}
               </Button>
             </form>
           )}
 
-          <div className="mt-6 border-t border-sigemun-border pt-4 text-center text-[11px] text-sigemun-muted">
+          <div className="mt-6 border-t border-[#E5E7EB] pt-4 text-center text-[11px] text-[#6B7280]">
             ¿Es funcionario municipal?{' '}
-            <Link to="/login" className="font-semibold text-sigemun-primary hover:underline">
+            <Link to="/login" className="font-semibold text-[#1D4ED8] hover:underline">
               Acceso institucional
             </Link>
           </div>

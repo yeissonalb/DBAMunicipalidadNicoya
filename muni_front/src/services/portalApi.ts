@@ -13,6 +13,7 @@ import type {
   LoginCiudadanoDto,
   LoginCiudadanoResponseDto,
   PagoSinpeDto,
+  ReportarTransferenciaDto,
   SpArchivoTramiteResultDto,
   SpEstadoCuentaResultDto,
   SpFacturasContribuyenteResultDto,
@@ -105,6 +106,23 @@ export const portalApi = {
     ),
   archivos: (idTramite: number) =>
     unwrapResponse<SpArchivoTramiteResultDto[]>(portalHttp.get(`/portal/tramites/${idTramite}/archivos`)),
+  obtenerArchivoBlob: async (idTramite: number, idArchivo: number): Promise<Blob> => {
+    const respuesta = await portalHttp.get(`/portal/tramites/${idTramite}/archivos/${idArchivo}/descargar`, { responseType: 'blob' });
+    return respuesta.data;
+  },
+  descargarArchivoBlob: async (idTramite: number, idArchivo: number, nombreOriginal: string) => {
+    const resp = await portalHttp.get(`/portal/tramites/${idTramite}/archivos/${idArchivo}/descargar`, {
+      responseType: 'blob',
+    });
+    const url = window.URL.createObjectURL(new Blob([resp.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', nombreOriginal);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
   subirRequisito: (idTramite: number, idRequisito: number, archivo: File) => {
     const form = new FormData();
     form.append('Archivo', archivo);
@@ -120,6 +138,8 @@ export const portalApi = {
     unwrapResponse<SpEstadoCuentaResultDto[]>(portalHttp.get('/portal/estado-cuenta')),
   facturas: () =>
     unwrapResponse<SpFacturasContribuyenteResultDto[]>(portalHttp.get('/portal/facturas')),
+  reportarTransferencia: (idFactura: number, dto: ReportarTransferenciaDto) =>
+    unwrapFullResponse<number>(portalHttp.post(`/portal/facturas/${idFactura}/reportar-transferencia`, dto)),
   pagarSinpe: (idFactura: number, dto: PagoSinpeDto) =>
     unwrapFullResponse<number>(portalHttp.post(`/portal/facturas/${idFactura}/pago-sinpe`, dto)),
 };

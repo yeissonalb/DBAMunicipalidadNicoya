@@ -1,4 +1,5 @@
 using Entities.SpResults;
+using Microsoft.EntityFrameworkCore;
 using Services.Auth.Dto;
 using Services.Common;
 using Services.genericResponse;
@@ -86,11 +87,46 @@ namespace Services.Auth
             var id = await _context.Database.ExecSpOutputIdAsync(
                 "dbo.sp_activar_cuenta_ciudadana",
                 Sp.VarChar("@identificacion", dto.Identificacion.Trim(), 20),
-                Sp.VarChar("@correo_electronico", dto.CorreoElectronico.Trim(), 100),
+                Sp.VarChar("@codigo_activacion", dto.CodigoActivacion.Trim(), 64),
                 Sp.VarChar("@password_hash", PasswordHasher.Sha256(dto.Password), 255),
                 Sp.OutInt("@nuevo_id_cuenta"));
 
-            return Respuesta.Ok(id, "Cuenta ciudadana activada. Ya puede iniciar sesión con su cédula y contraseña.");
+            return Respuesta.Ok(id, "Cuenta ciudadana activada con éxito. Ya puede iniciar sesión en el portal ciudadano.");
+        }
+
+        public async Task<BaseResponse<CodigoActivacionGeneradoDto>> GenerarCodigoActivacionAsync(GenerarCodigoActivacionDto dto, int idUsuarioGenerador)
+        {
+            var pCodigo = Sp.OutVarChar("@codigo_generado", 64);
+            var pExpira = Sp.OutDateTime("@fecha_expiracion");
+
+            await _context.Database.ExecSpAsync(
+                "dbo.sp_generar_codigo_activacion",
+                Sp.Int("@id_contribuyente", dto.IdContribuyente),
+                Sp.Int("@id_usuario_generador", idUsuarioGenerador),
+                Sp.Int("@duracion_horas", dto.DuracionHoras ?? 48),
+                Sp.VarChar("@cedula_representante", dto.CedulaRepresentante?.Trim(), 20),
+                Sp.VarChar("@observacion", dto.Observacion?.Trim(), 255),
+                pCodigo,
+                pExpira);
+
+            var codigo = pCodigo.Value?.ToString() ?? string.Empty;
+            var expira = pExpira.Value is DateTime dt ? dt : DateTime.UtcNow.AddHours(48);
+
+            return Respuesta.Ok(new CodigoActivacionGeneradoDto
+            {
+                IdContribuyente = dto.IdContribuyente,
+                CodigoActivacion = codigo,
+                FechaExpiracion = expira
+            }, "Código de activación asistida generado exitosamente.");
+        }
+
+        public async Task<BaseResponse<bool>> ConsultarEstadoCuentaCiudadanaAsync(int idContribuyente)
+        {
+            var existe = await _context.Database.SqlQueryRaw<int>(
+                "SELECT COUNT(1) AS Value FROM dbo.Cuenta_Ciudadana WHERE id_contribuyente = {0} AND activa = 1", idContribuyente)
+                .FirstOrDefaultAsync();
+
+            return Respuesta.Ok(existe > 0);
         }
     }
 }

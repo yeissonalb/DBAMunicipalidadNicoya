@@ -1,4 +1,4 @@
-using Entities.SpResults;
+﻿using Entities.SpResults;
 using Services.Common;
 using Services.genericResponse;
 using Services.MyDbContext;
@@ -11,6 +11,14 @@ namespace Services.TipoTramiteService
         private readonly MunicipalidadContext _context;
 
         public SvTipoTramite(MunicipalidadContext context) => _context = context;
+
+        public async Task<BaseResponse<object>> ConfigurarInmuebleAsync(int idTipo, ReglaInmuebleDto dto, int idUsuario)
+        {
+            await _context.Database.ExecSpAsync("dbo.sp_configurar_inmueble_tramite",
+                Sp.Int("@id_tipo_tramite", idTipo), Sp.Bit("@requiere_inmueble", dto.RequiereInmueble),
+                Sp.VarChar("@motivo", dto.Motivo.Trim(), 255), Sp.Int("@id_usuario", idUsuario));
+            return Respuesta.Ok("Regla de inmueble configurada.");
+        }
 
         // Requiere script 14: @nuevo_id_tipo_tramite OUTPUT (y THROW 50043 si el nombre ya existe).
         public async Task<BaseResponse<int>> RegistrarTipoTramiteAsync(TipoTramiteDto dto)

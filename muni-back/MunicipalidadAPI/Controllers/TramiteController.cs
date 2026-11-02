@@ -10,7 +10,7 @@ namespace MunicipalidadAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = $"{Roles.Admin},{Roles.Analista},{Roles.Contribuyente},{Roles.Ciudadano},{Roles.CiudadanoContribuyente}")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Analista}")]
     public class TramiteController : ControllerBase
     {
         private readonly ISvTramite _svTramite;
@@ -21,6 +21,14 @@ namespace MunicipalidadAPI.Controllers
             _svTramite = svTramite;
             _env = env;
         }
+
+        [HttpGet("{idTramite:int}/cotejo")]
+        public async Task<IActionResult> Cotejo(int idTramite)
+            => Ok(await _svTramite.ConsultarCotejoAsync(idTramite));
+
+        [HttpPost("{idTramite:int}/cotejo")]
+        public async Task<IActionResult> RevisarArchivo(int idTramite, [FromBody] RevisarArchivoDto dto)
+            => Ok(await _svTramite.RevisarArchivoAsync(idTramite, dto, AuthHelpers.GetIdUsuario(User)));
 
         private string WebRoot => _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
 
@@ -37,7 +45,7 @@ namespace MunicipalidadAPI.Controllers
         public async Task<IActionResult> Buscar([FromQuery] string? numeroExpediente, [FromQuery] int? idContribuyente)
             => Ok(await _svTramite.ConsultarAsync(numeroExpediente, idContribuyente));
 
-        /// <summary>sp_registrar_tramite. El funcionario (@id_usuario) se toma del JWT.</summary>
+        /// <summary>sp_registrar_tramite (CU-TR-03). Si el expediente es nulo, el servidor lo genera de forma atómica.</summary>
         [HttpPost]
         public async Task<IActionResult> Registrar([FromBody] RegistrarTramiteDto dto)
             => StatusCode(StatusCodes.Status201Created,
@@ -94,13 +102,27 @@ namespace MunicipalidadAPI.Controllers
         /// <summary>sp_cambiar_estado_tramite (REC, REV, DOC, EVA, APR, RECH).</summary>
         [HttpPost("{idTramite:int}/estado")]
         public async Task<IActionResult> CambiarEstado(int idTramite, [FromBody] CambiarEstadoTramiteDto dto)
-            => Ok(await _svTramite.CambiarEstadoAsync(idTramite, dto));
+            => Ok(await _svTramite.CambiarEstadoAsync(idTramite, dto, AuthHelpers.GetIdUsuario(User)));
 
-        /// <summary>sp_consultar_archivos_tramite: todos los documentos del expediente (script 15).</summary>
+        /// <summary>sp_consultar_archivos_tramite: todos los documentos del expediente.</summary>
         [HttpGet("{idTramite:int}/archivos")]
         public async Task<IActionResult> Archivos(int idTramite) => Ok(await _svTramite.ConsultarArchivosAsync(idTramite));
 
-        /// <summary>sp_consultar_requisitos_tramite: requisitos del tipo de trámite y si ya se presentaron (script 15).</summary>
+        /// <summary>Descarga protegida de archivo adjunto para funcionarios autorizados.</summary>
+        [HttpGet("{idTramite:int}/archivos/{idArchivo:int}/descargar")]
+        public async Task<IActionResult> DescargarArchivo(int idTramite, int idArchivo)
+        {
+            var info = await _svTramite.ObtenerArchivoParaDescargaAsync(idTramite, idArchivo, WebRoot);
+            if (!info.Success || info.Data is null)
+                return NotFound(new BaseResponse<object> { Success = false, Message = info.Message });
+
+            if (!System.IO.File.Exists(info.Data.RutaFisica))
+                return NotFound(new BaseResponse<object> { Success = false, Message = "El archivo físico no se encuentra en el servidor." });
+
+            return PhysicalFile(info.Data.RutaFisica, info.Data.ContentType, info.Data.NombreOriginal);
+        }
+
+        /// <summary>sp_consultar_requisitos_tramite: requisitos del tipo de trámite y si ya se presentaron.</summary>
         [HttpGet("{idTramite:int}/requisitos-estado")]
         public async Task<IActionResult> RequisitosEstado(int idTramite) => Ok(await _svTramite.ConsultarRequisitosEstadoAsync(idTramite));
 
@@ -115,7 +137,7 @@ namespace MunicipalidadAPI.Controllers
         /// <summary>sp_registrar_resolucion_tramite (APR o RECH) y cierre del expediente.</summary>
         [HttpPost("{idTramite:int}/resolucion")]
         public async Task<IActionResult> Resolucion(int idTramite, [FromBody] ResolucionTramiteDto dto)
-            => Ok(await _svTramite.RegistrarResolucionAsync(idTramite, dto));
+            => Ok(await _svTramite.RegistrarResolucionAsync(idTramite, dto, AuthHelpers.GetIdUsuario(User)));
 
         /// <summary>sp_consultar_tramites_por_contribuyente.</summary>
         [HttpGet("contribuyente/{idContribuyente:int}")]

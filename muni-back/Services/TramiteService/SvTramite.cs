@@ -1,4 +1,4 @@
-using Entities.SpResults;
+﻿using Entities.SpResults;
 using Entities.Views;
 using Microsoft.EntityFrameworkCore;
 using Services.Common;
@@ -14,6 +14,19 @@ namespace Services.TramiteService
 
         public SvTramite(MunicipalidadContext context) => _context = context;
 
+        public async Task<BaseResponse<List<CotejoRequisitoDto>>> ConsultarCotejoAsync(int idTramite)
+            => Respuesta.Ok(await _context.Database.QuerySpAsync<CotejoRequisitoDto>(
+                "dbo.sp_consultar_cotejo_requisitos", Sp.Int("@id_tramite", idTramite)));
+
+        public async Task<BaseResponse<object>> RevisarArchivoAsync(int idTramite, RevisarArchivoDto dto, int idUsuario)
+        {
+            await _context.Database.ExecSpAsync("dbo.sp_revisar_archivo_requisito",
+                Sp.Int("@id_tramite", idTramite), Sp.Int("@id_archivo_adjunto", dto.IdArchivoAdjunto),
+                Sp.VarChar("@estado", dto.Estado, 20), Sp.VarChar("@observacion", dto.Observacion.Trim(), 255),
+                Sp.Int("@id_usuario", idUsuario));
+            return Respuesta.Ok("Revisión documental registrada.");
+        }
+
         public async Task<BaseResponse<List<VwTramitesSeguimiento>>> ObtenerSeguimientoAsync()
         {
             var data = await _context.VwTramitesSeguimiento.ToListAsync();
@@ -26,18 +39,29 @@ namespace Services.TramiteService
             return Respuesta.Ok(data);
         }
 
-        public async Task<BaseResponse<int>> RegistrarAsync(RegistrarTramiteDto dto, int idUsuario)
+        public async Task<BaseResponse<TramiteRadicadoResultadoDto>> RegistrarAsync(RegistrarTramiteDto dto, int idUsuario)
         {
-            var id = await _context.Database.ExecSpOutputIdAsync(
+            var pExpediente = Sp.InOutVarChar("@numero_expediente", dto.NumeroExpediente?.Trim(), 30);
+            var pId = Sp.OutInt("@nuevo_id_tramite");
+
+            await _context.Database.ExecSpAsync(
                 "dbo.sp_registrar_tramite",
-                Sp.VarChar("@numero_expediente", dto.NumeroExpediente, 30),
+                pExpediente,
                 Sp.Int("@id_tipo_tramite", dto.IdTipoTramite),
                 Sp.Int("@id_usuario", idUsuario),
                 Sp.Int("@id_inmueble", dto.IdInmueble),
                 Sp.Int("@id_contribuyente", dto.IdContribuyente),
-                Sp.OutInt("@nuevo_id_tramite"));
+                Sp.VarChar("@observaciones_iniciales", dto.ObservacionesIniciales?.Trim(), 255),
+                pId);
 
-            return Respuesta.Ok(id, "Trámite radicado.");
+            var idTramite = Convert.ToInt32(pId.Value);
+            var numExpediente = pExpediente.Value?.ToString() ?? string.Empty;
+
+            return Respuesta.Ok(new TramiteRadicadoResultadoDto
+            {
+                IdTramite = idTramite,
+                NumeroExpediente = numExpediente
+            }, $"Trámite radicado exitosamente. Expediente: {numExpediente}");
         }
 
         public async Task<BaseResponse<List<SpConsultarTramiteResultDto>>> ConsultarAsync(string? numeroExpediente, int? idContribuyente)
@@ -160,13 +184,14 @@ namespace Services.TramiteService
             return Respuesta.Ok(data);
         }
 
-        public async Task<BaseResponse<object>> CambiarEstadoAsync(int idTramite, CambiarEstadoTramiteDto dto)
+        public async Task<BaseResponse<object>> CambiarEstadoAsync(int idTramite, CambiarEstadoTramiteDto dto, int? idUsuario = null)
         {
             await _context.Database.ExecSpAsync(
                 "dbo.sp_cambiar_estado_tramite",
                 Sp.Int("@id_tramite", idTramite),
-                Sp.VarChar("@codigo_estado", dto.CodigoEstado, 20),
-                Sp.VarChar("@observaciones", dto.Observaciones, 255));
+                Sp.VarChar("@codigo_estado", dto.CodigoEstado.Trim(), 20),
+                Sp.VarChar("@observaciones", dto.Observaciones.Trim(), 255),
+                Sp.Int("@id_usuario", idUsuario));
 
             return Respuesta.Ok("Estado del trámite actualizado.");
         }
@@ -186,13 +211,14 @@ namespace Services.TramiteService
             return Respuesta.Ok(data);
         }
 
-        public async Task<BaseResponse<object>> RegistrarResolucionAsync(int idTramite, ResolucionTramiteDto dto)
+        public async Task<BaseResponse<object>> RegistrarResolucionAsync(int idTramite, ResolucionTramiteDto dto, int? idUsuario = null)
         {
             await _context.Database.ExecSpAsync(
                 "dbo.sp_registrar_resolucion_tramite",
                 Sp.Int("@id_tramite", idTramite),
-                Sp.VarChar("@codigo_estado", dto.CodigoEstado, 20),
-                Sp.VarChar("@observaciones", dto.Observaciones, 255));
+                Sp.VarChar("@codigo_estado", dto.CodigoEstado.Trim(), 20),
+                Sp.VarChar("@observaciones", dto.Observaciones.Trim(), 255),
+                Sp.Int("@id_usuario", idUsuario));
 
             return Respuesta.Ok("Resolución registrada y trámite cerrado.");
         }
@@ -204,6 +230,31 @@ namespace Services.TramiteService
                 Sp.Int("@id_contribuyente", idContribuyente));
 
             return Respuesta.Ok(data);
+        }
+
+        public async Task<BaseResponse<DescargaArchivoDto>> ObtenerArchivoParaDescargaAsync(int idTramite, int idArchivoAdjunto, string webRootPath)
+        {
+            var archivos = await _context.Database.QuerySpAsync<SpArchivoTramiteResultDto>(
+                "dbo.sp_consultar_archivos_tramite",
+                Sp.Int("@id_tramite", idTramite));
+
+            var archivo = archivos.FirstOrDefault(a => a.IdArchivoAdjunto == idArchivoAdjunto);
+            if (archivo == null || string.IsNullOrWhiteSpace(archivo.RutaAlmacenamiento))
+                return new BaseResponse<DescargaArchivoDto> { Success = false, Message = "Archivo no encontrado en el expediente." };
+
+            var rutaFisica = ArchivoTramitePolicy.ResolverRutaProtegida(webRootPath, archivo.RutaAlmacenamiento);
+            if (rutaFisica is null)
+                return new BaseResponse<DescargaArchivoDto> { Success = false, Message = "Ruta de documento no permitida." };
+
+            var nombreOriginal = archivo.NombreOriginal ?? Path.GetFileName(rutaFisica);
+            var contentType = ArchivoTramitePolicy.ObtenerContentType(nombreOriginal);
+
+            return Respuesta.Ok(new DescargaArchivoDto
+            {
+                RutaFisica = rutaFisica,
+                NombreOriginal = nombreOriginal,
+                ContentType = contentType
+            });
         }
     }
 }

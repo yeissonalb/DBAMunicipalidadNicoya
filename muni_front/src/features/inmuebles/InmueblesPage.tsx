@@ -162,8 +162,8 @@ export function InmueblesPage() {
   const asociarForm = useForm<AsociarPropietarioForm>({
     resolver: zodResolver(asociarPropietarioSchema),
     defaultValues: {
-      idContribuyente: 1,
-      porcentajeParticipacion: 100,
+      idContribuyente: 0,
+      porcentajeParticipacion: undefined,
     },
   });
 
@@ -666,6 +666,7 @@ export function InmueblesPage() {
               error={asociarForm.formState.errors.idContribuyente?.message}
             >
               <Select {...asociarForm.register('idContribuyente')}>
+                <option value={0}>— Seleccione un contribuyente —</option>
                 {(padronQuery.data ?? []).map((p) => (
                   <option key={p.idContribuyente} value={p.idContribuyente}>
                     #{p.idContribuyente} · {p.identificacion} — {p.nombreCompletoORazonSocial}

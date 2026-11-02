@@ -39,6 +39,29 @@ namespace Services.Common
             Direction = ParameterDirection.Output
         };
 
+        public static SqlParameter OutVarChar(string name, int size) => new(Normalize(name), SqlDbType.VarChar, size)
+        {
+            Direction = ParameterDirection.Output
+        };
+
+        public static SqlParameter InOutVarChar(string name, string? value, int size) => new(Normalize(name), SqlDbType.VarChar, size)
+        {
+            Direction = ParameterDirection.InputOutput,
+            Value = (object?)value ?? DBNull.Value
+        };
+
+        public static SqlParameter OutDateTime(string name) => new(Normalize(name), SqlDbType.DateTime)
+        {
+            Direction = ParameterDirection.Output
+        };
+
+        public static SqlParameter Decimal(string name, decimal? value, byte precision = 18, byte scale = 2) => new(Normalize(name), SqlDbType.Decimal)
+        {
+            Precision = precision,
+            Scale = scale,
+            Value = (object?)value ?? DBNull.Value
+        };
+
         private static SqlParameter Make(string name, SqlDbType type, object? value) => new(Normalize(name), type)
         {
             Value = value ?? DBNull.Value

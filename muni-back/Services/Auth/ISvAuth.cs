@@ -14,7 +14,13 @@ namespace Services.Auth
         /// <summary>Portal ciudadano: dbo.sp_autenticar_ciudadano (THROW 50064/50065).</summary>
         Task<BaseResponse<CiudadanoTokenDto>> AutenticarCiudadanoAsync(LoginCiudadanoDto dto);
 
-        /// <summary>Portal ciudadano: dbo.sp_activar_cuenta_ciudadana (THROW 50045/50066).</summary>
+        /// <summary>Portal ciudadano: activación asistida con PIN/código único (dbo.sp_activar_cuenta_ciudadana).</summary>
         Task<BaseResponse<int>> ActivarCuentaCiudadanaAsync(ActivarCuentaCiudadanaDto dto);
+
+        /// <summary>Emisión asistida de código de activación por funcionario autorizado (dbo.sp_generar_codigo_activacion).</summary>
+        Task<BaseResponse<CodigoActivacionGeneradoDto>> GenerarCodigoActivacionAsync(GenerarCodigoActivacionDto dto, int idUsuarioGenerador);
+
+        /// <summary>Verifica si el contribuyente ya cuenta con una cuenta ciudadana activa en el portal.</summary>
+        Task<BaseResponse<bool>> ConsultarEstadoCuentaCiudadanaAsync(int idContribuyente);
     }
 }

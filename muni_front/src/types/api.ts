@@ -184,6 +184,8 @@ export interface VwPadronContribuyente {
   idContribuyente: number;
   tipoContribuyente: string;
   tipoPersona: string;
+  identificacionOficial?: string | null;
+  nombreORazonSocial?: string | null;
   identificacion: string;
   nombreCompletoORazonSocial: string;
   nombreFantasia?: string | null;
@@ -442,6 +444,7 @@ export interface CatalogoEstadoAvaluoDto {
 // 7. Tipos de Trámite y Requisitos (/api/tipotramite)
 // ----------------------------------------------------------------------------
 export interface SpTiposTramiteResultDto {
+  requiereInmueble?: boolean | null;
   idTipoTramite: number;
   nombreTramite: string;
   descripcionTipo: string;
@@ -576,10 +579,16 @@ export interface SpTramitesPorContribuyenteResultDto {
 }
 
 export interface RegistrarTramiteDto {
-  numeroExpediente: string;
+  observacionesIniciales?: string;
+  numeroExpediente?: string;
   idTipoTramite: number;
   idInmueble?: number | null;
   idContribuyente: number;
+}
+
+export interface TramiteRadicadoResultadoDto {
+  idTramite: number;
+  numeroExpediente: string;
 }
 
 export interface ActualizarTramiteDto {
@@ -616,6 +625,9 @@ export interface ArchivoAdjuntadoDto {
 // 9. Tributos y Deudas (/api/tributodeuda)
 // ----------------------------------------------------------------------------
 export interface SpTiposTributoResultDto {
+  tarifa?: number | null;
+  montoFijo?: number | null;
+  baseCalculo?: string | null;
   idTipoTributo: number;
   codigoTributo: string;
   nombreTributo: string;
@@ -699,6 +711,9 @@ export interface VwEstadoCuentaContribuyente {
 }
 
 export interface SpEstadoCuentaResultDto {
+  saldoPendiente?: number | null;
+  totalAPagar?: number | null;
+  estadoFactura?: string | null;
   idContribuyente?: number;
   identificacionOficial?: string | null;
   nombreORazonSocial?: string | null;
@@ -1064,8 +1079,29 @@ export interface LoginCiudadanoDto {
 
 export interface ActivarCuentaCiudadanaDto {
   identificacion: string;
-  correoElectronico: string;
+  codigoActivacion: string;
+  correoElectronico?: string;
   password: string;
+}
+
+export interface GenerarCodigoActivacionDto {
+  idContribuyente: number;
+  duracionHoras?: number;
+  cedulaRepresentante?: string;
+  observacion?: string;
+}
+
+export interface CodigoActivacionGeneradoDto {
+  idContribuyente: number;
+  codigoActivacion: string;
+  fechaExpiracion: string;
+}
+
+export interface ReportarTransferenciaDto {
+  comprobante: string;
+  monto: number;
+  telefonoOrigen?: string;
+  observaciones?: string;
 }
 
 export interface CiudadanoTokenDto {

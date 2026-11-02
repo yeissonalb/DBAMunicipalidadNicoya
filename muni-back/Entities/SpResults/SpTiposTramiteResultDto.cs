@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Entities.SpResults
@@ -6,6 +6,8 @@ namespace Entities.SpResults
     /// <summary>Recordset devuelto por dbo.sp_consultar_tipos_tramite.</summary>
     public class SpTiposTramiteResultDto
     {
+        [Column("requiere_inmueble")]
+        public bool? RequiereInmueble { get; set; }
         [Column("id_tipo_tramite")]
         public int IdTipoTramite { get; set; }
 

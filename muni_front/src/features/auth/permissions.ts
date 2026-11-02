@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Gobernanza RBAC Unificada y Matriz CRUD Granular de todo el sistema SIGEMUN.
  * Nombres exactos de dbo.Rol (11_Datos_Semilla_Pruebas.sql y MunicipalidadAPI.Constantes.Roles).
  */
@@ -443,7 +443,7 @@ export const MODULE_PERMISSIONS = {
     ROLES.ANALISTA_TRAMITES,
     ROLES.AUDITOR,
   ],
-  PORTAL_CIUDADANO: [ROLES.CIUDADANO, ROLES.ADMIN],
+  PORTAL_CIUDADANO: [ROLES.ADMIN, ROLES.ANALISTA_TRAMITES, ROLES.CAJERO],
   CONTRIBUYENTES: [ROLES.ADMIN, ROLES.ANALISTA_TRAMITES, ROLES.CAJERO],
   INMUEBLES: [ROLES.ADMIN, ROLES.ANALISTA_TRAMITES],
   TRAMITES: [ROLES.ADMIN, ROLES.ANALISTA_TRAMITES],
@@ -535,7 +535,7 @@ export function getDefaultRouteForRoles(roles: string[]): string {
     !normalized.includes(ROLES.ADMIN) &&
     !normalized.includes(ROLES.DBA)
   ) {
-    return '/portal-ciudadano';
+    return '/portal';
   }
   return '/dashboard';
 }

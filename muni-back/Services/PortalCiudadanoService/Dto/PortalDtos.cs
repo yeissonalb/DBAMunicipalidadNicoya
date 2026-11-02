@@ -12,4 +12,20 @@ namespace Services.PortalCiudadanoService.Dto
         [Required]
         public double? Monto { get; set; }
     }
+
+    /// <summary>Reporte ciudadano de transferencia bancaria / SINPE (pendiente de verificación en Caja).</summary>
+    public class ReportarTransferenciaDto
+    {
+        [Required, StringLength(50, MinimumLength = 4)]
+        public string Comprobante { get; set; } = string.Empty;
+
+        [Required, Range(0.01, double.MaxValue, ErrorMessage = "El monto reportado debe ser mayor a cero.")]
+        public decimal Monto { get; set; }
+
+        [StringLength(20)]
+        public string? TelefonoOrigen { get; set; }
+
+        [StringLength(255)]
+        public string? Observaciones { get; set; }
+    }
 }

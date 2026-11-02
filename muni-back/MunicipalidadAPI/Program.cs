@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
@@ -205,7 +205,15 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseStaticFiles();                              // sirve wwwroot/uploads/...
+// Los documentos solo se sirven mediante endpoints con autenticacion y titularidad.
+app.Use(async (context, next) => {
+    if (context.Request.Path.StartsWithSegments("/uploads", StringComparison.OrdinalIgnoreCase)) {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+    await next(context);
+});
+app.UseStaticFiles();
 app.UseCors("ReactApp");
 app.UseMiddleware<SqlExceptionMiddleware>();       // THROW 50XXX -> HTTP (después de CORS para conservar encabezados)
 app.UseAuthentication();

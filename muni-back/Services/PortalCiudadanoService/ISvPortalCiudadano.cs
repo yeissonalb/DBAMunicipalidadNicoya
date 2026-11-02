@@ -20,5 +20,7 @@ namespace Services.PortalCiudadanoService
         Task<BaseResponse<List<SpEstadoCuentaResultDto>>> EstadoCuentaAsync(int idContribuyente);
         Task<BaseResponse<List<SpFacturasContribuyenteResultDto>>> MisFacturasAsync(int idContribuyente);
         Task<BaseResponse<int>> PagarFacturaSinpeAsync(int idContribuyente, int idFactura, PagoSinpeDto dto);
+        Task<BaseResponse<int>> ReportarTransferenciaAsync(int idContribuyente, int idFactura, ReportarTransferenciaDto dto);
+        Task<BaseResponse<DescargaArchivoDto>> ObtenerArchivoParaDescargaAsync(int idContribuyente, int idTramite, int idArchivoAdjunto, string webRootPath);
     }
 }
