@@ -22,11 +22,7 @@ Conectada a la Web API existente en `muni-back/` (**.NET 9 / ASP.NET Core Web AP
 ## 2. Requisitos Previos e Instalación
 
 ### 2.1 Base de Datos y Backend (`muni-back`)
-1. Asegúrese de tener ejecutados en su instancia de SQL Server los scripts de `BaseDeDatos/`, incluyendo obligatoriamente:
-   - `BaseDeDatos/Database_Backend/13_sp_autenticar_usuario.sql`
-   - `BaseDeDatos/Database_Backend/14_mejoras_catalogos_output.sql`
-   - `BaseDeDatos/Database_Backend/15_portal_ciudadano_dw_monitoreo.sql` (portal ciudadano, revocaciones, Data Warehouse y monitoreo DBA)
-   - Opcional: `BaseDeDatos/DataWareHouse/DWH_Structure.sql`, `DWH_ETL.sql`, `DWH_Vistas_Analiticas.sql` (pantalla Data Warehouse) y `BaseDeDatos/PlanDeMantenimientoBD/01`–`04` (historial de mantenimiento)
+1. Para una instancia nueva, ejecutar `BaseDeDatos/Scripts_Ordinarios/MunicipalidadNicoya2026_MASTER.sql` en SSMS con **Modo SQLCMD**. Seguir `BaseDeDatos/LEEME_INSTALACION.md`. Ya incluye portal, caja, Data Warehouse y mantenimiento; no ejecutar migraciones historicas separadas.
 2. Inicie el backend desde otra terminal:
    ```bash
    cd muni-back/MunicipalidadAPI

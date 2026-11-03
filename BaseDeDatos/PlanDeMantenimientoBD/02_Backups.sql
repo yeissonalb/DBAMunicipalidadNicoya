@@ -1,4 +1,4 @@
-/* ============================================================================
+﻿/* ============================================================================
    PROYECTO: SISTEMA DE GESTIÓN MUNICIPALIDAD DE NICOYA 2026
    CURSO: ADMINISTRACIÓN DE BASES DE DATOS (BD-II)
    UNIVERSIDAD NACIONAL DE COSTA RICA - SEDE REGIONAL CHOROTEGA, CAMPUS NICOYA
@@ -15,7 +15,6 @@ GO
 SET NOCOUNT ON;
 GO
 
--- 1. Tabla de Registro de Ejecución de Comandos de Mantenimiento
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[CommandLog]') AND type in (N'U'))
 BEGIN
 CREATE TABLE [dbo].[CommandLog](
@@ -41,12 +40,12 @@ PRINT '-> Tabla CommandLog creada en MaintenanceDB.';
 END
 GO
 
--- 2. Procedimiento Ejecutor de Comandos de Mantenimiento con Auditoría
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[CommandExecute]') AND type in (N'P', N'PC'))
 BEGIN
     EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [dbo].[CommandExecute] AS';
 END
 GO
+
 ALTER PROCEDURE [dbo].[CommandExecute]
     @DatabaseContext nvarchar(max),
     @Command nvarchar(max),
@@ -111,12 +110,12 @@ BEGIN
 END;
 GO
 
--- 3. Procedimiento Centralizado de Respaldos Municipales
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[DatabaseBackup]') AND type in (N'P', N'PC'))
 BEGIN
     EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [dbo].[DatabaseBackup] AS';
 END
 GO
+
 ALTER PROCEDURE [dbo].[DatabaseBackup]
     @Databases nvarchar(max) = 'MunicipalidadNicoya2026,MunicipalidadNicoyaDataMart2026',
     @Directory nvarchar(max) = 'C:\Backups_Nicoya2026',
@@ -128,6 +127,8 @@ ALTER PROCEDURE [dbo].[DatabaseBackup]
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    IF @Directory IS NULL THROW 50022,N'Configure la carpeta de respaldo de la instancia.',1;
     DECLARE @DBName sysname;
     DECLARE @FileName nvarchar(500);
     DECLARE @Timestamp nvarchar(25) = REPLACE(REPLACE(REPLACE(CONVERT(VARCHAR(19), GETDATE(), 120), '-', ''), ' ', '_'), ':', '');
@@ -185,11 +186,23 @@ BEGIN
             -- Sincronizar en la tabla de bitácora de la Municipalidad si existe
             IF OBJECT_ID('MunicipalidadNicoya2026.dbo.sp_registrar_ejecucion_respaldo') IS NOT NULL
             BEGIN
-                DECLARE @nuevo_id_respaldo INT;
+                DECLARE @nuevo_id_respaldo INT,@config_real INT,@bytes_reales BIGINT;
+                SET @config_real=NULL; SET @bytes_reales=0;
+                SELECT TOP(1) @config_real=c.id_respaldos_config
+                FROM MunicipalidadNicoya2026.dbo.Respaldos_Config c
+                JOIN MunicipalidadNicoya2026.dbo.Tipo_de_respaldo t ON t.id_tipo_de_respaldo=c.id_tipo_de_respaldo
+                WHERE c.origen=@DBName AND c.activo=1 AND t.nombre_tipo_respaldo=
+                    CASE @BackupType WHEN 'FULL' THEN 'Full' WHEN 'DIFF' THEN 'Diferencial' WHEN 'LOG' THEN 'Log' END
+                ORDER BY c.id_respaldos_config;
+                SELECT TOP(1) @bytes_reales=CONVERT(BIGINT,bs.compressed_backup_size)
+                FROM msdb.dbo.backupset bs JOIN msdb.dbo.backupmediafamily mf ON mf.media_set_id=bs.media_set_id
+                WHERE bs.database_name=@DBName AND mf.physical_device_name=@FileName
+                ORDER BY bs.backup_finish_date DESC,bs.backup_set_id DESC;
+                IF @config_real IS NOT NULL
                 EXEC MunicipalidadNicoya2026.dbo.sp_registrar_ejecucion_respaldo
-                    @id_respaldo_config = 1,
+                    @id_respaldo_config = @config_real,
                     @ruta_archivo = @FileName,
-                    @tamano_bytes = 104857600,
+                    @tamano_bytes = @bytes_reales,
                     @nombre_estado = 'Exitoso',
                     @detalles_error = NULL,
                     @nuevo_id_respaldo = @nuevo_id_respaldo OUTPUT;
@@ -203,16 +216,21 @@ BEGIN
 END;
 GO
 
--- 4. PROGRAMACIÓN DE JOBS EN SQL SERVER AGENT
 USE msdb;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 PRINT 'Configurando Jobs automáticos de Backup en msdb...';
 
 -- Job Backup FULL Semanal
 IF EXISTS (SELECT 1 FROM msdb.dbo.sysjobs WHERE name = N'DatabaseBackup - Nicoya2026 - FULL')
     EXEC sp_delete_job @job_name = N'DatabaseBackup - Nicoya2026 - FULL';
+END;
 GO
+
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 EXEC sp_add_job @job_name = N'DatabaseBackup - Nicoya2026 - FULL', @enabled = 1, @description = N'Respaldo completo semanal para Municipalidad de Nicoya 2026';
 EXEC sp_add_jobstep 
     @job_name = N'DatabaseBackup - Nicoya2026 - FULL', 
@@ -225,12 +243,18 @@ EXEC sp_add_jobschedule
     @name = N'Schedule_Full_Semanal', 
     @freq_type = 8, @freq_interval = 1, @freq_recurrence_factor = 1, @active_start_time = 230000;
 EXEC sp_add_jobserver @job_name = N'DatabaseBackup - Nicoya2026 - FULL', @server_name = N'(local)';
+END;
 GO
 
--- Job Backup DIFF Diario
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 IF EXISTS (SELECT 1 FROM msdb.dbo.sysjobs WHERE name = N'DatabaseBackup - Nicoya2026 - DIFF')
     EXEC sp_delete_job @job_name = N'DatabaseBackup - Nicoya2026 - DIFF';
+END;
 GO
+
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 EXEC sp_add_job @job_name = N'DatabaseBackup - Nicoya2026 - DIFF', @enabled = 1, @description = N'Respaldo diferencial diario para Municipalidad de Nicoya 2026';
 EXEC sp_add_jobstep 
     @job_name = N'DatabaseBackup - Nicoya2026 - DIFF', 
@@ -243,7 +267,11 @@ EXEC sp_add_jobschedule
     @name = N'Schedule_Diff_Diario', 
     @freq_type = 8, @freq_interval = 126, @freq_recurrence_factor = 1, @active_start_time = 230000;
 EXEC sp_add_jobserver @job_name = N'DatabaseBackup - Nicoya2026 - DIFF', @server_name = N'(local)';
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 PRINT '-> PlanDeMantenimiento: Backups configurados exitosamente.';
+END;
 GO

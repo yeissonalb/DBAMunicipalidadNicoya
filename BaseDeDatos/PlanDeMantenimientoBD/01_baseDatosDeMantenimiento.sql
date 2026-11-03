@@ -1,10 +1,12 @@
-/* ============================================================================
+﻿/* ============================================================================
    PROYECTO: SISTEMA DE GESTIÓN MUNICIPALIDAD DE NICOYA 2026
    ARCHIVO: PlanDeMantenimiento\01_baseDatosDeMantenimiento.sql
    ============================================================================ */
 
 USE master;
+
 GO
+
 
 IF DB_ID('MaintenanceDB') IS NULL
 BEGIN
@@ -31,4 +33,5 @@ ELSE
 BEGIN
     PRINT '-> Base de datos MaintenanceDB ya existe en el servidor.';
 END
+
 GO

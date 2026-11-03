@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -84,8 +84,8 @@ export function DbaRespaldosPage() {
         rutaBackupFull: rutaBackupFull.trim(),
       });
     },
-    onSuccess: (res) => {
-      toast.success(res.message || 'Simulacro de restauración ejecutado y auditado exitosamente.');
+    onSuccess: () => {
+      toast.success('Solicitud completada. Revise el registro de verificación; requiere el procedimiento actualizado por el script 24.');
       setOpenRestoreConfirm(false);
       queryClient.invalidateQueries({ queryKey: ['dba'] });
       queryClient.invalidateQueries({ queryKey: ['auditoria'] });
@@ -102,11 +102,14 @@ export function DbaRespaldosPage() {
     <div className="space-y-6">
       <PageHeader
         title="Consola Técnica DBA — Respaldos y Recuperación ante Desastres"
-        subtitle="Historial de respaldos ejecutados, verificación criptográfica SHA-256 y simulacro de restauración (RESTORE VERIFYONLY)."
+        subtitle="Historial de respaldos y comprobación de legibilidad mediante RESTORE VERIFYONLY."
         badge="Operaciones Críticas SQL"
         icon={<Landmark className="h-6 w-6" />}
         actions={
           <>
+            <Button variant="secondary" disabled={verificarIntegridadMut.isPending} onClick={() => verificarIntegridadMut.mutate()}>
+              <CheckCircle2 className="h-4 w-4" /> Comprobar base (DBCC CHECKDB)
+            </Button>
             <Button
               variant="secondary"
               onClick={() => queryClient.invalidateQueries({ queryKey: ['dba'] })}
@@ -172,7 +175,7 @@ export function DbaRespaldosPage() {
             <CardDescription>ÚLTIMO RESPALDO REGISTRADO</CardDescription>
             <CardTitle className="text-base font-extrabold text-[#171717]">
               {ultimoRespaldo
-                ? `${ultimoRespaldo.codigoTipoDeRespaldo} · ${formatNumber(
+                ? `${ultimoRespaldo.nombreTipoRespaldo ?? 'Tipo no informado'} · ${formatNumber(
                     ultimoRespaldo.tamanoMb,
                     2
                   )} MB`
@@ -181,21 +184,16 @@ export function DbaRespaldosPage() {
           </CardHeader>
           <CardContent className="pt-2 text-xs text-[#6B7280]">
             {ultimoRespaldo
-              ? `Fecha: ${formatDateTime(ultimoRespaldo.fechaInicio)} (${ultimoRespaldo.estadoRespaldo})`
+              ? `Fecha: ${formatDateTime(ultimoRespaldo.fechaInicio)} (${ultimoRespaldo.estadoEjecucion ?? 'Sin estado informado'})`
               : 'Ejecute un respaldo inmediato para poblar el historial.'}
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-[#15803D]">
           <CardHeader className="pb-2">
-            <CardDescription>EJECUCIONES ACUMULADAS EN POLÍTICAS</CardDescription>
+            <CardDescription>REGISTROS DE EJECUCIÓN CONSULTADOS</CardDescription>
             <CardTitle className="text-2xl font-extrabold text-[#15803D]">
-              {formatNumber(
-                (estadoQuery.data ?? []).reduce(
-                  (acc, e) => acc + (e.totalEjecuciones ?? 0),
-                  0
-                )
-              )}
+              {estadoQuery.isLoading ? 'Cargando...' : estadoQuery.isError ? 'No disponible' : formatNumber(estadoQuery.data?.length ?? 0)}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-2 text-xs text-[#6B7280]">
@@ -261,16 +259,16 @@ export function DbaRespaldosPage() {
                         <th className="px-3.5 py-3">Tipo / Política</th>
                         <th className="px-3.5 py-3">Ruta Archivo (.bak)</th>
                         <th className="px-3.5 py-3">Tamaño</th>
-                        <th className="px-3.5 py-3">Hash SHA-256</th>
+                        <th className="px-3.5 py-3">Detalle de ejecución</th>
                         <th className="px-3.5 py-3">Estado</th>
                         <th className="px-3.5 py-3 text-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#E5E7EB]">
                       {historialQuery.data.map((h) => (
-                        <tr key={h.idRespaldoHistorial} className="hover:bg-[#F8FAFC]">
+                        <tr key={h.idRespaldos} className="hover:bg-[#F8FAFC]">
                           <td className="px-3.5 py-3 font-mono font-bold text-[#171717]">
-                            #{h.idRespaldoHistorial}
+                            #{h.idRespaldos}
                           </td>
                           <td className="px-3.5 py-3 whitespace-nowrap">
                             <p className="font-medium text-[#171717]">{formatDateTime(h.fechaInicio)}</p>
@@ -279,7 +277,7 @@ export function DbaRespaldosPage() {
                             </p>
                           </td>
                           <td className="px-3.5 py-3">
-                            <Badge variant="blue">{h.codigoTipoDeRespaldo}</Badge>
+                            <Badge variant="blue">{h.nombreTipoRespaldo ?? 'No informado'}</Badge>
                             <p className="mt-0.5 text-[11px] font-medium text-[#4B5563]">
                               {h.nombreConfiguracion}
                             </p>
@@ -295,33 +293,26 @@ export function DbaRespaldosPage() {
                           </td>
                           <td
                             className="px-3.5 py-3 font-mono text-[10px] text-[#6B7280] max-w-[120px] truncate"
-                            title={h.hashVerificacion}
+                            title={h.detallesError ?? undefined}
                           >
-                            {h.hashVerificacion}
+                            {h.detallesError || 'Sin detalle adicional'}
                           </td>
                           <td className="px-3.5 py-3">
                             <Badge
                               variant={
-                                h.estadoRespaldo.toUpperCase().includes('COMP') ||
-                                h.estadoRespaldo.toUpperCase().includes('EXIT') ||
-                                h.estadoRespaldo.toUpperCase().includes('OK')
+                                (h.estadoEjecucion ?? '').toUpperCase().includes('COMP') ||
+                                (h.estadoEjecucion ?? '').toUpperCase().includes('EXIT') ||
+                                (h.estadoEjecucion ?? '').toUpperCase().includes('OK')
                                   ? 'success'
                                   : 'warning'
                               }
                             >
-                              {h.estadoRespaldo}
+                              {h.estadoEjecucion || 'Sin estado informado'}
                             </Badge>
                           </td>
                           <td className="px-3.5 py-3 text-right whitespace-nowrap">
                             <div className="inline-flex items-center gap-1.5">
-                              <Button
-                                variant="secondary"
-                                onClick={() => verificarIntegridadMut.mutate()}
-                                disabled={verificarIntegridadMut.isPending}
-                                title="Verificar integridad DBCC CHECKDB"
-                              >
-                                <CheckCircle2 className="h-3.5 w-3.5" /> Integridad
-                              </Button>
+
                               <Button
                                 onClick={() => setRutaBackupFull(h.rutaArchivo)}
                                 title="Cargar ruta en el panel de restauración"
@@ -345,10 +336,10 @@ export function DbaRespaldosPage() {
           <Card className="border-t-4 border-t-[#DC2626] sticky top-20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base text-[#DC2626]">
-                <RotateCcw className="h-5 w-5" /> RESTAURAR RESPALDO (DRP)
+                <RotateCcw className="h-5 w-5" /> VERIFICAR ARCHIVO DE RESPALDO
               </CardTitle>
               <CardDescription>
-                Ejecuta protocolo de contingencia con <code className="font-mono">RESTORE VERIFYONLY</code>{' '}
+                Comprueba el archivo mediante <code className="font-mono">RESTORE VERIFYONLY</code>{' '}
                 y registro forense.
               </CardDescription>
             </CardHeader>
@@ -397,7 +388,7 @@ export function DbaRespaldosPage() {
                   </>
                 ) : (
                   <>
-                    <HardDrive className="h-4 w-4" /> CONFIRMAR RESTAURACIÓN / SIMULACRO
+                    <HardDrive className="h-4 w-4" /> VERIFICAR RESPALDO
                   </>
                 )}
               </Button>
@@ -410,10 +401,10 @@ export function DbaRespaldosPage() {
       <ConfirmDialog
         open={openRestoreConfirm}
         onClose={() => setOpenRestoreConfirm(false)}
-        multiStepSecurity
-        variant="destructive"
-        title="Protocolo Crítico DBA — Simulacro y Verificación de Restauración"
-        confirmLabel="Ejecutar RESTORE VERIFYONLY Definitivamente"
+        variant="default"
+        title="Comprobar archivo de respaldo"
+        description="Requiere aplicar el script 24. Ejecuta RESTORE VERIFYONLY WITH CHECKSUM sobre el archivo indicado. No restaura ni sobrescribe la base actual. Esta comprobación no sustituye una prueba real de restauración."
+        confirmLabel="Verificar archivo"
         isPending={simularRestauracionMut.isPending}
         onConfirm={() => simularRestauracionMut.mutate()}
         impactSummary={

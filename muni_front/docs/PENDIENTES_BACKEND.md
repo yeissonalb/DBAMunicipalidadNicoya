@@ -1,7 +1,9 @@
+> Instalacion actualizada el 03/11/2026: consultar `BaseDeDatos/LEEME_INSTALACION.md`. Este documento conserva contexto historico de desarrollo.
+
 # Pendientes del Backend — estado de resolución
 
 Este documento registraba los hallazgos que el frontend no podía resolver sin tocar `muni-back/` ni `BaseDeDatos/`.
-**Todos quedaron resueltos** con el script `BaseDeDatos/Database_Backend/15_portal_ciudadano_dw_monitoreo.sql`
+**Todos quedaron resueltos** con el script `BaseDeDatos/Scripts_Ordinarios/05_Procedimientos_Operacionales.sql`
 y los cambios correspondientes en la API y en este frontend.
 
 | # | Pendiente | Estado | Solución |
@@ -17,7 +19,7 @@ y los cambios correspondientes en la API y en este frontend.
 ## Requisitos de despliegue
 
 1. Base operativa `MunicipalidadNicoya2026`: scripts `Scripts_Ordinarios/01` a `09` (o el `MASTER`).
-2. Scripts del backend, en orden: `Database_Backend/13_sp_autenticar_usuario.sql`, `14_mejoras_catalogos_output.sql`, `15_portal_ciudadano_dw_monitoreo.sql`.
+2. Usar el MASTER consolidado en Modo SQLCMD y consultar `BaseDeDatos/LEEME_INSTALACION.md`; no ejecutar migraciones historicas adicionales.
 3. Opcional — Data Warehouse: `DataWareHouse/DWH_Structure.sql`, `DWH_ETL.sql`, `DWH_Vistas_Analiticas.sql`. Sin ellos la pantalla de Data Warehouse muestra cómo instalarlo y no falla.
 4. Opcional — Plan de mantenimiento (MaintenanceDB / Ola Hallengren): `PlanDeMantenimientoBD/01` a `04`. Sin él, el mantenimiento usa la rutina integrada (REBUILD/REORGANIZE) y el historial aparece vacío.
 

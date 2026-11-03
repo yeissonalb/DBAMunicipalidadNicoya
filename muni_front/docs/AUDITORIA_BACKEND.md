@@ -1,3 +1,5 @@
+> Instalacion actualizada el 03/11/2026: consultar `BaseDeDatos/LEEME_INSTALACION.md`. Este documento conserva contexto historico de desarrollo.
+
 # Auditoría Técnica y Funcional del Backend — SIGEMUN (`muni-back`)
 
 **Proyecto:** SIGEMUN — Sistema de Gestión para la Municipalidad de Nicoya  
@@ -6,7 +8,7 @@
 **Fuentes inspeccionadas:**
 - **Fuente A:** `Municipalidad Nicoya G-04 Documentación.pdf` (264 páginas revisadas íntegramente: requisitos funcionales/administrativos pp. 53–109, diagramas pp. 110–112, wireframes pp. 113–120, casos de uso pp. 120–222, inventario de SP/triggers/funciones/vistas/DW pp. 223–264).
 - **Fuente B:** `muni-back/` (.NET 9 / ASP.NET Core Web API, `Program.cs`, 14 controladores, middlewares, servicios, entidades y `tools/entity_columns.json`).
-- **Fuente C:** `BaseDeDatos/` (`Scripts_Ordinarios/`, `Database_Backend/` scripts 01–14, `DataWareHouse/`, `PlanDeMantenimientoBD/`).
+- **Fuente C:** `BaseDeDatos/` (`Scripts_Ordinarios/`, definiciones consolidadas de `Scripts_Ordinarios/`, `DataWareHouse/`, `PlanDeMantenimientoBD/`).
 
 
 > **Nota (actualización):** esta auditoría describe el backend *antes* del script `15_portal_ciudadano_dw_monitoreo.sql`. Las limitaciones que menciona (portal ciudadano, acceso del Analista al padrón, listado de adjuntos, revocaciones, Data Warehouse y monitoreo DBA) ya están resueltas; ver [`PENDIENTES_BACKEND.md`](./PENDIENTES_BACKEND.md).

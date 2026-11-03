@@ -992,16 +992,20 @@ export interface VwEstadoRespaldo {
 }
 
 export interface SpFrecuenciaResultDto {
+  nombreFrecuencia: string | null;
   idFrecuencia: number;
   codigoFrecuencia: string;
 }
 
 export interface SpTipoRespaldoResultDto {
+  nombreTipoRespaldo: string | null;
   idTipoDeRespaldo: number;
   codigoTipoDeRespaldo: string;
 }
 
 export interface SpConfiguracionRespaldoResultDto {
+  nombreFrecuencia: string | null;
+  nombreTipoRespaldo: string | null;
   idRespaldosConfig: number;
   nombreConfiguracion: string;
   horaEjecucion: string;
@@ -1017,15 +1021,22 @@ export interface SpConfiguracionRespaldoResultDto {
 }
 
 export interface SpHistorialRespaldosResultDto {
-  idRespaldoHistorial: number;
+  idRespaldos: number;
+  nombreTipoRespaldo: string | null;
+  nombreFrecuencia: string | null;
+  duracionSegundos: number | null;
+  estadoEjecucion: string | null;
+  tamanoBytes: number;
+  detallesError: string | null;
+  idRespaldoHistorial?: number;
   fechaInicio: string;
   fechaFin?: string | null;
   rutaArchivo: string;
   tamanoMb: number;
-  hashVerificacion: string;
+  hashVerificacion?: string;
   nombreConfiguracion: string;
-  codigoTipoDeRespaldo: string;
-  estadoRespaldo: string;
+  codigoTipoDeRespaldo?: string;
+  estadoRespaldo?: string;
   usuarioEjecutor?: string | null;
 }
 
