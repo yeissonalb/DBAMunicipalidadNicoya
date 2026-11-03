@@ -19,7 +19,7 @@ namespace Entities.SpResults
         public string? EstadoFinal { get; set; }
 
         [Column("dias_promedio_consumidos")]
-        public int? DiasPromedioConsumidos { get; set; }
+        public decimal? DiasPromedioConsumidos { get; set; }
 
         [Column("cantidad_tramites")]
         public int? CantidadTramites { get; set; }

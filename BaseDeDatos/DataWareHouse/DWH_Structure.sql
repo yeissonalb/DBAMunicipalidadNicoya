@@ -1,22 +1,7 @@
-/* ============================================================================
-   PROYECTO: SISTEMA DE GESTIÓN MUNICIPALIDAD DE NICOYA 2026
-   CURSO: ADMINISTRACIÓN DE BASES DE DATOS (BD-II)
-   UNIVERSIDAD NACIONAL DE COSTA RICA - SEDE REGIONAL CHOROTEGA, CAMPUS NICOYA
-   ARCHIVO: DataWareHouse\DWH_Structure.sql
-   ============================================================================
-   ESTRUCTURA DEL DATA WAREHOUSE / DATAMART (ESQUEMA EN ESTRELLA)
-   Crea la base de datos analítica, dimensiones, tablas de hechos y funciones BI.
-   ============================================================================ */
-
-USE master;
+﻿USE master;
 GO
 
-IF DB_ID('MunicipalidadNicoyaDataMart2026') IS NOT NULL
-BEGIN
-    ALTER DATABASE MunicipalidadNicoyaDataMart2026 SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-    DROP DATABASE MunicipalidadNicoyaDataMart2026;
-    PRINT '-> Base de datos Data Warehouse anterior eliminada.';
-END
+IF DB_ID(N'MunicipalidadNicoyaDataMart2026') IS NOT NULL THROW 50022,N'El Data Mart ya existe. Este instalador es para bases nuevas.',1;
 GO
 
 CREATE DATABASE MunicipalidadNicoyaDataMart2026
@@ -46,7 +31,6 @@ PRINT '   CREACIÓN DE TABLAS DE DIMENSIONES (DIM_*)           ';
 PRINT '=======================================================';
 GO
 
--- 1. Dimensión Tiempo
 CREATE TABLE DIM_TIEMPO (
     id_tiempo      INT           IDENTITY(1,1) NOT NULL,
     fecha          DATE          NOT NULL,
@@ -63,7 +47,6 @@ CREATE TABLE DIM_TIEMPO (
 );
 GO
 
--- 2. Dimensión Contribuyente
 CREATE TABLE DIM_CONTRIBUYENTE (
     id_contribuyente_dw     INT          IDENTITY(1,1) NOT NULL,
     id_contribuyente_origen INT          NOT NULL,
@@ -75,7 +58,6 @@ CREATE TABLE DIM_CONTRIBUYENTE (
 );
 GO
 
--- 3. Dimensión Ubicación
 CREATE TABLE DIM_UBICACION (
     id_ubicacion_dw    INT          IDENTITY(1,1) NOT NULL,
     id_distrito_origen INT          NOT NULL,
@@ -86,7 +68,6 @@ CREATE TABLE DIM_UBICACION (
 );
 GO
 
--- 4. Dimensión Tributo
 CREATE TABLE DIM_TRIBUTO (
     id_tributo_dw          INT          IDENTITY(1,1) NOT NULL,
     id_tipo_tributo_origen INT          NOT NULL,
@@ -99,7 +80,6 @@ CREATE TABLE DIM_TRIBUTO (
 );
 GO
 
--- 5. Dimensión Trámite
 CREATE TABLE DIM_TRAMITE (
     id_tramite_dw             INT          IDENTITY(1,1) NOT NULL,
     id_tipo_tramite_origen    INT          NOT NULL,
@@ -111,7 +91,6 @@ CREATE TABLE DIM_TRAMITE (
 );
 GO
 
--- 6. Dimensión Departamento
 CREATE TABLE DIM_DEPARTAMENTO (
     id_departamento_dw     INT          IDENTITY(1,1) NOT NULL,
     id_departamento_origen INT          NOT NULL,
@@ -127,7 +106,6 @@ PRINT '   CREACIÓN DE TABLAS DE HECHOS (FACT_*)               ';
 PRINT '=======================================================';
 GO
 
--- 1. Tabla de Hechos: Recaudación Municipal
 CREATE TABLE FACT_RECAUDACION (
     id_recaudacion      INT            IDENTITY(1,1) NOT NULL,
     id_tiempo           INT            NOT NULL,
@@ -146,7 +124,6 @@ CREATE TABLE FACT_RECAUDACION (
 CREATE NONCLUSTERED INDEX IX_FACT_REC_Analisis ON FACT_RECAUDACION(id_tiempo, id_ubicacion_dw, id_tributo_dw) INCLUDE (monto_recaudado, monto_intereses);
 GO
 
--- 2. Tabla de Hechos: Morosidad Municipal
 CREATE TABLE FACT_MOROSIDAD (
     id_morosidad                    INT            IDENTITY(1,1) NOT NULL,
     id_tiempo                       INT            NOT NULL,
@@ -162,7 +139,6 @@ CREATE TABLE FACT_MOROSIDAD (
 CREATE NONCLUSTERED INDEX IX_FACT_MOR_Analisis ON FACT_MOROSIDAD(id_tiempo, id_ubicacion_dw, id_tributo_dw) INCLUDE (saldo_vencido, cantidad_contribuyentes_morosos);
 GO
 
--- 3. Tabla de Hechos: Eficiencia en Trámites
 CREATE TABLE FACT_EFICIENCIA_TRAMITES (
     id_eficiencia          INT          IDENTITY(1,1) NOT NULL,
     id_tiempo              INT          NOT NULL,
@@ -182,84 +158,6 @@ GO
 PRINT '=======================================================';
 PRINT '   FUNCIONES ANALÍTICAS DE INTELIGENCIA DE NEGOCIOS    ';
 PRINT '=======================================================';
-GO
-
--- FUN-19: Recaudación por Rango Temporal
-CREATE OR ALTER FUNCTION dbo.fn_dw_total_recaudacion_periodo
-(
-    @fecha_inicio DATE,
-    @fecha_fin DATE
-)
-RETURNS DECIMAL(12,2)
-AS
-BEGIN
-    DECLARE @total DECIMAL(12,2) = 0;
-    SELECT @total = SUM(fr.monto_recaudado + fr.monto_intereses)
-    FROM dbo.FACT_RECAUDACION fr
-    INNER JOIN dbo.DIM_TIEMPO dt ON fr.id_tiempo = dt.id_tiempo
-    WHERE dt.fecha >= @fecha_inicio AND dt.fecha <= @fecha_fin;
-    RETURN ISNULL(@total, 0);
-END;
-GO
-
--- FUN-20: Recaudación por Distrito Cantonal
-CREATE OR ALTER FUNCTION dbo.fn_dw_total_recaudacion_distrito
-(
-    @distrito VARCHAR(50)
-)
-RETURNS DECIMAL(12,2)
-AS
-BEGIN
-    DECLARE @total DECIMAL(12,2) = 0;
-    SELECT @total = SUM(fr.monto_recaudado + fr.monto_intereses)
-    FROM dbo.FACT_RECAUDACION fr
-    INNER JOIN dbo.DIM_UBICACION du ON fr.id_ubicacion_dw = du.id_ubicacion_dw
-    WHERE du.distrito = @distrito;
-    RETURN ISNULL(@total, 0);
-END;
-GO
-
--- FUN-21: Porcentaje de Morosidad Analítica
-CREATE OR ALTER FUNCTION dbo.fn_dw_porcentaje_morosidad
-(
-    @id_tiempo INT
-)
-RETURNS FLOAT
-AS
-BEGIN
-    DECLARE @total_morosos INT = 0;
-    DECLARE @total_contribuyentes INT = 0;
-    DECLARE @pct FLOAT = 0;
-
-    SELECT @total_morosos = SUM(cantidad_contribuyentes_morosos)
-    FROM dbo.FACT_MOROSIDAD
-    WHERE id_tiempo = @id_tiempo;
-
-    SELECT @total_contribuyentes = COUNT(*) FROM dbo.DIM_CONTRIBUYENTE;
-
-    IF @total_contribuyentes > 0
-        SET @pct = (@total_morosos * 100.0) / @total_contribuyentes;
-
-    RETURN @pct;
-END;
-GO
-
--- FUN-22: Promedio de Días de Resolución por Trámite o Área
-CREATE OR ALTER FUNCTION dbo.fn_dw_promedio_dias_resolucion
-(
-    @id_tramite_dw INT = NULL,
-    @id_departamento_dw INT = NULL
-)
-RETURNS FLOAT
-AS
-BEGIN
-    DECLARE @promedio FLOAT = 0;
-    SELECT @promedio = AVG(CAST(dias_resolucion AS FLOAT))
-    FROM dbo.FACT_EFICIENCIA_TRAMITES
-    WHERE (@id_tramite_dw IS NULL OR id_tramite_dw = @id_tramite_dw)
-      AND (@id_departamento_dw IS NULL OR id_departamento_dw = @id_departamento_dw);
-    RETURN ISNULL(@promedio, 0);
-END;
 GO
 
 PRINT '-> DataWareHouse\DWH_Structure.sql creado exitosamente.';

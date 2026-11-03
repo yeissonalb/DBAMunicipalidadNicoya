@@ -119,7 +119,12 @@ export function DataWarehousePage() {
     },
   });
 
-  const filas = consultaQuery.data ?? [];
+  const filas = (consultaQuery.data ?? []).map((fila) => {
+    const mes = Number(fila.mes);
+    return Number.isInteger(mes) && mes >= 1 && mes <= 12 && 'nombreMes' in fila
+      ? { ...fila, nombreMes: new Intl.DateTimeFormat('es-CR', { month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(2026, mes - 1, 1))) }
+      : fila;
+  });
   const grafico = construirGrafico(vista, filas);
 
   return (
@@ -222,7 +227,7 @@ export function DataWarehousePage() {
         <Card className="overflow-hidden">
           <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
             <CardTitle className="text-base">Validación de la carga #{ultimaValidacion[0].idCarga}</CardTitle>
-            <CardDescription>Comparación de totales entre la base operativa (OLTP) y el Data Mart.</CardDescription>
+            <CardDescription>Comparación de totales entre la base operativa (OLTP) y el Data Mart en la ejecución. Una carga fallida conserva los datos anteriores tras aplicar el script 25.</CardDescription>
           </CardHeader>
           <CardContent className="p-0 sm:p-0">
             <TablaGenerica
@@ -238,6 +243,12 @@ export function DataWarehousePage() {
         </Card>
       )}
 
+      <p className="text-sm text-sigemun-muted">
+        Los indicadores corresponden a la última carga, no al estado en tiempo real. Los registros de recaudación
+        agrupan aplicaciones de pago; no equivalen al número de pagos individuales. Las clasificaciones de zona,
+        categoría y residencia requieren una regla aprobada. Los conteos de morosos no deben sumarse entre tributos
+        para obtener personas únicas.
+      </p>
       {/* Consultas analíticas */}
       {instalado && (
         <>
@@ -378,7 +389,7 @@ export function DataWarehousePage() {
       >
         <div className="space-y-4 text-sm">
           <p>
-            La carga recalcula las dimensiones y tablas de hechos. Puede tardar varios minutos según
+            La carga agrega dimensiones faltantes y vacía y reconstruye las tablas de hechos del Data Mart. No modifica pagos ni trámites de la base operativa. Puede tardar varios minutos según
             el volumen de datos; no cierre esta ventana mientras se ejecuta.
           </p>
           <div className="flex justify-end gap-2">
@@ -410,13 +421,13 @@ export function DataWarehousePage() {
 const ETIQUETAS: Record<string, string> = {
   anio: 'Año',
   trimestre: 'Trimestre',
-  mes: 'Mes',
+  mes: 'Número de mes',
   nombreMes: 'Mes',
   totalRecaudadoPrincipal: 'Principal',
   totalRecaudadoIntereses: 'Intereses',
   totalDescuentosAplicados: 'Descuentos',
   totalRecaudadoGeneral: 'Total recaudado',
-  transaccionesRegistradas: 'Transacciones',
+  transaccionesRegistradas: 'Registros agregados',
   codigoTributo: 'Código',
   nombreTributo: 'Tributo',
   categoriaTributo: 'Categoría',
@@ -426,7 +437,7 @@ const ETIQUETAS: Record<string, string> = {
   totalRecaudado: 'Total recaudado',
   distrito: 'Distrito',
   zonaRuralUrbana: 'Zona',
-  totalPagosDistrito: 'Pagos',
+  totalPagosDistrito: 'Registros agregados',
   saldoVencido: 'Saldo vencido',
   cantidadContribuyentesMorosos: 'Contribuyentes morosos',
   nombreTramite: 'Trámite',
@@ -456,6 +467,7 @@ const CAMPOS_MONEDA = new Set([
 function formatearCelda(clave: string, valor: unknown): string {
   if (valor === null || valor === undefined || valor === '') return '—';
   if (typeof valor === 'number') {
+    if (clave === 'anio') return String(valor);
     if (CAMPOS_MONEDA.has(clave)) return formatCurrencyCRC(valor);
     return Number.isInteger(valor) ? formatNumber(valor) : formatNumber(valor, 2);
   }
@@ -548,7 +560,7 @@ function construirGrafico(vista: Vista, filas: Record<string, unknown>[]): Grafi
       }
       return {
         titulo: 'Saldo vencido por distrito',
-        subtitulo: 'Suma de todos los periodos y tributos',
+        subtitulo: 'Foto de saldos vencidos de la última carga ETL; no es recaudación',
         moneda: true,
         datos: Array.from(porDistrito, ([etiqueta, saldo]) => ({ etiqueta, saldo })),
         series: [{ clave: 'saldo', nombre: 'Saldo vencido (₡)', color: '#B91C1C' }],

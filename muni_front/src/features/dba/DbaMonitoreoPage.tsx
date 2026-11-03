@@ -36,10 +36,11 @@ export function DbaMonitoreoPage() {
   const queryClient = useQueryClient();
   const [pestana, setPestana] = useState<Pestana>('sesiones');
   const [umbral, setUmbral] = useState(5);
+  const [verTodasLasBases, setVerTodasLasBases] = useState(false);
   const [sesionATerminar, setSesionATerminar] = useState<SpDbaMonitorSesionResultDto | null>(null);
   const [opciones, setOpciones] = useState({
-    optimizarIndices: true,
-    actualizarEstadisticas: true,
+    optimizarIndices: false,
+    actualizarEstadisticas: false,
     purgarRespaldos: false,
   });
   const [resultadoMant, setResultadoMant] = useState<SpDbaMantenimientoResultDto[] | null>(null);
@@ -92,6 +93,10 @@ export function DbaMonitoreoPage() {
   });
 
   const r = resumenQuery.data;
+  const archivosVisibles = (archivosQuery.data ?? []).filter(
+    (a) => verTodasLasBases || (r?.baseDatos != null && a.baseDatos === r.baseDatos),
+  );
+  const actualizando = queryClient.isFetching({ queryKey: ['monitoreo'] }) > 0;
 
   return (
     <div className="flex flex-col" style={{ gap: '2rem' }}>
@@ -104,9 +109,11 @@ export function DbaMonitoreoPage() {
           <Button
             variant="outline"
             size="sm"
+            disabled={actualizando}
+            title="Volver a consultar las métricas; no modifica datos ni termina sesiones"
             onClick={() => queryClient.invalidateQueries({ queryKey: ['monitoreo'] })}
           >
-            <RefreshCw className="h-4 w-4" /> Actualizar
+            <RefreshCw className={`h-4 w-4 ${actualizando ? 'animate-spin' : ''}`} /> {actualizando ? 'Actualizando...' : 'Actualizar métricas'}
           </Button>
         }
       />
@@ -132,6 +139,11 @@ export function DbaMonitoreoPage() {
         </Button>
       </nav>
 
+      <p className="text-sm text-sigemun-muted">
+        Servidor: recursos del equipo donde se ejecuta SQL Server. Motor: actividad de la instancia,
+        incluidas otras bases. Base municipal: archivos e índices de {r?.baseDatos ?? 'la base configurada'}.
+        Estas métricas no representan únicamente el consumo del aplicativo. El resumen se actualiza cada 30 segundos.
+      </p>
       {/* Resumen del servidor */}
       {resumenQuery.isLoading ? (
         <LoadingState message="Leyendo vistas de administración dinámica (DMV)..." />
@@ -143,27 +155,27 @@ export function DbaMonitoreoPage() {
             <Kpi
               icon={<Cpu className="h-4 w-4" />}
               titulo="CPU de SQL Server"
-              valor={r.cpuSqlPct != null ? `${formatNumber(r.cpuSqlPct)}%` : '—'}
-              detalle={`Otros procesos: ${formatNumber(r.cpuOtrosPct)}% · ${r.cpus ?? '—'} CPU`}
+              valor={r.cpuSqlPct != null ? `${formatNumber(r.cpuSqlPct)}%` : 'No disponible'}
+              detalle={`Motor · Otros procesos: ${r.cpuOtrosPct == null ? 'sin medición' : `${formatNumber(r.cpuOtrosPct)}%`} · ${r.cpus ?? '—'} CPU del servidor`}
               alerta={(r.cpuSqlPct ?? 0) >= 80}
             />
             <Kpi
               icon={<MemoryStick className="h-4 w-4" />}
-              titulo="Memoria del servidor"
+              titulo="Servidor · Memoria total en uso"
               valor={r.memoriaUsoPct != null ? `${formatNumber(r.memoriaUsoPct, 1)}%` : '—'}
-              detalle={`SQL usa ${formatNumber(r.memoriaSqlMb)} MB · libre ${formatNumber(r.memoriaDisponibleMb)} MB`}
+              detalle={`Incluye Windows y otros programas. Motor SQL: ${r.memoriaSqlMb == null ? 'sin medición' : `${formatNumber(r.memoriaSqlMb)} MB`}; servidor libre: ${formatNumber(r.memoriaDisponibleMb)} MB`}
               alerta={(r.memoriaUsoPct ?? 0) >= 90}
             />
             <Kpi
               icon={<Users className="h-4 w-4" />}
-              titulo="Conexiones de usuario"
+              titulo="Motor · Sesiones de usuario"
               valor={formatNumber(r.conexionesUsuario)}
-              detalle={`${r.solicitudesActivas ?? 0} activas · ${r.sesionesBloqueadas ?? 0} bloqueadas · ${r.transaccionesActivas ?? 0} transacciones`}
+              detalle={`${r.solicitudesActivas ?? 0} solicitudes en ejecución (incluye procesos internos) · ${r.sesionesBloqueadas ?? 0} bloqueadas · ${r.transaccionesActivas ?? 0} transacciones`}
               alerta={(r.sesionesBloqueadas ?? 0) > 0}
             />
             <Kpi
               icon={<HardDrive className="h-4 w-4" />}
-              titulo="Almacenamiento de la BD"
+              titulo="Base municipal · Datos usados / asignados"
               valor={`${formatNumber(r.datosUsadoMb, 1)} / ${formatNumber(r.datosMb, 1)} MB`}
               detalle={`Log ${formatNumber(r.logMb, 1)} MB (${formatNumber(r.logUsadoPct, 1)}% usado)`}
               alerta={(r.logUsadoPct ?? 0) >= 80}
@@ -219,9 +231,9 @@ export function DbaMonitoreoPage() {
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-col gap-3 border-b border-sigemun-border bg-sigemun-surface sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="text-base">Sesiones de usuario</CardTitle>
+              <CardTitle className="text-base">Sesiones de usuario de la instancia</CardTitle>
               <CardDescription>
-                Se actualiza cada 15 s. Las consultas que superan el umbral se marcan como lentas.
+                Incluye conexiones de SSMS, la API y otros programas. Se actualiza cada 15 s. Las consultas que superan el umbral se marcan como lentas.
               </CardDescription>
             </div>
             <label className="flex items-center gap-2 text-xs font-semibold">
@@ -340,8 +352,15 @@ export function DbaMonitoreoPage() {
       {pestana === 'archivos' && (
         <Card className="overflow-hidden">
           <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
-            <CardTitle className="text-base">Archivos de datos y log</CardTitle>
-            <CardDescription>Tamaño, uso y espacio libre del volumen donde reside cada archivo.</CardDescription>
+            <CardTitle className="text-base">Archivos de datos y log · {verTodasLasBases ? 'Bases relacionadas' : r?.baseDatos ?? 'Base municipal'}</CardTitle>
+            <CardDescription>
+              Tamaño asignado y usado por archivo. El espacio libre corresponde al disco del servidor,
+              compartido con Windows y otros programas. «No disponible» no significa cero.
+            </CardDescription>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={verTodasLasBases} onChange={(e) => setVerTodasLasBases(e.target.checked)} />
+              Incluir Data Warehouse y base de mantenimiento
+            </label>
           </CardHeader>
           <CardContent className="p-0 sm:p-0">
             {archivosQuery.isLoading ? (
@@ -363,7 +382,7 @@ export function DbaMonitoreoPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-sigemun-border">
-                    {(archivosQuery.data ?? []).map((a, i) => (
+                    {archivosVisibles.map((a, i) => (
                       <tr key={`${a.baseDatos}-${a.archivoLogico}-${i}`} className="even:bg-sigemun-surface">
                         <td className="px-3 py-2">
                           <p className="font-semibold">{a.archivoLogico}</p>
@@ -376,7 +395,7 @@ export function DbaMonitoreoPage() {
                           {a.rutaFisica}
                         </td>
                         <td className="px-3 py-2">{formatNumber(a.tamanoMb, 1)} MB</td>
-                        <td className="px-3 py-2">{a.usadoMb != null ? `${formatNumber(a.usadoMb, 1)} MB` : '—'}</td>
+                        <td className="px-3 py-2">{a.usadoMb != null ? `${formatNumber(a.usadoMb, 1)} MB` : 'No disponible'}</td>
                         <td className="px-3 py-2">{a.maximoMb != null ? `${formatNumber(a.maximoMb, 0)} MB` : 'Ilimitado'}</td>
                         <td className="px-3 py-2">
                           {a.volumenLibrePct != null ? (
@@ -403,7 +422,7 @@ export function DbaMonitoreoPage() {
           <CardHeader className="border-b border-sigemun-border bg-sigemun-surface">
             <CardTitle className="text-base">Fragmentación de índices</CardTitle>
             <CardDescription>
-              Índices con más de 5% de fragmentación. ≥30% se recomienda REBUILD; 5–30% REORGANIZE.
+              Se muestran todos los índices, incluso los que tienen 0 %. La recomendación proviene de SQL Server; los índices pequeños pueden quedar sin intervención.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0 sm:p-0">
@@ -412,7 +431,7 @@ export function DbaMonitoreoPage() {
             ) : fragmentacionQuery.isError ? (
               <ErrorState error={fragmentacionQuery.error} onRetry={() => fragmentacionQuery.refetch()} />
             ) : (fragmentacionQuery.data ?? []).length === 0 ? (
-              <p className="p-4 text-xs text-sigemun-muted">No hay índices fragmentados. 👍</p>
+              <p className="p-4 text-xs text-sigemun-muted">La consulta no devolvió índices para esta base.</p>
             ) : (
               <div className="max-h-96 overflow-auto">
                 <table className="w-full min-w-[760px] text-left text-xs">
@@ -433,12 +452,12 @@ export function DbaMonitoreoPage() {
                         <td className="px-3 py-2 font-mono text-[11px]">{f.indice}</td>
                         <td className="px-3 py-2">{f.tipoIndice}</td>
                         <td className="px-3 py-2">
-                          <Badge variant={(f.fragmentacionPct ?? 0) > 30 ? 'danger' : 'warning'}>
+                          <Badge variant={f.accionRecomendada?.startsWith('REBUILD') ? 'danger' : f.accionRecomendada?.startsWith('REORGANIZE') ? 'warning' : 'outline'}>
                             {formatNumber(f.fragmentacionPct, 1)}%
                           </Badge>
                         </td>
                         <td className="px-3 py-2">{formatNumber(f.paginas)}</td>
-                        <td className="px-3 py-2">{f.accionRecomendada}</td>
+                        <td className="px-3 py-2">{f.accionRecomendada?.startsWith('NINGUNA') ? (f.accionRecomendada.includes('(') ? 'Sin intervención (índice pequeño)' : 'Sin intervención') : f.accionRecomendada}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -456,8 +475,8 @@ export function DbaMonitoreoPage() {
             <CardHeader>
               <CardTitle className="text-base">Ejecutar plan de mantenimiento</CardTitle>
               <CardDescription>
-                Usa MaintenanceDB (Ola Hallengren) si está instalado; si no, aplica REBUILD/REORGANIZE
-                directamente. Puede tardar varios minutos.
+                Seleccione explícitamente las tareas que desea ejecutar sobre la base municipal.
+                La optimización puede bloquear operaciones y tardar varios minutos. Las recomendaciones se calculan en la base de datos.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

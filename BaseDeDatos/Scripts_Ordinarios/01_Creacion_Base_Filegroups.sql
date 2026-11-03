@@ -1,20 +1,12 @@
-/* ============================================================================
-   PROYECTO: SISTEMA DE GESTIÓN MUNICIPALIDAD DE NICOYA 2026
-   ARCHIVO 01: CREACIÓN DE BASE DE DATOS Y FILEGROUPS
-   ============================================================================ */
+﻿-- Rutas fijas del proyecto: C:\SQLData y C:\SQLLOG.
+GO
 
 USE master;
 GO
--- 0. Recreación limpia de la base de datos si ya existe
-IF EXISTS (SELECT name FROM sys.databases WHERE name = N'MunicipalidadNicoya2026')
-BEGIN
-    ALTER DATABASE MunicipalidadNicoya2026 SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-    DROP DATABASE MunicipalidadNicoya2026;
-    PRINT '-> Base de datos anterior eliminada para recreación limpia.';
-END
+
+IF DB_ID(N'MunicipalidadNicoya2026') IS NOT NULL THROW 50022,N'La base municipal ya existe. Este instalador es para bases nuevas.',1;
 GO
 
--- 1. Creación de la Base de Datos principal 
 CREATE DATABASE MunicipalidadNicoya2026
 ON PRIMARY
 (
@@ -37,13 +29,9 @@ GO
 PRINT 'Base de datos MunicipalidadNicoya2026 creada con éxito.';
 GO
 
--- ============================================================================
--- CREACIÓN DE FILEGROUPS 
--- ============================================================================
-
--- Filegroup: FG_Contribuyentes (Contribuyente, Contribuyente_Fisico, Contribuyente_Juridico, Representante_Legal)
 ALTER DATABASE MunicipalidadNicoya2026 ADD FILEGROUP FG_Contribuyentes;
 GO
+
 ALTER DATABASE MunicipalidadNicoya2026 ADD FILE
 (
     NAME = 'Nicoya2026_Contribuyentes',
@@ -54,9 +42,9 @@ ALTER DATABASE MunicipalidadNicoya2026 ADD FILE
 ) TO FILEGROUP FG_Contribuyentes;
 GO
 
--- Filegroup: FG_Inmuebles (Distrito, Tipo_Uso_Inmueble, Bien_Inmueble, Derecho_Inmueble)
 ALTER DATABASE MunicipalidadNicoya2026 ADD FILEGROUP FG_Inmuebles;
 GO
+
 ALTER DATABASE MunicipalidadNicoya2026 ADD FILE
 (
     NAME = 'Nicoya2026_Inmuebles',
@@ -67,9 +55,9 @@ ALTER DATABASE MunicipalidadNicoya2026 ADD FILE
 ) TO FILEGROUP FG_Inmuebles;
 GO
 
--- Filegroup: FG_Tramites (Departamento, Tipo_Tramite, Requisito, Tipo_Tramite_Requisito, Estado_Tramite, Tramite, Historial_Tramite, Archivo_Adjunto)
 ALTER DATABASE MunicipalidadNicoya2026 ADD FILEGROUP FG_Tramites;
 GO
+
 ALTER DATABASE MunicipalidadNicoya2026 ADD FILE
 (
     NAME = 'Nicoya2026_Tramites',
@@ -80,9 +68,9 @@ ALTER DATABASE MunicipalidadNicoya2026 ADD FILE
 ) TO FILEGROUP FG_Tramites;
 GO
 
--- Filegroup: FG_Tributos (Tipo_Tributo, Estado_Deuda, Deudas_Municipales, Factura, Medio_Pago, Pago_Municipal, Detalle_Factura)
 ALTER DATABASE MunicipalidadNicoya2026 ADD FILEGROUP FG_Tributos;
 GO
+
 ALTER DATABASE MunicipalidadNicoya2026 ADD FILE
 (
     NAME = 'Nicoya2026_Tributos',
@@ -93,22 +81,22 @@ ALTER DATABASE MunicipalidadNicoya2026 ADD FILE
 ) TO FILEGROUP FG_Tributos;
 GO
 
--- Filegroup: FG_Seguridad (Usuario, Rol, Rol_Usuario, Permiso, Rol_Permiso)
 ALTER DATABASE MunicipalidadNicoya2026 ADD FILEGROUP FG_Seguridad;
 GO
+
 ALTER DATABASE MunicipalidadNicoya2026 ADD FILE
 (
     NAME = 'Nicoya2026_Seguridad',
     FILENAME = 'C:\SQLData\Nicoya2026_Seguridad.ndf',
     SIZE = 16MB,
-    MAXSIZE = 512MB,
-    FILEGROWTH = 16MB
+    MAXSIZE = 2GB,
+    FILEGROWTH = 64MB
 ) TO FILEGROUP FG_Seguridad;
 GO
 
--- Filegroup: FG_Auditoria_DBA (Tipo_Accion_Auditoria, Logs_Acciones_Auditoria, Logs_eventos_Auditoria, Estados_Respaldos, Tipo_de_respaldo, Frecuencia, Respaldos_Config, Respaldos, Restauracion)
 ALTER DATABASE MunicipalidadNicoya2026 ADD FILEGROUP FG_Auditoria_DBA;
 GO
+
 ALTER DATABASE MunicipalidadNicoya2026 ADD FILE
 (
     NAME = 'Nicoya2026_Auditoria_DBA',

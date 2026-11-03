@@ -17,25 +17,8 @@ No existe ningún `_context.Tabla.Add/Where`: el contexto solo mapea las vistas.
 
 ## 1. Puesta en marcha
 
-1. **Base de datos.** Ejecute `../BaseDeDatos/Scripts_Ordinarios/MunicipalidadNicoya2026_MASTER.sql`.
-2. **Scripts del backend (obligatorios, en este orden):**
-   - `../BaseDeDatos/Database_Backend/13_sp_autenticar_usuario.sql`: crea el procedimiento de login.
-   - `../BaseDeDatos/Database_Backend/14_mejoras_catalogos_output.sql`:
-     - identidad del usuario en auditoría (`SESSION_CONTEXT`);
-     - `OUTPUT` en rol, permiso, tipo de trámite y requisito;
-     - 7 catálogos de consulta;
-     - representante legal por id del padrón;
-     - 404 en las actualizaciones;
-     - 409 en duplicados.
-
-   - `../BaseDeDatos/Database_Backend/15_portal_ciudadano_dw_monitoreo.sql`:
-     - portal ciudadano (`dbo.Cuenta_Ciudadana`, activación, login y consultas con validación de pertenencia);
-     - listado de archivos y estado de requisitos de un trámite;
-     - consulta y revocación de roles y permisos;
-     - Data Warehouse (estado, ETL, consultas) y monitoreo/mantenimiento DBA.
-
-   Sin el 14, los endpoints de registro de rol, permiso, tipo de trámite y requisito, y los de catálogo, fallan porque esos SP no tienen el `OUTPUT` ni existen. Sin el 15 fallan el portal ciudadano, las revocaciones, `tramite/{id}/archivos`, `datawarehouse/*` y `monitoreodba/*`.
-   - **Opcionales:** `../BaseDeDatos/DataWareHouse/DWH_Structure.sql`, `DWH_ETL.sql` y `DWH_Vistas_Analiticas.sql` (sin ellos `datawarehouse/estado` responde `dwInstalado: false` y las consultas 404 / 50034); `../BaseDeDatos/PlanDeMantenimientoBD/01`–`04` (sin MaintenanceDB el mantenimiento usa una rutina integrada y el historial sale vacío).
+1. **Base de datos.** Para una instalacion nueva, ejecutar `../BaseDeDatos/Scripts_Ordinarios/MunicipalidadNicoya2026_MASTER.sql` en SSMS con **Modo SQLCMD**. Incluye las tres bases y las definiciones consolidadas.
+2. **Configuracion local.** Seguir `../BaseDeDatos/LEEME_INSTALACION.md` y configurar el servidor SQL de esta computadora en la API. No ejecutar migraciones historicas adicionales. El instalador carga catalogos y usuarios; no crea operaciones ficticias.
 3. **Compilar y ejecutar:**
 
 ```bash
@@ -296,7 +279,7 @@ En todos los casos se respetó la **BD real**: con la firma de la especificació
 
 | Especificación | BD real | Qué se hizo |
 |---|---|---|
-| `sp_autenticar_usuario` | No existía | Se creó en `BaseDeDatos/Database_Backend/13_sp_autenticar_usuario.sql` |
+| `sp_autenticar_usuario` | No existía | Se creó en `BaseDeDatos/Scripts_Ordinarios/05_Procedimientos_Operacionales.sql` |
 | `sp_registrar_rol`, `_permiso`, `_tipo_tramite` y `_requisito` con `OUTPUT` | Sin `OUTPUT` | **Resuelto con el script 14** (`@nuevo_id_* INT = NULL OUTPUT`) |
 | `sp_registrar_configuracion_respaldo` sin `OUTPUT` | Tiene `@nuevo_id_config OUTPUT` | Se devuelve el id generado |
 | `sp_generar_factura` con `@id_usuario` | No lo recibe | No se envía |
@@ -361,7 +344,7 @@ En todos los casos se respetó la **BD real**: con la firma de la especificació
 
    ```bash
    cd muni-back
-   python tools/verificar_firmas_sp.py ..\BaseDeDatos\Scripts_Ordinarios\02_Creacion_Tablas.sql ..\BaseDeDatos\Scripts_Ordinarios\04_Vistas_Consultas.sql ..\BaseDeDatos\Scripts_Ordinarios\05_Procedimientos_Operacionales.sql ..\BaseDeDatos\Scripts_Ordinarios\08_Estrategia_Respaldos_DBA.sql ..\BaseDeDatos\Database_Backend\13_sp_autenticar_usuario.sql ..\BaseDeDatos\Database_Backend\14_mejoras_catalogos_output.sql ..\BaseDeDatos\Database_Backend\15_portal_ciudadano_dw_monitoreo.sql Services tools\entity_columns.json
+   python tools/verificar_firmas_sp.py ..\BaseDeDatos\Scripts_Ordinarios\02_Creacion_Tablas.sql ..\BaseDeDatos\Scripts_Ordinarios\04_Vistas_Consultas.sql ..\BaseDeDatos\Scripts_Ordinarios\05_Procedimientos_Operacionales.sql ..\BaseDeDatos\Scripts_Ordinarios\08_Estrategia_Respaldos_DBA.sql Services tools\entity_columns.json
    ```
 
    El script compara cada llamada `EXEC` contra la firma T-SQL (nombres, obligatorios, `OUTPUT`, tipos y tamaños `VARCHAR`). También compara cada DTO o vista contra las columnas reales del `SELECT`.

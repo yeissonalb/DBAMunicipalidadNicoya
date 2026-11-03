@@ -1,12 +1,6 @@
-/* ============================================================================
-   PROYECTO: SISTEMA DE GESTIÓN MUNICIPALIDAD DE NICOYA 2026
-   ARCHIVO 02: DDL DE TABLAS, RESTRICCIONES Y RELACIONES (37 TABLAS)
-   ============================================================================ */
-
-USE MunicipalidadNicoya2026;
+﻿USE MunicipalidadNicoya2026;
 GO
 
--- ============================================================================
 -- 1. CATÁLOGOS BASE INDEPENDIENTES 
 -- ============================================================================
 
@@ -22,7 +16,6 @@ CREATE TABLE Departamento
 ) ON FG_Tramites;
 GO
 
--- 1.2 Distrito (FG_Inmuebles)
 CREATE TABLE Distrito
 (
     id_distrito         INT           IDENTITY(1,1) NOT NULL,
@@ -34,7 +27,6 @@ CREATE TABLE Distrito
 ) ON FG_Inmuebles;
 GO
 
--- 1.3 Tipo_Uso_Inmueble (FG_Inmuebles)
 CREATE TABLE Tipo_Uso_Inmueble
 (
     id_tipo_uso_inmueble INT          IDENTITY(1,1) NOT NULL,
@@ -45,7 +37,6 @@ CREATE TABLE Tipo_Uso_Inmueble
 ) ON FG_Inmuebles;
 GO
 
--- 1.4 Estado_Tramite (FG_Tramites)
 CREATE TABLE Estado_Tramite
 (
     id_estado           INT           IDENTITY(1,1) NOT NULL,
@@ -57,7 +48,6 @@ CREATE TABLE Estado_Tramite
 ) ON FG_Tramites;
 GO
 
--- 1.5 Requisito (FG_Tramites)
 CREATE TABLE Requisito
 (
     id_requisito        INT           IDENTITY(1,1) NOT NULL,
@@ -68,7 +58,6 @@ CREATE TABLE Requisito
 ) ON FG_Tramites;
 GO
 
--- 1.6 Tipo_Tributo (FG_Tributos)
 CREATE TABLE Tipo_Tributo
 (
     id_tipo_tributo     INT           IDENTITY(1,1) NOT NULL,
@@ -84,7 +73,6 @@ CREATE TABLE Tipo_Tributo
 ) ON FG_Tributos;
 GO
 
--- 1.7 Estado_Deuda (FG_Tributos)
 CREATE TABLE Estado_Deuda
 (
     id_estado_deuda     INT           IDENTITY(1,1) NOT NULL,
@@ -95,7 +83,6 @@ CREATE TABLE Estado_Deuda
 ) ON FG_Tributos;
 GO
 
--- 1.8 Medio_Pago (FG_Tributos)
 CREATE TABLE Medio_Pago
 (
     id_medio_pago       INT           IDENTITY(1,1) NOT NULL,
@@ -105,7 +92,6 @@ CREATE TABLE Medio_Pago
 ) ON FG_Tributos;
 GO
 
--- 1.9 Rol (FG_Seguridad)
 CREATE TABLE Rol
 (
     id_rol              INT           IDENTITY(1,1) NOT NULL,
@@ -115,7 +101,6 @@ CREATE TABLE Rol
 ) ON FG_Seguridad;
 GO
 
--- 1.10 Permiso (FG_Seguridad)
 CREATE TABLE Permiso
 (
     id_permiso          INT           IDENTITY(1,1) NOT NULL,
@@ -126,7 +111,6 @@ CREATE TABLE Permiso
 ) ON FG_Seguridad;
 GO
 
--- 1.11 Tipo_Accion_Auditoria (FG_Auditoria_DBA)
 CREATE TABLE Tipo_Accion_Auditoria
 (
     id_tipo_accion      INT           IDENTITY(1,1) NOT NULL,
@@ -136,7 +120,6 @@ CREATE TABLE Tipo_Accion_Auditoria
 ) ON FG_Auditoria_DBA;
 GO
 
--- 1.12 Estados_Respaldos (FG_Auditoria_DBA)
 CREATE TABLE Estados_Respaldos
 (
     id_estados_respaldos INT          IDENTITY(1,1) NOT NULL,
@@ -146,7 +129,6 @@ CREATE TABLE Estados_Respaldos
 ) ON FG_Auditoria_DBA;
 GO
 
--- 1.13 Tipo_de_respaldo (FG_Auditoria_DBA)
 CREATE TABLE Tipo_de_respaldo
 (
     id_tipo_de_respaldo INT           IDENTITY(1,1) NOT NULL,
@@ -157,7 +139,6 @@ CREATE TABLE Tipo_de_respaldo
 ) ON FG_Auditoria_DBA;
 GO
 
--- 1.14 Frecuencia (FG_Auditoria_DBA)
 CREATE TABLE Frecuencia
 (
     id_frecuencia       INT           IDENTITY(1,1) NOT NULL,
@@ -170,7 +151,6 @@ CREATE TABLE Frecuencia
 ) ON FG_Auditoria_DBA;
 GO
 
--- ============================================================================
 -- 2. TABLAS BASE CON LLAVE FORÁNEA INICIAL (Usuarios y Contribuyentes)
 -- ============================================================================
 
@@ -193,7 +173,6 @@ CREATE TABLE Usuario
 ) ON FG_Seguridad;
 GO
 
--- 2.2 Contribuyente (FG_Contribuyentes)
 CREATE TABLE Contribuyente
 (
     id_contribuyente    INT           IDENTITY(1,1) NOT NULL,
@@ -206,7 +185,6 @@ CREATE TABLE Contribuyente
 ) ON FG_Contribuyentes;
 GO
 
--- 2.3 Tipo_Tramite (FG_Tramites)
 CREATE TABLE Tipo_Tramite
 (
     id_tipo_tramite     INT           IDENTITY(1,1) NOT NULL,
@@ -221,7 +199,6 @@ CREATE TABLE Tipo_Tramite
 ) ON FG_Tramites;
 GO
 
--- ============================================================================
 -- 3. RELACIONES DE CONTRIBUYENTES
 -- ============================================================================
 
@@ -242,7 +219,6 @@ CREATE TABLE Contribuyente_Fisico
 ) ON FG_Contribuyentes;
 GO
 
--- 3.2 Contribuyente_Juridico (FG_Contribuyentes)
 CREATE TABLE Contribuyente_Juridico
 (
     id_contribuyente_juridico INT    IDENTITY(1,1) NOT NULL,
@@ -258,7 +234,6 @@ CREATE TABLE Contribuyente_Juridico
 ) ON FG_Contribuyentes;
 GO
 
--- 3.3 Representante_Legal (FG_Contribuyentes)
 CREATE TABLE Representante_Legal
 (
     id_representante_legal INT        IDENTITY(1,1) NOT NULL,
@@ -274,7 +249,6 @@ CREATE TABLE Representante_Legal
 ) ON FG_Contribuyentes;
 GO
 
--- ============================================================================
 -- 4. SEGURIDAD RELACIONAL (Tablas intermedias de Roles y Permisos)
 -- ============================================================================
 
@@ -291,7 +265,6 @@ CREATE TABLE Rol_Usuario
 ) ON FG_Seguridad;
 GO
 
--- 4.2 Rol_Permiso (FG_Seguridad)
 CREATE TABLE Rol_Permiso
 (
     id_rol_permiso      INT           IDENTITY(1,1) NOT NULL,
@@ -304,7 +277,6 @@ CREATE TABLE Rol_Permiso
 ) ON FG_Seguridad;
 GO
 
--- ============================================================================
 -- 5. MÓDULO INMUEBLES Y CATASTRO
 -- ============================================================================
 
@@ -330,7 +302,6 @@ CREATE TABLE Bien_Inmueble
 ) ON FG_Inmuebles;
 GO
 
--- 5.2 Derecho_Inmueble (FG_Inmuebles)
 CREATE TABLE Derecho_Inmueble
 (
     id_derecho_inmueble INT           IDENTITY(1,1) NOT NULL,
@@ -345,7 +316,6 @@ CREATE TABLE Derecho_Inmueble
 ) ON FG_Inmuebles;
 GO
 
--- ============================================================================
 -- 6. MÓDULO TRÁMITES, REQUISITOS Y EXPEDIENTES
 -- ============================================================================
 
@@ -362,7 +332,6 @@ CREATE TABLE Tipo_Tramite_Requisito
 ) ON FG_Tramites;
 GO
 
--- 6.2 Tramite (FG_Tramites)
 CREATE TABLE Tramite
 (
     id_tramite          INT           IDENTITY(1,1) NOT NULL,
@@ -383,7 +352,6 @@ CREATE TABLE Tramite
 ) ON FG_Tramites;
 GO
 
--- 6.3 Historial_Tramite (FG_Tramites)
 CREATE TABLE Historial_Tramite
 (
     id_historial        INT           IDENTITY(1,1) NOT NULL,
@@ -391,13 +359,16 @@ CREATE TABLE Historial_Tramite
     observaciones       NVARCHAR(255)  NULL,
     id_tramite          INT           NOT NULL,
     id_estado_tramite   INT           NOT NULL,
+    id_usuario INT NULL,
+    id_estado_anterior INT NULL,
+    CONSTRAINT FK_Historial_Usuario FOREIGN KEY (id_usuario) REFERENCES dbo.Usuario(id_usuario),
+    CONSTRAINT FK_Historial_EstadoAnterior FOREIGN KEY (id_estado_anterior) REFERENCES dbo.Estado_Tramite(id_estado),
     CONSTRAINT PK_Historial_Tramite       PRIMARY KEY (id_historial),
     CONSTRAINT FK_Historial_Tramite       FOREIGN KEY (id_tramite) REFERENCES Tramite(id_tramite) ON DELETE CASCADE,
     CONSTRAINT FK_Historial_Estado        FOREIGN KEY (id_estado_tramite) REFERENCES Estado_Tramite(id_estado)
 ) ON FG_Tramites;
 GO
 
--- 6.4 Archivo_Adjunto (FG_Tramites)
 CREATE TABLE Archivo_Adjunto
 (
     id_archivo_adjunto  INT           IDENTITY(1,1) NOT NULL,
@@ -414,7 +385,6 @@ CREATE TABLE Archivo_Adjunto
 ) ON FG_Tramites;
 GO
 
--- ============================================================================
 -- 7. MÓDULO TRIBUTOS, DEUDAS Y FACTURACIÓN
 -- ============================================================================
 
@@ -440,7 +410,6 @@ CREATE TABLE Deudas_Municipales
 ) ON FG_Tributos;
 GO
 
--- 7.2 Factura (FG_Tributos)
 CREATE TABLE Factura
 (
     id_factura          INT           IDENTITY(1,1) NOT NULL,
@@ -458,12 +427,11 @@ CREATE TABLE Factura
     CONSTRAINT CK_Factura_descuentos      CHECK (descuentos >= 0),
     CONSTRAINT CK_Factura_total           CHECK (total_a_pagar >= 0),
     CONSTRAINT CK_Factura_saldo           CHECK (saldo_pendiente >= 0),
-    CONSTRAINT CK_Factura_estado          CHECK (estado_factura IN ('Pendiente', 'Cancelada', 'Anulada')),
+    CONSTRAINT CK_Factura_estado          CHECK (estado_factura IN ('Pendiente','Cancelada','Anulada','EMITIDA','PAGADA_PARCIAL','PAGADA')),
     CONSTRAINT FK_Factura_Deuda           FOREIGN KEY (id_deuda_municipal) REFERENCES Deudas_Municipales(id_deuda_municipal)
 ) ON FG_Tributos;
 GO
 
--- 7.3 Pago_Municipal (FG_Tributos)
 CREATE TABLE Pago_Municipal
 (
     id_pago_municipal   INT           IDENTITY(1,1) NOT NULL,
@@ -480,7 +448,6 @@ CREATE TABLE Pago_Municipal
 ) ON FG_Tributos;
 GO
 
--- 7.4 Detalle_Factura (FG_Tributos)
 CREATE TABLE Detalle_Factura
 (
     id_detalle_factura  INT           IDENTITY(1,1) NOT NULL,
@@ -498,7 +465,6 @@ CREATE TABLE Detalle_Factura
 ) ON FG_Tributos;
 GO
 
--- ============================================================================
 -- 8. MÓDULO AUDITORÍA, RESPALDOS Y DBA
 -- ============================================================================
 
@@ -520,7 +486,6 @@ CREATE TABLE Logs_Acciones_Auditoria
 ) ON FG_Auditoria_DBA;
 GO
 
--- 8.2 Logs_eventos_Auditoria (FG_Auditoria_DBA)
 CREATE TABLE Logs_eventos_Auditoria
 (
     id_log_sistema      INT           IDENTITY(1,1) NOT NULL,
@@ -534,7 +499,6 @@ CREATE TABLE Logs_eventos_Auditoria
 ) ON FG_Auditoria_DBA;
 GO
 
--- 8.3 Respaldos_Config (FG_Auditoria_DBA)
 CREATE TABLE Respaldos_Config
 (
     id_respaldos_config INT           IDENTITY(1,1) NOT NULL,
@@ -556,7 +520,6 @@ CREATE TABLE Respaldos_Config
 ) ON FG_Auditoria_DBA;
 GO
 
--- 8.4 Respaldos (FG_Auditoria_DBA)
 CREATE TABLE Respaldos
 (
     id_respaldos        INT           IDENTITY(1,1) NOT NULL,
@@ -573,7 +536,6 @@ CREATE TABLE Respaldos
 ) ON FG_Auditoria_DBA;
 GO
 
--- 8.5 Restauracion (FG_Auditoria_DBA)
 CREATE TABLE Restauracion
 (
     id_restauracion     INT           IDENTITY(1,1) NOT NULL,
@@ -589,5 +551,122 @@ CREATE TABLE Restauracion
 ) ON FG_Auditoria_DBA;
 GO
 
-PRINT 'Creación de 37 tablas, restricciones y llaves foráneas completada con éxito.';
+-- A. PORTAL CIUDADANO
+-- ============================================================================
+
+IF OBJECT_ID('dbo.Cuenta_Ciudadana', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Cuenta_Ciudadana
+    (
+        id_cuenta_ciudadana INT            IDENTITY(1,1) NOT NULL,
+        id_contribuyente    INT            NOT NULL,
+        password_hash       NVARCHAR(255)  NOT NULL,
+        activa              BIT            NOT NULL CONSTRAINT DF_Cuenta_Ciudadana_activa DEFAULT (1),
+        fecha_activacion    DATETIME       NOT NULL CONSTRAINT DF_Cuenta_Ciudadana_fecha DEFAULT (GETDATE()),
+        ultimo_acceso       DATETIME       NULL,
+        CONSTRAINT PK_Cuenta_Ciudadana PRIMARY KEY (id_cuenta_ciudadana),
+        CONSTRAINT UQ_Cuenta_Ciudadana_contribuyente UNIQUE (id_contribuyente),
+        CONSTRAINT FK_Cuenta_Ciudadana_Contribuyente FOREIGN KEY (id_contribuyente) REFERENCES dbo.Contribuyente(id_contribuyente)
+    ) ON FG_Seguridad;
+    PRINT '-> Tabla dbo.Cuenta_Ciudadana creada.';
+END
+GO
+
+-- D. DATA WAREHOUSE
+-- ============================================================================
+
+IF OBJECT_ID('dbo.Control_Cargas_ETL', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Control_Cargas_ETL
+    (
+        id_carga          INT             IDENTITY(1,1) NOT NULL,
+        fecha_inicio      DATETIME        NOT NULL CONSTRAINT DF_Control_ETL_inicio DEFAULT (GETDATE()),
+        fecha_fin         DATETIME        NULL,
+        estado            NVARCHAR(20)    NOT NULL,
+        detalle           NVARCHAR(2000)  NULL,
+        id_usuario        INT             NULL,
+        CONSTRAINT PK_Control_Cargas_ETL PRIMARY KEY (id_carga),
+        CONSTRAINT CK_Control_ETL_estado CHECK (estado IN ('En Ejecución', 'Exitoso', 'Con Diferencias', 'Fallido')),
+        CONSTRAINT FK_Control_ETL_Usuario FOREIGN KEY (id_usuario) REFERENCES dbo.Usuario(id_usuario)
+    ) ON FG_Auditoria_DBA;
+    PRINT '-> Tabla dbo.Control_Cargas_ETL creada.';
+END
+GO
+
+IF OBJECT_ID('dbo.Revision_Archivo_Requisito', 'U') IS NULL
+BEGIN
+ CREATE TABLE dbo.Revision_Archivo_Requisito (
+  id_revision INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+  id_archivo_adjunto INT NOT NULL REFERENCES dbo.Archivo_Adjunto(id_archivo_adjunto),
+  estado VARCHAR(20) NOT NULL CHECK (estado IN ('VALIDADO','SUBSANAR')),
+  observacion VARCHAR(255) NOT NULL,
+  fecha_revision DATETIME NOT NULL DEFAULT GETDATE(),
+  id_usuario INT NOT NULL REFERENCES dbo.Usuario(id_usuario)
+ );
+ CREATE INDEX IX_RevisionArchivo_Ultima ON dbo.Revision_Archivo_Requisito(id_archivo_adjunto, id_revision DESC);
+END;
+GO
+
+IF OBJECT_ID('dbo.Configuracion_Inmueble_Tramite','U') IS NULL
+ CREATE TABLE dbo.Configuracion_Inmueble_Tramite(
+  id_tipo_tramite INT NOT NULL PRIMARY KEY REFERENCES dbo.Tipo_Tramite(id_tipo_tramite),
+  requiere_inmueble BIT NOT NULL, motivo NVARCHAR(255) NOT NULL,
+  id_usuario INT NOT NULL REFERENCES dbo.Usuario(id_usuario), fecha_configuracion DATETIME NOT NULL DEFAULT GETDATE()
+ );
+GO
+
+IF OBJECT_ID('dbo.Historial_Configuracion_Inmueble','U') IS NULL
+ CREATE TABLE dbo.Historial_Configuracion_Inmueble(
+  id_historial_configuracion INT IDENTITY PRIMARY KEY,
+  id_tipo_tramite INT NOT NULL REFERENCES dbo.Tipo_Tramite(id_tipo_tramite),
+  requiere_inmueble BIT NOT NULL,motivo NVARCHAR(255) NOT NULL,
+  id_usuario INT NOT NULL REFERENCES dbo.Usuario(id_usuario),fecha DATETIME NOT NULL DEFAULT GETDATE()
+ );
+GO
+
+-- Estructura recuperada de los metadatos compartidos en SSMS (03/11/2026).
+CREATE TABLE dbo.Token_Activacion_Ciudadana
+(
+ id_token_activacion INT IDENTITY(1,1) NOT NULL,
+ id_contribuyente INT NOT NULL,
+ codigo_activacion VARCHAR(64) NOT NULL,
+ fecha_generacion DATETIME NOT NULL DEFAULT(GETDATE()),
+ fecha_expiracion DATETIME NOT NULL,
+ utilizado BIT NOT NULL DEFAULT(0),
+ fecha_utilizacion DATETIME NULL,
+ id_usuario_generador INT NOT NULL,
+ id_representante_legal INT NULL,
+ observacion_solicitud NVARCHAR(255) NULL,
+ CONSTRAINT PK_Token_Activacion PRIMARY KEY(id_token_activacion),
+ CONSTRAINT UQ_TokenActivacion_codigo UNIQUE(codigo_activacion),
+ CONSTRAINT FK_TokenActivacion_Contribuyente FOREIGN KEY(id_contribuyente) REFERENCES dbo.Contribuyente(id_contribuyente),
+ CONSTRAINT FK_TokenActivacion_Usuario FOREIGN KEY(id_usuario_generador) REFERENCES dbo.Usuario(id_usuario),
+ CONSTRAINT FK_TokenActivacion_Representante FOREIGN KEY(id_representante_legal) REFERENCES dbo.Representante_Legal(id_representante_legal)
+) ON FG_Seguridad;
+GO
+CREATE TABLE dbo.Reporte_Transferencia_Ciudadana
+(
+ id_reporte_transferencia INT IDENTITY(1,1) NOT NULL,
+ id_contribuyente INT NOT NULL,
+ id_factura INT NOT NULL,
+ comprobante VARCHAR(50) NOT NULL,
+ monto DECIMAL(18,2) NOT NULL,
+ telefono_origen VARCHAR(20) NULL,
+ observaciones NVARCHAR(255) NULL,
+ fecha_reporte DATETIME NOT NULL DEFAULT(GETDATE()),
+ estado VARCHAR(30) NOT NULL DEFAULT('PENDIENTE_VERIFICACION'),
+ id_usuario_verificador INT NULL,
+ fecha_verificacion DATETIME NULL,
+ id_pago_municipal INT NULL,
+ CONSTRAINT PK_Reporte_Transferencia PRIMARY KEY(id_reporte_transferencia),
+ CONSTRAINT CK_RepTrans_Estado CHECK(estado IN ('PENDIENTE_VERIFICACION','APLICADO','RECHAZADO')),
+ CONSTRAINT FK_RepTrans_Contribuyente FOREIGN KEY(id_contribuyente) REFERENCES dbo.Contribuyente(id_contribuyente),
+ CONSTRAINT FK_RepTrans_Factura FOREIGN KEY(id_factura) REFERENCES dbo.Factura(id_factura),
+ CONSTRAINT FK_RepTrans_Verificador FOREIGN KEY(id_usuario_verificador) REFERENCES dbo.Usuario(id_usuario),
+ CONSTRAINT FK_RepTrans_Pago FOREIGN KEY(id_pago_municipal) REFERENCES dbo.Pago_Municipal(id_pago_municipal)
+) ON FG_Tributos;
+GO
+CREATE SEQUENCE dbo.Seq_Expediente AS BIGINT
+ START WITH 1000 INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807
+ NO CYCLE CACHE;
 GO

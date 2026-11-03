@@ -13,7 +13,7 @@ namespace Entities.SpResults
         public int? VolumenTotalGestionado { get; set; }
 
         [Column("promedio_dias_resolucion_area")]
-        public int? PromedioDiasResolucionArea { get; set; }
+        public decimal? PromedioDiasResolucionArea { get; set; }
 
         [Column("tramites_aprobados")]
         public int? TramitesAprobados { get; set; }

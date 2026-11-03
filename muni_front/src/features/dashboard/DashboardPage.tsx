@@ -174,7 +174,7 @@ export function DashboardPage() {
       allowed: canPerformCrud(roles, 'AuditoriaForense', 'CONSULTAR'),
     },
     {
-      title: 'Consola Técnica DBA (SQL Server 2022)',
+      title: 'Consola Técnica DBA (SQL Server)',
       subtitle: 'Políticas de Respaldo, SHA-256 y Recuperación',
       description:
         'Estado del motor SQL, políticas FULL/DIFF/LOG, cifrado AES-256 y pruebas con RESTORE VERIFYONLY.',

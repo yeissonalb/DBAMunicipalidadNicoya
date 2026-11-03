@@ -1,4 +1,4 @@
-/* ============================================================================
+﻿/* ============================================================================
    PROYECTO: SISTEMA DE GESTIÓN MUNICIPALIDAD DE NICOYA 2026
    CURSO: ADMINISTRACIÓN DE BASES DE DATOS (BD-II)
    UNIVERSIDAD NACIONAL DE COSTA RICA - SEDE REGIONAL CHOROTEGA, CAMPUS NICOYA
@@ -22,6 +22,7 @@ BEGIN
     EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [dbo].[IndexOptimize] AS';
 END
 GO
+
 ALTER PROCEDURE [dbo].[IndexOptimize]
     @Databases nvarchar(max) = 'MunicipalidadNicoya2026,MunicipalidadNicoyaDataMart2026',
     @FragmentationLow_Threshold float = 5.0,
@@ -117,14 +118,18 @@ BEGIN
 END;
 GO
 
--- PROGRAMACIÓN DEL JOB DE OPTIMIZACIÓN DE ÍNDICES EN SQL SERVER AGENT
 USE msdb;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 IF EXISTS (SELECT 1 FROM msdb.dbo.sysjobs WHERE name = N'IndexOptimize - Nicoya2026')
     EXEC sp_delete_job @job_name = N'IndexOptimize - Nicoya2026';
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 EXEC sp_add_job 
     @job_name = N'IndexOptimize - Nicoya2026', 
     @enabled = 1, 
@@ -146,7 +151,11 @@ EXEC sp_add_jobschedule
     @active_start_time = 010000; -- 01:00 AM
 
 EXEC sp_add_jobserver @job_name = N'IndexOptimize - Nicoya2026', @server_name = N'(local)';
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 PRINT '-> PlanDeMantenimiento: Optimización de índices y estadísticas configurada exitosamente.';
+END;
 GO

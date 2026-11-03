@@ -1,15 +1,10 @@
-/* ============================================================================
-   PROYECTO: SISTEMA DE GESTIÓN MUNICIPALIDAD DE NICOYA 2026
-   ARCHIVO 04: VISTAS DE CONSULTA Y GESTIÓN MUNICIPAL (VISC-01 A VISC-12)
-   ============================================================================ */
-
-USE MunicipalidadNicoya2026;
+﻿-- Instalacion consolidada. Una definicion final por objeto; no ejecutar migraciones historicas.
 GO
 
--- ============================================================================
--- VISC-01: vw_padron_contribuyentes
--- Consolidación del padrón general con datos físicos y jurídicos unificados
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\04_Vistas_Consultas.sql
 CREATE OR ALTER VIEW dbo.vw_padron_contribuyentes
 AS
 SELECT 
@@ -39,10 +34,10 @@ LEFT JOIN dbo.Contribuyente_Fisico cf ON c.id_contribuyente = cf.id_contribuyent
 LEFT JOIN dbo.Contribuyente_Juridico cj ON c.id_contribuyente = cj.id_contribuyente;
 GO
 
--- ============================================================================
--- VISC-02: vw_inmuebles_propietarios
--- Relación de bienes inmuebles catastrados con sus titulares y cuotas
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\04_Vistas_Consultas.sql
 CREATE OR ALTER VIEW dbo.vw_inmuebles_propietarios
 AS
 SELECT 
@@ -71,10 +66,10 @@ INNER JOIN dbo.Contribuyente c ON di.id_contribuyente = c.id_contribuyente
 INNER JOIN dbo.vw_padron_contribuyentes p ON c.id_contribuyente = p.id_contribuyente;
 GO
 
--- ============================================================================
--- VISC-03: vw_tramites_seguimiento
--- Seguimiento ejecutivo de expedientes con estado vigente del historial
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\04_Vistas_Consultas.sql
 CREATE OR ALTER VIEW dbo.vw_tramites_seguimiento
 AS
 SELECT 
@@ -104,10 +99,10 @@ INNER JOIN dbo.vw_padron_contribuyentes p ON c.id_contribuyente = p.id_contribuy
 LEFT JOIN dbo.Bien_Inmueble bi ON t.id_inmueble = bi.id_inmueble;
 GO
 
--- ============================================================================
--- VISC-04: vw_historial_tramites_detallado
--- Trazabilidad cronológica de eventos y revisiones por expediente
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Database_Backend\16_alineacion_flujo_municipal_y_seguridad.sql
 CREATE OR ALTER VIEW dbo.vw_historial_tramites_detallado
 AS
 SELECT 
@@ -118,17 +113,23 @@ SELECT
     ht.fecha_cambio,
     et.codigo AS codigo_estado,
     et.nombre_estado,
-    ht.observaciones
+    et_ant.codigo AS codigo_estado_anterior,
+    et_ant.nombre_estado AS nombre_estado_anterior,
+    ht.observaciones,
+    u.user_name AS usuario_actor,
+    COALESCE(NULLIF(LTRIM(RTRIM(CONCAT(u.nombre_usuario, ' ', u.apellido1_usuario, ' ', u.apellido2_usuario))), ''), u.user_name) AS funcionario_actor
 FROM dbo.Historial_Tramite ht
 INNER JOIN dbo.Tramite t ON ht.id_tramite = t.id_tramite
 INNER JOIN dbo.Tipo_Tramite tt ON t.id_tipo_tramite = tt.id_tipo_tramite
-INNER JOIN dbo.Estado_Tramite et ON ht.id_estado_tramite = et.id_estado;
+INNER JOIN dbo.Estado_Tramite et ON ht.id_estado_tramite = et.id_estado
+LEFT JOIN dbo.Estado_Tramite et_ant ON ht.id_estado_anterior = et_ant.id_estado
+LEFT JOIN dbo.Usuario u ON ht.id_usuario = u.id_usuario;
 GO
 
--- ============================================================================
--- VISC-05: vw_estado_cuenta_contribuyente
--- Estado de cuenta integral: inmuebles, deudas, facturación y pagos
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\04_Vistas_Consultas.sql
 CREATE OR ALTER VIEW dbo.vw_estado_cuenta_contribuyente
 AS
 SELECT 
@@ -161,10 +162,10 @@ INNER JOIN dbo.Estado_Deuda ed ON dm.id_estado_deuda = ed.id_estado_deuda
 LEFT JOIN dbo.Factura f ON dm.id_deuda_municipal = f.id_deuda_municipal;
 GO
 
--- ============================================================================
--- VISC-06: vw_facturas_pendientes
--- Facturas con saldos pendientes por recaudar
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\04_Vistas_Consultas.sql
 CREATE OR ALTER VIEW dbo.vw_facturas_pendientes
 AS
 SELECT 
@@ -190,10 +191,10 @@ INNER JOIN dbo.Distrito d ON bi.id_distrito = d.id_distrito
 WHERE f.saldo_pendiente > 0 AND f.estado_factura = 'Pendiente';
 GO
 
--- ============================================================================
--- VISC-07: vw_morosidad_contribuyentes
--- Contribuyentes con obligaciones vencidas e importes de mora
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\04_Vistas_Consultas.sql
 CREATE OR ALTER VIEW dbo.vw_morosidad_contribuyentes
 AS
 SELECT 
@@ -224,10 +225,10 @@ INNER JOIN dbo.Estado_Deuda ed ON dm.id_estado_deuda = ed.id_estado_deuda
 WHERE ed.codigo_estado_deuda = 'VENC' OR (ed.codigo_estado_deuda = 'PEND' AND dm.fecha_de_vencimiento < GETDATE());
 GO
 
--- ============================================================================
--- VISC-08: vw_recaudacion_por_tributo
--- Recaudación efectiva desglosada por concepto tributario
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\04_Vistas_Consultas.sql
 CREATE OR ALTER VIEW dbo.vw_recaudacion_por_tributo
 AS
 SELECT 
@@ -247,10 +248,10 @@ INNER JOIN dbo.Tipo_Tributo tt ON dm.id_tipo_tributo = tt.id_tipo_tributo
 GROUP BY tt.id_tipo_tributo, tt.codigo_tributo, tt.nombre_tributo, tt.periodicidad;
 GO
 
--- ============================================================================
--- VISC-09: vw_recaudacion_por_distrito
--- Ingresos municipales clasificados geográficamente por distrito cantonal
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\04_Vistas_Consultas.sql
 CREATE OR ALTER VIEW dbo.vw_recaudacion_por_distrito
 AS
 SELECT 
@@ -270,10 +271,10 @@ INNER JOIN dbo.Distrito d ON bi.id_distrito = d.id_distrito
 GROUP BY d.id_distrito, d.codigo_distrital, d.nombre_distrito;
 GO
 
--- ============================================================================
--- VISC-10: vw_auditoria_detallada
--- Pistas de auditoría enriquecidas con datos del usuario e IP
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\04_Vistas_Consultas.sql
 CREATE OR ALTER VIEW dbo.vw_auditoria_detallada
 AS
 SELECT 
@@ -294,10 +295,10 @@ LEFT JOIN dbo.Usuario u ON la.id_usuario = u.id_usuario
 LEFT JOIN dbo.Departamento dep ON u.id_departamento = dep.id_departamento;
 GO
 
--- ============================================================================
--- VISC-11: vw_usuarios_roles_permisos
--- Matriz de seguridad: funcionarios, perfiles y privilegios asignados
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\04_Vistas_Consultas.sql
 CREATE OR ALTER VIEW dbo.vw_usuarios_roles_permisos
 AS
 SELECT 
@@ -320,10 +321,10 @@ INNER JOIN dbo.Rol_Permiso rp ON r.id_rol = rp.id_rol
 INNER JOIN dbo.Permiso p ON rp.id_permiso = p.id_permiso;
 GO
 
--- ============================================================================
--- VISC-12: vw_estado_respaldos
--- Monitor operacional para DBA del subsistema de backups y recuperaciones
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\04_Vistas_Consultas.sql
 CREATE OR ALTER VIEW dbo.vw_estado_respaldos
 AS
 SELECT 
@@ -346,5 +347,109 @@ INNER JOIN dbo.Frecuencia f ON rc.id_frecuencia = f.id_frecuencia
 INNER JOIN dbo.Estados_Respaldos er ON r.id_estados_respaldos = er.id_estados_respaldos;
 GO
 
-PRINT '-> 12 Vistas de consulta creadas exitosamente.';
+USE [MunicipalidadNicoyaDataMart2026];
+GO
+
+-- Fuente de la version final: DataWareHouse\DWH_Vistas_Analiticas.sql
+CREATE OR ALTER VIEW dbo.vw_dw_recaudacion_periodo
+AS
+SELECT 
+    dt.anio,
+    dt.trimestre,
+    dt.mes,
+    dt.nombre_mes,
+    SUM(fr.monto_recaudado) AS total_recaudado_principal,
+    SUM(fr.monto_intereses) AS total_recaudado_intereses,
+    SUM(fr.monto_descuento) AS total_descuentos_aplicados,
+    SUM(fr.monto_recaudado + fr.monto_intereses) AS total_recaudado_general,
+    COUNT(fr.id_recaudacion) AS transacciones_registradas
+FROM dbo.FACT_RECAUDACION fr
+INNER JOIN dbo.DIM_TIEMPO dt ON fr.id_tiempo = dt.id_tiempo
+GROUP BY dt.anio, dt.trimestre, dt.mes, dt.nombre_mes;
+GO
+
+USE [MunicipalidadNicoyaDataMart2026];
+GO
+
+-- Fuente de la version final: DataWareHouse\DWH_Vistas_Analiticas.sql
+CREATE OR ALTER VIEW dbo.vw_dw_recaudacion_tributo
+AS
+SELECT 
+    dtr.codigo_tributo,
+    dtr.nombre_tributo,
+    dtr.categoria_tributo,
+    dtr.periodicidad,
+    SUM(fr.monto_recaudado) AS total_principal,
+    SUM(fr.monto_intereses) AS total_intereses,
+    SUM(fr.monto_recaudado + fr.monto_intereses) AS total_recaudado
+FROM dbo.FACT_RECAUDACION fr
+INNER JOIN dbo.DIM_TRIBUTO dtr ON fr.id_tributo_dw = dtr.id_tributo_dw
+GROUP BY dtr.codigo_tributo, dtr.nombre_tributo, dtr.categoria_tributo, dtr.periodicidad;
+GO
+
+USE [MunicipalidadNicoyaDataMart2026];
+GO
+
+-- Fuente de la version final: DataWareHouse\DWH_Vistas_Analiticas.sql
+CREATE OR ALTER VIEW dbo.vw_dw_recaudacion_ubicacion
+AS
+SELECT 
+    du.distrito,
+    du.zona_rural_urbana,
+    SUM(fr.monto_recaudado) AS total_principal,
+    SUM(fr.monto_intereses) AS total_intereses,
+    SUM(fr.monto_recaudado + fr.monto_intereses) AS total_recaudado,
+    COUNT(fr.id_recaudacion) AS total_pagos_distrito
+FROM dbo.FACT_RECAUDACION fr
+INNER JOIN dbo.DIM_UBICACION du ON fr.id_ubicacion_dw = du.id_ubicacion_dw
+GROUP BY du.distrito, du.zona_rural_urbana;
+GO
+
+USE [MunicipalidadNicoyaDataMart2026];
+GO
+
+-- Fuente de la version final: DataWareHouse\DWH_Vistas_Analiticas.sql
+CREATE OR ALTER VIEW dbo.vw_dw_morosidad
+AS
+SELECT 
+    dt.anio,
+    dt.mes,
+    dt.nombre_mes,
+    du.distrito,
+    du.zona_rural_urbana,
+    dtr.nombre_tributo,
+    fm.saldo_vencido,
+    fm.cantidad_contribuyentes_morosos
+FROM dbo.FACT_MOROSIDAD fm
+INNER JOIN dbo.DIM_TIEMPO dt ON fm.id_tiempo = dt.id_tiempo
+INNER JOIN dbo.DIM_UBICACION du ON fm.id_ubicacion_dw = du.id_ubicacion_dw
+INNER JOIN dbo.DIM_TRIBUTO dtr ON fm.id_tributo_dw = dtr.id_tributo_dw;
+GO
+
+USE [MunicipalidadNicoyaDataMart2026];
+GO
+
+-- Fuente de la version final: Database_Backend\25_corregir_etl_sin_cambiar_modelo.sql
+CREATE OR ALTER VIEW dbo.vw_dw_eficiencia_tramites AS
+SELECT tr.nombre_tramite,tr.plazo_dias_resolucion AS plazo_compromiso_sla,d.nombre_departamento,
+ f.estado_final,CAST(SUM(CAST(f.dias_resolucion AS DECIMAL(18,4))*f.cantidad_tramites)/NULLIF(SUM(f.cantidad_tramites),0) AS DECIMAL(18,2)) dias_promedio_consumidos,
+ SUM(f.cantidad_tramites) cantidad_tramites,
+ CASE WHEN MAX(CASE WHEN f.dias_resolucion>tr.plazo_dias_resolucion THEN 1 ELSE 0 END)=1
+ THEN 'Incluye fuera de plazo' ELSE 'Dentro del Plazo SLA' END estado_cumplimiento
+FROM dbo.FACT_EFICIENCIA_TRAMITES f JOIN dbo.DIM_TRAMITE tr ON tr.id_tramite_dw=f.id_tramite_dw
+JOIN dbo.DIM_DEPARTAMENTO d ON d.id_departamento_dw=f.id_departamento_dw
+GROUP BY tr.nombre_tramite,tr.plazo_dias_resolucion,d.nombre_departamento,f.estado_final;
+GO
+
+USE [MunicipalidadNicoyaDataMart2026];
+GO
+
+-- Fuente de la version final: Database_Backend\25_corregir_etl_sin_cambiar_modelo.sql
+CREATE OR ALTER VIEW dbo.vw_dw_indicadores_departamento AS
+SELECT d.nombre_departamento,SUM(f.cantidad_tramites) volumen_total_gestionado,
+ CAST(SUM(CAST(f.dias_resolucion AS DECIMAL(18,4))*f.cantidad_tramites)/NULLIF(SUM(f.cantidad_tramites),0) AS DECIMAL(18,2)) promedio_dias_resolucion_area,
+ SUM(CASE WHEN f.estado_final='Aprobado' THEN f.cantidad_tramites ELSE 0 END) tramites_aprobados,
+ SUM(CASE WHEN f.estado_final='Rechazado' THEN f.cantidad_tramites ELSE 0 END) tramites_rechazados
+FROM dbo.FACT_EFICIENCIA_TRAMITES f JOIN dbo.DIM_DEPARTAMENTO d ON d.id_departamento_dw=f.id_departamento_dw
+GROUP BY d.nombre_departamento;
 GO

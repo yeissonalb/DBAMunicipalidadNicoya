@@ -1,13 +1,10 @@
-/* ============================================================================
-   PROYECTO: SISTEMA DE GESTIÓN MUNICIPALIDAD DE NICOYA 2026
-   ARCHIVO 03: FUNCIONES ESCALARES Y DE NEGOCIO (FUN-01 A FUN-18)
-   ============================================================================ */
-USE MunicipalidadNicoya2026;
+﻿-- Instalacion consolidada. Una definicion final por objeto; no ejecutar migraciones historicas.
 GO
--- ============================================================================
--- FUN-01: fn_calcular_total_deuda
--- Calcula el importe total de una obligación (Principal + Intereses + Multas)
--- ============================================================================
+
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_calcular_total_deuda ( @id_deuda_municipal INT )
 RETURNS FLOAT
 AS
@@ -22,10 +19,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-02: fn_calcular_dias_mora
--- Calcula los días de mora transcurridos a partir de la fecha de vencimiento
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_calcular_dias_mora ( @id_deuda_municipal INT )
 RETURNS INT
 AS
@@ -46,10 +43,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-03: fn_total_aplicado_factura
--- Suma los montos amortizados a principal, interés y recargo sobre una factura
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_total_aplicado_factura ( @id_factura INT )
 RETURNS FLOAT
 AS
@@ -64,10 +61,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-04: fn_saldo_calculado_factura
--- Calcula el saldo pendiente real de una factura (Total a pagar - Aplicaciones)
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_saldo_calculado_factura ( @id_factura INT )
 RETURNS FLOAT
 AS
@@ -90,10 +87,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-05: fn_total_deuda_contribuyente
--- Calcula el monto total pendiente de un contribuyente ponderado por su copropiedad
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_total_deuda_contribuyente ( @id_contribuyente INT )
 RETURNS FLOAT
 AS
@@ -114,10 +111,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-06: fn_total_pagado_contribuyente_periodo
--- Monto monetario total cancelado por un contribuyente en un rango de fechas
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_total_pagado_contribuyente_periodo ( @id_contribuyente INT, @fecha_inicio DATETIME, @fecha_fin DATETIME )
 RETURNS FLOAT
 AS
@@ -134,10 +131,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-07: fn_dias_transcurridos_tramite
--- Días transcurridos desde radicación hasta resolución final o a la fecha actual
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_dias_transcurridos_tramite ( @id_tramite INT )
 RETURNS INT
 AS
@@ -159,10 +156,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-08: fn_dias_restantes_tramite
--- Días restantes respecto al plazo legal máximo (SLA) del tipo de trámite
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_dias_restantes_tramite ( @id_tramite INT )
 RETURNS INT
 AS
@@ -183,10 +180,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-09: fn_tramite_fuera_plazo
--- Retorna 1 si el trámite superó el plazo máximo legal (SLA), 0 en caso contrario
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_tramite_fuera_plazo (  @id_tramite INT )
 RETURNS BIT
 AS
@@ -203,10 +200,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-10: fn_porcentaje_cumplimiento_plazo
--- Porcentaje de trámites resueltos en tiempo en un rango de fechas
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_porcentaje_cumplimiento_plazo ( @fecha_inicio DATETIME, @fecha_fin DATETIME )
 RETURNS FLOAT
 AS
@@ -231,10 +228,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-11: fn_ultimo_estado_tramite
--- Obtiene el nombre del estado vigente más reciente a partir del historial
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_ultimo_estado_tramite ( @id_tramite INT )
 RETURNS VARCHAR(50)
 AS
@@ -251,10 +248,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-12: fn_valor_fiscal_proporcional
--- Valor fiscal tasado atribuible al contribuyente según su cuota de copropiedad
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_valor_fiscal_proporcional ( @id_inmueble INT, @id_contribuyente INT )
 RETURNS FLOAT
 AS
@@ -271,10 +268,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-13: fn_tiene_permiso
--- Determina si un usuario tiene autorización para un módulo y acción específicos
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_tiene_permiso ( @id_usuario INT,  @modulo VARCHAR(50), @accion VARCHAR(20) ) 
 RETURNS BIT
 AS
@@ -298,10 +295,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-14: fn_es_contribuyente_fisico
--- Determina si el contribuyente corresponde a una persona física (1) o jurídica (0)
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_es_contribuyente_fisico ( @id_contribuyente INT )
 RETURNS BIT
 AS
@@ -315,10 +312,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-15: fn_representante_legal_vigente
--- Determina si la personería del representante legal se encuentra vigente
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_representante_legal_vigente ( @id_representante_legal INT )
 RETURNS BIT
 AS
@@ -337,10 +334,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-16: fn_horas_desde_ultimo_respaldo
--- Horas transcurridas desde el último respaldo finalizado exitosamente
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_horas_desde_ultimo_respaldo()
 RETURNS INT
 AS
@@ -361,10 +358,10 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- FUN-17: fn_proximo_respaldo_programado
--- Estima la próxima fecha y hora de ejecución de una directiva de respaldo
--- ============================================================================
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_proximo_respaldo_programado
 (
     @id_respaldos_config INT
@@ -395,10 +392,11 @@ BEGIN
     RETURN @proximo;
 END;
 GO
--- ============================================================================
--- FUN-18: fn_porcentaje_respaldos_exitosos
--- Porcentaje de respaldos completados sin error dentro de una ventana de días
--- ============================================================================
+
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Scripts_Ordinarios\03_Funciones_Negocio.sql
 CREATE OR ALTER FUNCTION dbo.fn_porcentaje_respaldos_exitosos
 (
     @dias INT
@@ -424,5 +422,101 @@ BEGIN
 END;
 GO
 
-PRINT '18 Funciones escalares y de negocio compiladas exitosamente.';
+USE [MunicipalidadNicoyaDataMart2026];
+GO
+
+-- Fuente de la version final: DataWareHouse\DWH_Structure.sql
+CREATE OR ALTER FUNCTION dbo.fn_dw_total_recaudacion_periodo
+(
+    @fecha_inicio DATE,
+    @fecha_fin DATE
+)
+RETURNS DECIMAL(12,2)
+AS
+BEGIN
+    DECLARE @total DECIMAL(12,2) = 0;
+    SELECT @total = SUM(fr.monto_recaudado + fr.monto_intereses)
+    FROM dbo.FACT_RECAUDACION fr
+    INNER JOIN dbo.DIM_TIEMPO dt ON fr.id_tiempo = dt.id_tiempo
+    WHERE dt.fecha >= @fecha_inicio AND dt.fecha <= @fecha_fin;
+    RETURN ISNULL(@total, 0);
+END;
+GO
+
+USE [MunicipalidadNicoyaDataMart2026];
+GO
+
+-- Fuente de la version final: DataWareHouse\DWH_Structure.sql
+CREATE OR ALTER FUNCTION dbo.fn_dw_total_recaudacion_distrito
+(
+    @distrito VARCHAR(50)
+)
+RETURNS DECIMAL(12,2)
+AS
+BEGIN
+    DECLARE @total DECIMAL(12,2) = 0;
+    SELECT @total = SUM(fr.monto_recaudado + fr.monto_intereses)
+    FROM dbo.FACT_RECAUDACION fr
+    INNER JOIN dbo.DIM_UBICACION du ON fr.id_ubicacion_dw = du.id_ubicacion_dw
+    WHERE du.distrito = @distrito;
+    RETURN ISNULL(@total, 0);
+END;
+GO
+
+USE [MunicipalidadNicoyaDataMart2026];
+GO
+
+-- Fuente de la version final: Database_Backend\25_corregir_etl_sin_cambiar_modelo.sql
+CREATE OR ALTER FUNCTION dbo.fn_dw_porcentaje_morosidad(@id_tiempo INT)
+RETURNS FLOAT AS BEGIN
+ DECLARE @grupos INT,@personas INT,@poblacion INT;
+ SELECT @grupos=COUNT(*),@personas=COALESCE(MAX(cantidad_contribuyentes_morosos),0)
+ FROM dbo.FACT_MOROSIDAD WHERE id_tiempo=@id_tiempo;
+ SELECT @poblacion=COUNT(*) FROM dbo.DIM_CONTRIBUYENTE;
+ -- El esquema agregado no permite conocer la intersección de personas entre grupos.
+ -- NULL significa no calculable; no inventar un porcentaje sumando conteos.
+ IF @grupos>1 OR @poblacion=0 OR @personas>@poblacion RETURN NULL;
+ IF @grupos=0 RETURN NULL;
+ RETURN @personas*100.0/@poblacion;
+END;
+GO
+
+USE [MunicipalidadNicoyaDataMart2026];
+GO
+
+-- Fuente de la version final: Database_Backend\25_corregir_etl_sin_cambiar_modelo.sql
+CREATE OR ALTER FUNCTION dbo.fn_dw_promedio_dias_resolucion(@id_tramite_dw INT=NULL,@id_departamento_dw INT=NULL)
+RETURNS FLOAT AS BEGIN
+ DECLARE @promedio FLOAT;
+ SELECT @promedio=SUM(CAST(dias_resolucion AS FLOAT)*cantidad_tramites)/NULLIF(SUM(cantidad_tramites),0)
+ FROM dbo.FACT_EFICIENCIA_TRAMITES
+ WHERE (@id_tramite_dw IS NULL OR id_tramite_dw=@id_tramite_dw)
+ AND (@id_departamento_dw IS NULL OR id_departamento_dw=@id_departamento_dw);
+ RETURN COALESCE(@promedio,0);
+END;
+GO
+
+USE [MunicipalidadNicoya2026];
+GO
+
+-- Fuente de la version final: Database_Backend\14_mejoras_catalogos_output.sql
+CREATE OR ALTER FUNCTION dbo.fn_usuario_sesion()
+RETURNS INT
+AS
+BEGIN
+    DECLARE @id INT = NULL;
+
+    -- 1) Usuario enviado por la API (solo si existe, para no violar la FK)
+    SELECT @id = u.id_usuario
+    FROM dbo.Usuario u
+    WHERE u.id_usuario = TRY_CAST(SESSION_CONTEXT(N'id_usuario') AS INT);
+
+    -- 2) Respaldo: comportamiento original (login SQL = user_name)
+    IF @id IS NULL
+        SELECT @id = u.id_usuario
+        FROM dbo.Usuario u
+        WHERE u.user_name = SYSTEM_USER;
+
+    RETURN @id;
+END;
 GO

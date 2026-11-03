@@ -1,16 +1,6 @@
-/* ============================================================================
-   PROYECTO: SISTEMA DE GESTIÓN MUNICIPALIDAD DE NICOYA 2026
-   ARCHIVO 08: ESTRATEGIA DE RESPALDOS, RESTAURACIÓN Y DBA (RRBD-01 A RRBD-05 Y JOBS)
-   ============================================================================ */
-
-USE MunicipalidadNicoya2026;
+﻿USE MunicipalidadNicoya2026;
 GO
 
--- ============================================================================
--- 1. PROCEDIMIENTOS ALMACENADOS DE ADMINISTRACIÓN DE RESPALDOS (RRBD)
--- ============================================================================
-
--- RRBD-01: sp_registrar_configuracion_respaldo
 CREATE OR ALTER PROCEDURE dbo.sp_registrar_configuracion_respaldo
     @nombre_configuracion VARCHAR(255),
     @hora_ejecucion       TIME,
@@ -39,7 +29,6 @@ BEGIN
 END;
 GO
 
--- RRBD-02: sp_actualizar_configuracion_respaldo
 CREATE OR ALTER PROCEDURE dbo.sp_actualizar_configuracion_respaldo
     @id_respaldos_config  INT,
     @nombre_configuracion VARCHAR(255),
@@ -51,6 +40,9 @@ AS
 BEGIN
     SET NOCOUNT ON;
     BEGIN TRY
+        IF NOT EXISTS (SELECT 1 FROM dbo.Respaldos_Config WHERE id_respaldos_config = @id_respaldos_config)
+            THROW 50026, N'Error: La configuración de respaldo especificada no existe.', 1;
+
         UPDATE dbo.Respaldos_Config
         SET nombre_configuracion = @nombre_configuracion,
             hora_ejecucion = @hora_ejecucion,
@@ -68,7 +60,6 @@ BEGIN
 END;
 GO
 
--- RRBD-03: sp_registrar_ejecucion_respaldo
 CREATE OR ALTER PROCEDURE dbo.sp_registrar_ejecucion_respaldo
     @id_respaldo_config   INT,
     @ruta_archivo         VARCHAR(255),
@@ -103,7 +94,6 @@ BEGIN
 END;
 GO
 
--- RRBD-04: sp_registrar_restauracion
 CREATE OR ALTER PROCEDURE dbo.sp_registrar_restauracion
     @destino        VARCHAR(100),
     @motivo         VARCHAR(255),
@@ -137,7 +127,6 @@ BEGIN
 END;
 GO
 
--- RRBD-05: sp_consultar_historial_respaldos
 CREATE OR ALTER PROCEDURE dbo.sp_consultar_historial_respaldos
     @fecha_inicio DATETIME = NULL,
     @fecha_fin    DATETIME = NULL
@@ -152,16 +141,13 @@ BEGIN
 END;
 GO
 
--- ============================================================================
--- 2. PROCEDIMIENTOS AUTOMATIZADOS DE EJECUCIÓN FÍSICA DE BACKUPS
--- ============================================================================
-
--- Procedimiento: sp_dba_ejecutar_backup_full
 CREATE OR ALTER PROCEDURE dbo.sp_dba_ejecutar_backup_full
     @ruta_carpeta VARCHAR(200) = 'C:\Backups_Nicoya2026'
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    IF @ruta_carpeta IS NULL THROW 50022,N'Configure una carpeta de respaldo accesible al servicio SQL Server.',1;
     DECLARE @timestamp VARCHAR(25) = REPLACE(REPLACE(REPLACE(CONVERT(VARCHAR(19), GETDATE(), 120), '-', ''), ' ', '_'), ':', '');
     DECLARE @archivo VARCHAR(255) = @ruta_carpeta + '\Nicoya2026_Full_' + @timestamp + '.bak';
     DECLARE @sql NVARCHAR(MAX);
@@ -173,7 +159,7 @@ BEGIN
     INNER JOIN dbo.Tipo_de_respaldo tr ON rc.id_tipo_de_respaldo = tr.id_tipo_de_respaldo
     WHERE tr.nombre_tipo_respaldo = 'Full' AND rc.activo = 1;
 
-    IF @id_cfg IS NULL SET @id_cfg = 1;
+    IF @id_cfg IS NULL THROW 50022,N'Configure una politica activa para este tipo de respaldo.',1;
 
     BEGIN TRY
         PRINT 'Iniciando Backup FULL de MunicipalidadNicoya2026 en: ' + @archivo;
@@ -182,10 +168,16 @@ BEGIN
         SET @sql = N'BACKUP DATABASE MunicipalidadNicoya2026 TO DISK = ''' + @archivo + N''' WITH FORMAT, INIT, CHECKSUM, STATS = 10;';
         EXEC sp_executesql @sql;
 
+        DECLARE @tamano_real BIGINT;
+        SELECT TOP(1) @tamano_real=CONVERT(BIGINT,bs.compressed_backup_size)
+        FROM msdb.dbo.backupset bs JOIN msdb.dbo.backupmediafamily mf ON mf.media_set_id=bs.media_set_id
+        WHERE bs.database_name=N'MunicipalidadNicoya2026' AND mf.physical_device_name=@archivo
+        ORDER BY bs.backup_finish_date DESC,bs.backup_set_id DESC;
+        SET @tamano_real=COALESCE(@tamano_real,0);
         EXEC dbo.sp_registrar_ejecucion_respaldo
             @id_respaldo_config = @id_cfg,
             @ruta_archivo = @archivo,
-            @tamano_bytes = 104857600, -- Calculado dinámico o estimado
+            @tamano_bytes = @tamano_real,
             @nombre_estado = 'Exitoso',
             @detalles_error = NULL,
             @nuevo_id_respaldo = @id_respaldo OUTPUT;
@@ -206,12 +198,13 @@ BEGIN
 END;
 GO
 
--- Procedimiento: sp_dba_ejecutar_backup_diferencial
 CREATE OR ALTER PROCEDURE dbo.sp_dba_ejecutar_backup_diferencial
     @ruta_carpeta VARCHAR(200) = 'C:\Backups_Nicoya2026'
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    IF @ruta_carpeta IS NULL THROW 50022,N'Configure una carpeta de respaldo accesible al servicio SQL Server.',1;
     DECLARE @timestamp VARCHAR(25) = REPLACE(REPLACE(REPLACE(CONVERT(VARCHAR(19), GETDATE(), 120), '-', ''), ' ', '_'), ':', '');
     DECLARE @archivo VARCHAR(255) = @ruta_carpeta + '\Nicoya2026_Diff_' + @timestamp + '.bak';
     DECLARE @sql NVARCHAR(MAX);
@@ -223,7 +216,7 @@ BEGIN
     INNER JOIN dbo.Tipo_de_respaldo tr ON rc.id_tipo_de_respaldo = tr.id_tipo_de_respaldo
     WHERE tr.nombre_tipo_respaldo = 'Diferencial' AND rc.activo = 1;
 
-    IF @id_cfg IS NULL SET @id_cfg = 1;
+    IF @id_cfg IS NULL THROW 50022,N'Configure una politica activa para este tipo de respaldo.',1;
 
     BEGIN TRY
         PRINT 'Iniciando Backup DIFERENCIAL en: ' + @archivo;
@@ -232,10 +225,16 @@ BEGIN
         SET @sql = N'BACKUP DATABASE MunicipalidadNicoya2026 TO DISK = ''' + @archivo + N''' WITH DIFFERENTIAL, CHECKSUM, STATS = 10;';
         EXEC sp_executesql @sql;
 
+        DECLARE @tamano_real BIGINT;
+        SELECT TOP(1) @tamano_real=CONVERT(BIGINT,bs.compressed_backup_size)
+        FROM msdb.dbo.backupset bs JOIN msdb.dbo.backupmediafamily mf ON mf.media_set_id=bs.media_set_id
+        WHERE bs.database_name=N'MunicipalidadNicoya2026' AND mf.physical_device_name=@archivo
+        ORDER BY bs.backup_finish_date DESC,bs.backup_set_id DESC;
+        SET @tamano_real=COALESCE(@tamano_real,0);
         EXEC dbo.sp_registrar_ejecucion_respaldo
             @id_respaldo_config = @id_cfg,
             @ruta_archivo = @archivo,
-            @tamano_bytes = 20971520,
+            @tamano_bytes = @tamano_real,
             @nombre_estado = 'Exitoso',
             @detalles_error = NULL,
             @nuevo_id_respaldo = @id_respaldo OUTPUT;
@@ -256,7 +255,6 @@ BEGIN
 END;
 GO
 
--- Procedimiento: sp_dba_verificar_integridad_dbcc
 CREATE OR ALTER PROCEDURE dbo.sp_dba_verificar_integridad_dbcc
 AS
 BEGIN
@@ -267,63 +265,59 @@ BEGIN
 END;
 GO
 
--- Procedimiento: sp_dba_simular_restauracion_contingencia
 CREATE OR ALTER PROCEDURE dbo.sp_dba_simular_restauracion_contingencia
     @ruta_backup_full VARCHAR(255),
-    @id_usuario_dba   INT
+    @id_usuario_dba INT
 AS
 BEGIN
     SET NOCOUNT ON;
-    DECLARE @db_destino VARCHAR(100) = 'MunicipalidadNicoya2026_Simulacro';
+    SET @ruta_backup_full = LTRIM(RTRIM(@ruta_backup_full));
+    IF NULLIF(@ruta_backup_full, '') IS NULL
+        THROW 50016, N'Indique la ruta del archivo de respaldo en el servidor.', 1;
+    IF @id_usuario_dba IS NULL OR @id_usuario_dba <= 0
+        THROW 50016, N'Indique el usuario responsable de la verificación.', 1;
+
+    -- SQL Server valida acceso, estructura y checksum disponible.
+    -- Si falla, el error se propaga y no se registra una verificación exitosa.
+    RESTORE VERIFYONLY FROM DISK = @ruta_backup_full WITH CHECKSUM;
+
     DECLARE @nuevo_id_rst INT;
-
-    BEGIN TRY
-        PRINT 'Iniciando simulacro de contingencia y restauración en base: ' + @db_destino;
-
-        IF EXISTS (SELECT name FROM sys.databases WHERE name = @db_destino)
-        BEGIN
-            EXEC('ALTER DATABASE ' + @db_destino + ' SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE ' + @db_destino + ';');
-        END
-
-        -- Simulación y registro de prueba periódica
-        EXEC dbo.sp_registrar_restauracion
-            @destino = @db_destino,
-            @motivo = 'Prueba semestral obligatoria de plan de contingencia y RTO',
-            @nombre_estado = 'Exitoso',
-            @id_usuario = @id_usuario_dba,
-            @nuevo_id_restauracion = @nuevo_id_rst OUTPUT;
-
-        PRINT '-> Simulacro de restauración finalizado exitosamente.';
-    END TRY
-    BEGIN CATCH
-        THROW;
-    END CATCH
+    EXEC dbo.sp_registrar_restauracion
+        @destino = 'MunicipalidadNicoya2026',
+        @motivo = 'RESTORE VERIFYONLY WITH CHECKSUM: verificación de respaldo, sin restaurar la base.',
+        @nombre_estado = 'Exitoso',
+        @id_usuario = @id_usuario_dba,
+        @nuevo_id_restauracion = @nuevo_id_rst OUTPUT;
 END;
 GO
 
--- ============================================================================
--- 3. SCRIPT DE CREACIÓN DE JOBS AUTOMATIZADOS EN SQL SERVER AGENT
--- (Requiere msdb y permisos de sysadmin / SQLAgentOperatorRole)
--- ============================================================================
 USE msdb;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 PRINT 'Configurando Jobs automáticos en SQL Server Agent...';
 
--- 3.1 JOB: Respaldo Full Semanal (Domingos a las 11:00 PM)
+
 IF EXISTS (SELECT 1 FROM msdb.dbo.sysjobs WHERE name = N'Nicoya2026_Job_Backup_Full')
 BEGIN
     EXEC sp_delete_job @job_name = N'Nicoya2026_Job_Backup_Full';
 END
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 EXEC sp_add_job 
     @job_name = N'Nicoya2026_Job_Backup_Full',
     @enabled = 1,
     @description = N'Respaldo completo semanal para MunicipalidadNicoya2026',
     @category_name = N'Database Maintenance';
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 EXEC sp_add_jobstep 
     @job_name = N'Nicoya2026_Job_Backup_Full',
     @step_name = N'Ejecutar_Backup_Full',
@@ -332,34 +326,48 @@ EXEC sp_add_jobstep
     @database_name = N'MunicipalidadNicoya2026',
     @retry_attempts = 2,
     @retry_interval = 5;
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 EXEC sp_add_jobschedule 
     @job_name = N'Nicoya2026_Job_Backup_Full',
     @name = N'Horario_Semanal_Domingo_23hrs',
-    @freq_type = 8,        -- Semanal
-    @freq_interval = 1,    -- Domingo
+    @freq_type = 8,        
+    @freq_interval = 1,    
     @freq_recurrence_factor = 1,
-    @active_start_time = 230000; -- 11:00 PM
+    @active_start_time = 230000;
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 EXEC sp_add_jobserver @job_name = N'Nicoya2026_Job_Backup_Full', @server_name = N'(local)';
+END;
 GO
 
--- 3.2 JOB: Respaldo Diferencial Diario (Lunes a Sábado a las 11:00 PM)
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 IF EXISTS (SELECT 1 FROM msdb.dbo.sysjobs WHERE name = N'Nicoya2026_Job_Backup_Diff')
 BEGIN
     EXEC sp_delete_job @job_name = N'Nicoya2026_Job_Backup_Diff';
 END
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 EXEC sp_add_job 
     @job_name = N'Nicoya2026_Job_Backup_Diff',
     @enabled = 1,
     @description = N'Respaldo diferencial diario para MunicipalidadNicoya2026',
     @category_name = N'Database Maintenance';
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 EXEC sp_add_jobstep 
     @job_name = N'Nicoya2026_Job_Backup_Diff',
     @step_name = N'Ejecutar_Backup_Diferencial',
@@ -368,53 +376,77 @@ EXEC sp_add_jobstep
     @database_name = N'MunicipalidadNicoya2026',
     @retry_attempts = 2,
     @retry_interval = 5;
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 EXEC sp_add_jobschedule 
     @job_name = N'Nicoya2026_Job_Backup_Diff',
     @name = N'Horario_Diario_Lunes_Sabado_23hrs',
-    @freq_type = 8,         -- Semanal
-    @freq_interval = 126,   -- Lunes a Sábado (2+4+8+16+32+64)
+    @freq_type = 8,         
+    @freq_interval = 126,   
     @freq_recurrence_factor = 1,
-    @active_start_time = 230000; -- 11:00 PM
+    @active_start_time = 230000;
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 EXEC sp_add_jobserver @job_name = N'Nicoya2026_Job_Backup_Diff', @server_name = N'(local)';
+END;
 GO
 
--- 3.3 JOB: Mantenimiento e Integridad DBCC CHECKDB (Sábados a las 2:00 AM)
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 IF EXISTS (SELECT 1 FROM msdb.dbo.sysjobs WHERE name = N'Nicoya2026_Job_DBCC_CheckDB')
 BEGIN
     EXEC sp_delete_job @job_name = N'Nicoya2026_Job_DBCC_CheckDB';
 END
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 EXEC sp_add_job 
     @job_name = N'Nicoya2026_Job_DBCC_CheckDB',
     @enabled = 1,
     @description = N'Verificación semanal de integridad física con DBCC CHECKDB',
     @category_name = N'Database Maintenance';
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 EXEC sp_add_jobstep 
     @job_name = N'Nicoya2026_Job_DBCC_CheckDB',
     @step_name = N'Ejecutar_DBCC_CheckDB',
     @subsystem = N'TSQL',
     @command = N'EXEC MunicipalidadNicoya2026.dbo.sp_dba_verificar_integridad_dbcc;',
     @database_name = N'MunicipalidadNicoya2026';
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 EXEC sp_add_jobschedule 
     @job_name = N'Nicoya2026_Job_DBCC_CheckDB',
     @name = N'Horario_Sabado_02hrs',
-    @freq_type = 8,        -- Semanal
-    @freq_interval = 64,   -- Sábado
+    @freq_type = 8,        
+    @freq_interval = 64,   
     @freq_recurrence_factor = 1,
-    @active_start_time = 020000; -- 02:00 AM
+    @active_start_time = 020000;
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 EXEC sp_add_jobserver @job_name = N'Nicoya2026_Job_DBCC_CheckDB', @server_name = N'(local)';
+END;
 GO
 
+IF TRY_CONVERT(int,SESSION_CONTEXT(N'Nicoya_Configurar_Jobs'))=1 AND CONVERT(int,SERVERPROPERTY('EngineEdition'))<>4
+BEGIN
 PRINT '-> Procedimientos de respaldo, restauración y Jobs de SQL Server Agent configurados.';
+END;
 GO

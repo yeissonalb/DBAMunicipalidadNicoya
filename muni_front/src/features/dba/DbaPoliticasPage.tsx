@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -17,7 +17,7 @@ import {
   RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
-import { respaldosDbaApi } from '@/services/api';
+import { monitoreoDbaApi, respaldosDbaApi } from '@/services/api';
 import type { SpConfiguracionRespaldoResultDto } from '@/types/api';
 import { PageHeader } from '@/components/common/PageHeader';
 import { ErrorState, LoadingState } from '@/components/common/StateFeedback';
@@ -28,7 +28,7 @@ import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
 import { FormField } from '@/components/forms/FormField';
-import { ensureTimeSpanFormat, formatDateTime, formatNumber } from '@/lib/utils';
+import { ensureTimeSpanFormat } from '@/lib/utils';
 
 const crearPoliticaSchema = z.object({
   nombreConfiguracion: z.string().trim().min(3, 'Nombre requerido').max(255),
@@ -61,9 +61,9 @@ export function DbaPoliticasPage() {
   const [rutaCarpetaOpcional, setRutaCarpetaOpcional] = useState('');
   const [lastDbccStatus, setLastDbccStatus] = useState<string | null>(null);
 
-  const estadoRespaldosQuery = useQuery({
-    queryKey: ['dba', 'estado'],
-    queryFn: () => respaldosDbaApi.estado(),
+  const motorQuery = useQuery({
+    queryKey: ['monitoreo', 'resumen'],
+    queryFn: () => monitoreoDbaApi.resumen(),
   });
 
   const configuracionesQuery = useQuery({
@@ -71,10 +71,7 @@ export function DbaPoliticasPage() {
     queryFn: () => respaldosDbaApi.configuraciones(),
   });
 
-  const historialQuery = useQuery({
-    queryKey: ['dba', 'historial-politicas'],
-    queryFn: () => respaldosDbaApi.historial(),
-  });
+
 
   const frecuenciasQuery = useQuery({
     queryKey: ['dba', 'frecuencias'],
@@ -89,14 +86,14 @@ export function DbaPoliticasPage() {
   const createForm = useForm<CrearPoliticaForm>({
     resolver: zodResolver(crearPoliticaSchema),
     defaultValues: {
-      nombreConfiguracion: 'Respaldo Completo Diario',
+      nombreConfiguracion: '',
       horaEjecucion: '00:00:00',
       origen: 'MunicipalidadNicoya2026',
       retencionDias: 30,
       cifrado: 'AES-256',
-      rutaDestino: '/backup/sql_nicoya/',
-      idFrecuencia: 1,
-      idTipoDeRespaldo: 1,
+      rutaDestino: '',
+      idFrecuencia: 0,
+      idTipoDeRespaldo: 0,
     },
   });
 
@@ -152,22 +149,18 @@ export function DbaPoliticasPage() {
   const dbccMut = useMutation({
     mutationFn: () => respaldosDbaApi.verificarIntegridad(),
     onSuccess: (res) => {
-      const msg = res.message || 'RESTORE VERIFYONLY / DBCC CHECKDB verificado sin errores.';
+      const msg = res.message || 'Comprobación DBCC CHECKDB finalizada.';
       setLastDbccStatus(`${msg} (${new Date().toLocaleTimeString('es-CR')})`);
       toast.success(msg);
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const ultimoHashSha256 =
-    historialQuery.data?.[0]?.hashVerificacion ||
-    'ad4c5e4a753ac37cae6c55e7223b75308de9c72b20268386655a';
-
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Consola Técnica DBA — Políticas de Respaldo y Motor (SQL Server 2022 Operations)"
-        subtitle="Administración de políticas FULL, DIFF y LOG, cifrado AES-256 y verificación criptográfica SHA-256."
+        title="Consola Técnica DBA — Políticas de Respaldo y Motor (SQL Server)"
+        subtitle="Configuración de frecuencia, retención y destino de respaldos. La configuración de cifrado no acredita su ejecución."
         badge="Superuser DBA"
         icon={<Database className="h-6 w-6" />}
         actions={
@@ -224,11 +217,11 @@ export function DbaPoliticasPage() {
                 <Database className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-medium text-[#6B7280]">SQL Server Engine</p>
-                <p className="text-lg font-extrabold text-[#171717]">Online</p>
+                <p className="text-xs font-medium text-[#6B7280]">Conexión al motor SQL Server</p>
+                <p className="text-lg font-extrabold text-[#171717]">{motorQuery.isLoading ? 'Consultando...' : motorQuery.isError || !motorQuery.data ? 'No disponible' : motorQuery.data.servidor}</p>
               </div>
             </div>
-            <Badge variant="success">Online ●</Badge>
+            <Badge variant={motorQuery.isSuccess && motorQuery.data ? "success" : "outline"}>{motorQuery.isSuccess && motorQuery.data ? "Consulta respondida" : "Sin confirmar"}</Badge>
           </CardContent>
         </Card>
 
@@ -239,11 +232,11 @@ export function DbaPoliticasPage() {
                 <HardDrive className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-medium text-[#6B7280]">Storage</p>
-                <p className="text-lg font-extrabold text-[#171717]">412 GB Free</p>
+                <p className="text-xs font-medium text-[#6B7280]">Almacenamiento del servidor</p>
+                <p className="text-lg font-extrabold text-[#171717]">Consultar en monitoreo</p>
               </div>
             </div>
-            <Badge variant="blue">412 GB</Badge>
+            <Button variant="outline" asChild><Link to="/dba/monitoreo">Ver discos</Link></Button>
           </CardContent>
         </Card>
 
@@ -254,16 +247,16 @@ export function DbaPoliticasPage() {
                 <ShieldCheck className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-medium text-[#6B7280]">Integridad</p>
-                <p className="text-lg font-extrabold text-[#171717]">SHA-256 Verificada</p>
+                <p className="text-xs font-medium text-[#6B7280]">Integridad de la base actual</p>
+                <p className="text-lg font-extrabold text-[#171717]">{lastDbccStatus ? 'Comprobación finalizada' : 'Sin comprobar en esta sesión'}</p>
               </div>
             </div>
-            <Badge variant="success">Verificada</Badge>
+            <Badge variant="outline">DBCC CHECKDB</Badge>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabla: Activo de tabla (Respaldos_Config y tabla Respaldos) */}
+      {/* Tabla: Políticas de respaldo registradas */}
       {configuracionesQuery.isLoading ? (
         <LoadingState message="Consultando políticas de respaldo en SQL Server..." />
       ) : configuracionesQuery.isError ? (
@@ -275,9 +268,9 @@ export function DbaPoliticasPage() {
         <Card>
           <CardHeader className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
             <div>
-              <CardTitle>Activo de tabla (Respaldos_Config y tabla Respaldos)</CardTitle>
+              <CardTitle>Políticas de respaldo registradas</CardTitle>
               <CardDescription>
-                Configuración de frecuencia, retención, algoritmo de cifrado AES-256 y ruta de
+                Configuración de frecuencia, retención, cifrado declarado y ruta de
                 almacenamiento
               </CardDescription>
             </div>
@@ -303,9 +296,6 @@ export function DbaPoliticasPage() {
                 </thead>
                 <tbody className="divide-y divide-[#E5E7EB]">
                   {(configuracionesQuery.data ?? []).map((cfg) => {
-                    const monitor = estadoRespaldosQuery.data?.find(
-                      (m) => m.idRespaldosConfig === cfg.idRespaldosConfig
-                    );
                     return (
                       <tr key={cfg.idRespaldosConfig} className="hover:bg-[#F8FAFC]">
                         <td className="px-4 py-3.5 font-mono font-bold text-[#171717]">
@@ -315,16 +305,14 @@ export function DbaPoliticasPage() {
                           <p className="font-bold text-[#171717]">{cfg.nombreConfiguracion}</p>
                           <p className="font-mono text-[11px] text-[#6B7280]">
                             BD: {cfg.origen}
-                            {monitor?.ultimaEjecucion
-                              ? ` · Última: ${formatDateTime(monitor.ultimaEjecucion)} (${formatNumber(monitor.ultimoTamanoMb, 1)} MB)`
-                              : ''}
+
                           </p>
                         </td>
                         <td className="px-4 py-3.5">
-                          <Badge variant="blue">{cfg.codigoTipoDeRespaldo}</Badge>
+                          <Badge variant="blue">{cfg.nombreTipoRespaldo || 'No informado'}</Badge>
                         </td>
                         <td className="px-4 py-3.5 font-medium text-[#171717]">
-                          {cfg.codigoFrecuencia} ({cfg.horaEjecucion})
+                          {cfg.nombreFrecuencia || 'No informada'} ({cfg.horaEjecucion})
                         </td>
                         <td className="px-4 py-3.5">{cfg.retencionDias} días</td>
                         <td className="px-4 py-3.5 font-mono text-xs font-semibold text-[#1E3A8A]">
@@ -335,7 +323,7 @@ export function DbaPoliticasPage() {
                         </td>
                         <td className="px-4 py-3.5">
                           <Badge variant={cfg.activo ? 'success' : 'danger'}>
-                            {cfg.activo ? 'Completado' : 'Inactiva'}
+                            {cfg.activo ? 'Activa' : 'Inactiva'}
                           </Badge>
                         </td>
                         <td className="px-4 py-3.5 text-right">
@@ -365,20 +353,19 @@ export function DbaPoliticasPage() {
         </Card>
       )}
 
-      {/* Tarjeta Inferior del Wireframe DBA: Auditoría Criptográfica y Test de Restauración */}
+      {/* Tarjeta Inferior del Wireframe DBA: Comprobar integridad de la base de datos */}
       <Card>
         <CardHeader>
-          <CardTitle>Auditoría Criptográfica y Test de Restauración</CardTitle>
+          <CardTitle>Comprobar integridad de la base de datos</CardTitle>
           <CardDescription>
-            Verificación de suma de comprobación SHA-256 e integridad estructural de los archivos de
-            respaldo en SQL Server
+            DBCC CHECKDB comprueba la base de datos actual. Para verificar un archivo de respaldo, selecciónelo en Respaldos y recuperación.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div className="space-y-1">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">SHA-256</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">Resultado de esta sesión</p>
             <p className="break-all font-mono text-sm font-semibold text-[#171717]">
-              {ultimoHashSha256}
+              {lastDbccStatus ?? 'Todavía no se ha ejecutado esta comprobación.'}
             </p>
             {lastDbccStatus && (
               <p className="text-xs font-semibold text-[#15803D]">{lastDbccStatus}</p>
@@ -394,7 +381,7 @@ export function DbaPoliticasPage() {
               </>
             ) : (
               <>
-                <CheckCircle2 className="h-4 w-4" /> Verificar con RESTORE VERIFYONLY
+                <CheckCircle2 className="h-4 w-4" /> Comprobar base (DBCC CHECKDB)
               </>
             )}
           </Button>
@@ -427,10 +414,10 @@ export function DbaPoliticasPage() {
             required
             error={createForm.formState.errors.idTipoDeRespaldo?.message}
           >
-            <Select {...createForm.register('idTipoDeRespaldo')}>
+            <Select {...createForm.register('idTipoDeRespaldo')}><option value="0">Seleccione un tipo</option>
               {(tiposRespaldoQuery.data ?? []).map((t) => (
                 <option key={t.idTipoDeRespaldo} value={t.idTipoDeRespaldo}>
-                  {t.codigoTipoDeRespaldo}
+                  {t.nombreTipoRespaldo || 'No informado'}
                 </option>
               ))}
             </Select>
@@ -441,10 +428,10 @@ export function DbaPoliticasPage() {
             required
             error={createForm.formState.errors.idFrecuencia?.message}
           >
-            <Select {...createForm.register('idFrecuencia')}>
+            <Select {...createForm.register('idFrecuencia')}><option value="0">Seleccione una frecuencia</option>
               {(frecuenciasQuery.data ?? []).map((f) => (
                 <option key={f.idFrecuencia} value={f.idFrecuencia}>
-                  {f.codigoFrecuencia}
+                  {f.nombreFrecuencia || 'No informada'}
                 </option>
               ))}
             </Select>
@@ -574,7 +561,7 @@ export function DbaPoliticasPage() {
         open={openBackupModal}
         onClose={() => setOpenBackupModal(false)}
         title="Ejecutar Respaldo Inmediato en SQL Server"
-        description="Genera un respaldo físico y calcula automáticamente su hash SHA-256."
+        description="Solicita un respaldo físico al servidor SQL. El resultado se mostrará al finalizar."
       >
         <div className="space-y-4">
           <FormField label="Tipo de Respaldo a Ejecutar" required>
