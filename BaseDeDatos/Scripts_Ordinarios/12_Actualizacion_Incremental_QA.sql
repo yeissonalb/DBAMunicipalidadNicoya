@@ -9,7 +9,7 @@
     Este script no modifica tablas ni datos existentes. No ejecuta mantenimiento,
     respaldos, purgas, restauraciones ni trabajos de SQL Server Agent.
 */
-:setvar TargetDatabase "MunicipalidadNicoya2026_PruebaRestore"
+:setvar TargetDatabase "MunicipalidadNicoya2026"
 
 USE [$(TargetDatabase)];
 GO
