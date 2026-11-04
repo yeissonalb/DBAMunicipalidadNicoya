@@ -114,7 +114,7 @@ export function DbaRespaldosPage() {
               variant="secondary"
               onClick={() => queryClient.invalidateQueries({ queryKey: ['dba'] })}
             >
-              <RefreshCw className="h-4 w-4" /> Actualizar
+              <RefreshCw className="h-4 w-4" /> Recargar datos
             </Button>
             <Button
               variant="secondary"

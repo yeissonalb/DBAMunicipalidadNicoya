@@ -36,6 +36,9 @@ namespace Entities.SpResults
         [Column("fecha_de_vencimiento")]
         public DateTime FechaDeVencimiento { get; set; }
 
+        [Column("dias_mora")]
+        public int DiasMora { get; set; }
+
         [Column("codigo_estado_deuda")]
         public string? CodigoEstadoDeuda { get; set; }
 

@@ -1594,14 +1594,21 @@ AS
 BEGIN
     DECLARE @dias INT = 0;
     DECLARE @fecha_venc DATETIME;
+    DECLARE @codigo_estado VARCHAR(20);
 
-    SELECT @fecha_venc = fecha_de_vencimiento
-    FROM dbo.Deudas_Municipales
-    WHERE id_deuda_municipal = @id_deuda_municipal;
+    SELECT
+        @fecha_venc = dm.fecha_de_vencimiento,
+        @codigo_estado = ed.codigo_estado_deuda
+    FROM dbo.Deudas_Municipales dm
+    INNER JOIN dbo.Estado_Deuda ed ON dm.id_estado_deuda = ed.id_estado_deuda
+    WHERE dm.id_deuda_municipal = @id_deuda_municipal;
 
-    IF @fecha_venc IS NOT NULL AND @fecha_venc < GETDATE()
+    -- La regla vigente usa días naturales. PAG y ARR no continúan acumulando mora.
+    IF @fecha_venc IS NOT NULL
+       AND @codigo_estado IN ('PEND', 'VENC')
+       AND CAST(@fecha_venc AS DATE) < CAST(GETDATE() AS DATE)
     BEGIN
-        SET @dias = DATEDIFF(DAY, @fecha_venc, GETDATE());
+        SET @dias = DATEDIFF(DAY, CAST(@fecha_venc AS DATE), CAST(GETDATE() AS DATE));
     END
 
     RETURN @dias;
@@ -3437,6 +3444,7 @@ CREATE OR ALTER PROCEDURE dbo.sp_registrar_deuda_municipal
     @monto_intereses     FLOAT = 0,
     @monto_multas        FLOAT = 0,
     @fecha_de_vencimiento DATETIME,
+    @id_contribuyente    INT,
     @id_inmueble         INT,
     @id_tipo_tributo     INT,
     @codigo_estado_deuda VARCHAR(20) = 'PEND',
@@ -3450,6 +3458,17 @@ BEGIN
 
         IF @id_estado IS NULL
             THROW 50009, 'Error: Código de estado de deuda no válido.', 1;
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.Bien_Inmueble WHERE id_inmueble = @id_inmueble)
+            THROW 50028, N'El bien inmueble seleccionado no existe.', 1;
+
+        IF NOT EXISTS (
+            SELECT 1
+            FROM dbo.Derecho_Inmueble
+            WHERE id_inmueble = @id_inmueble
+              AND id_contribuyente = @id_contribuyente
+        )
+            THROW 50014, N'La finca seleccionada no está asociada al contribuyente indicado.', 1;
 
         INSERT INTO dbo.Deudas_Municipales
         (periodo_deuda, monto_principal, monto_intereses, monto_multas, fecha_de_vencimiento, id_inmueble, id_tipo_tributo, id_estado_deuda)
@@ -3485,6 +3504,7 @@ BEGIN
         dm.monto_multas,
         dbo.fn_calcular_total_deuda(dm.id_deuda_municipal) AS monto_total,
         dm.fecha_de_vencimiento,
+        dbo.fn_calcular_dias_mora(dm.id_deuda_municipal) AS dias_mora,
         ed.codigo_estado_deuda,
         ed.descripcion_estado_deuda
     FROM dbo.Contribuyente c
@@ -3535,13 +3555,18 @@ GO
 -- Fuente de la version final: Scripts_Ordinarios\05_Procedimientos_Operacionales.sql
 CREATE OR ALTER PROCEDURE dbo.sp_generar_factura
     @id_deuda_municipal INT,
-    @clave_numerica_hacienda VARCHAR(50),
+    @clave_numerica_hacienda VARCHAR(8000),
     @descuentos FLOAT = 0,
     @nuevo_id_factura INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
     BEGIN TRY
+        IF @clave_numerica_hacienda IS NULL
+           OR LEN(@clave_numerica_hacienda) <> 50
+           OR @clave_numerica_hacienda LIKE '%[^0-9]%'
+            THROW 50001, 'La clave numerica de Hacienda debe contener exactamente 50 digitos, sin letras, espacios ni simbolos.', 1;
+
         DECLARE @subtotal FLOAT;
         SELECT @subtotal = dbo.fn_calcular_total_deuda(@id_deuda_municipal);
 
@@ -5772,7 +5797,10 @@ BEGIN
         tarea              NVARCHAR(100),
         estado             NVARCHAR(20),
         detalle            NVARCHAR(1000),
-        duracion_segundos  INT
+        duracion_segundos  INT,
+        inicio             DATETIME2,
+        fin                DATETIME2,
+        numero_error       INT
     );
 
     DECLARE @inicio DATETIME2, @antes INT, @despues INT, @usar_maintenance BIT;
@@ -5806,15 +5834,15 @@ BEGIN
             INNER JOIN sys.indexes i ON ips.object_id = i.object_id AND ips.index_id = i.index_id
             WHERE i.name IS NOT NULL AND ips.avg_fragmentation_in_percent > 20 AND ips.page_count > 8;
 
-            INSERT INTO #resultado (tarea, estado, detalle, duracion_segundos)
+            INSERT INTO #resultado (tarea, estado, detalle, duracion_segundos, inicio, fin, numero_error)
             VALUES (N'Reorganización / reconstrucción de índices', N'Completado',
                     CONCAT(N'Índices fragmentados antes: ', @antes, N' · después: ', @despues,
                            N' (rutina integrada; criterio documental >20 %)'),
-                    DATEDIFF(SECOND, @inicio, SYSDATETIME()));
+                    DATEDIFF(SECOND, @inicio, SYSDATETIME()), @inicio, SYSDATETIME(), NULL);
         END TRY
         BEGIN CATCH
-            INSERT INTO #resultado (tarea, estado, detalle, duracion_segundos)
-            VALUES (N'Reorganización / reconstrucción de índices', N'Fallido', LEFT(ERROR_MESSAGE(), 1000), DATEDIFF(SECOND, @inicio, SYSDATETIME()));
+            INSERT INTO #resultado (tarea, estado, detalle, duracion_segundos, inicio, fin, numero_error)
+            VALUES (N'Reorganización / reconstrucción de índices', N'Fallido', LEFT(ERROR_MESSAGE(), 1000), DATEDIFF(SECOND, @inicio, SYSDATETIME()), @inicio, SYSDATETIME(), ERROR_NUMBER());
         END CATCH
     END
 
@@ -5824,12 +5852,12 @@ BEGIN
         SET @inicio = SYSDATETIME();
         BEGIN TRY
             EXEC sp_updatestats;
-            INSERT INTO #resultado (tarea, estado, detalle, duracion_segundos)
-            VALUES (N'Actualización de estadísticas', N'Completado', N'sp_updatestats ejecutado sobre MunicipalidadNicoya2026.', DATEDIFF(SECOND, @inicio, SYSDATETIME()));
+            INSERT INTO #resultado (tarea, estado, detalle, duracion_segundos, inicio, fin, numero_error)
+            VALUES (N'Actualización de estadísticas', N'Completado', CONCAT(N'sp_updatestats ejecutado sobre ', DB_NAME(), N'.'), DATEDIFF(SECOND, @inicio, SYSDATETIME()), @inicio, SYSDATETIME(), NULL);
         END TRY
         BEGIN CATCH
-            INSERT INTO #resultado (tarea, estado, detalle, duracion_segundos)
-            VALUES (N'Actualización de estadísticas', N'Fallido', LEFT(ERROR_MESSAGE(), 1000), DATEDIFF(SECOND, @inicio, SYSDATETIME()));
+            INSERT INTO #resultado (tarea, estado, detalle, duracion_segundos, inicio, fin, numero_error)
+            VALUES (N'Actualización de estadísticas', N'Fallido', LEFT(ERROR_MESSAGE(), 1000), DATEDIFF(SECOND, @inicio, SYSDATETIME()), @inicio, SYSDATETIME(), ERROR_NUMBER());
         END CATCH
     END
 
@@ -5858,11 +5886,38 @@ BEGIN
         CLOSE cur_cfg;
         DEALLOCATE cur_cfg;
 
-        INSERT INTO #resultado (tarea, estado, detalle, duracion_segundos)
+        INSERT INTO #resultado (tarea, estado, detalle, duracion_segundos, inicio, fin, numero_error)
         VALUES (N'Purga de respaldos expirados',
                 CASE WHEN @errores = N'' THEN N'Completado' ELSE N'Con advertencias' END,
                 CONCAT(N'Carpetas procesadas: ', @procesadas, CASE WHEN @errores = N'' THEN N'' ELSE N'. ' + @errores END),
-                DATEDIFF(SECOND, @inicio, SYSDATETIME()));
+                DATEDIFF(SECOND, @inicio, SYSDATETIME()), @inicio, SYSDATETIME(),
+                CASE WHEN @errores = N'' THEN NULL ELSE 50000 END);
+    END
+
+    IF OBJECT_ID(N'MaintenanceDB.dbo.CommandLog', N'U') IS NOT NULL
+    BEGIN
+        BEGIN TRY
+            INSERT INTO MaintenanceDB.dbo.CommandLog
+                (DatabaseName, Command, CommandType, StartTime, EndTime, ErrorNumber, ErrorMessage)
+            SELECT
+                DB_NAME(),
+                CONCAT(tarea, N': ', detalle),
+                CASE tarea
+                    WHEN N'Reorganización / reconstrucción de índices' THEN N'INDEX_MAINTENANCE'
+                    WHEN N'Actualización de estadísticas' THEN N'UPDATE_STATISTICS'
+                    WHEN N'Purga de respaldos expirados' THEN N'BACKUP_CLEANUP'
+                    ELSE N'DBA_MAINTENANCE'
+                END,
+                inicio,
+                fin,
+                numero_error,
+                CASE WHEN numero_error IS NULL THEN NULL ELSE detalle END
+            FROM #resultado;
+        END TRY
+        BEGIN CATCH
+            INSERT INTO #resultado (tarea, estado, detalle, duracion_segundos, inicio, fin, numero_error)
+            VALUES (N'Registro de bitácora', N'Fallido', LEFT(ERROR_MESSAGE(), 1000), 0, SYSDATETIME(), SYSDATETIME(), ERROR_NUMBER());
+        END CATCH
     END
 
     SELECT orden, tarea, estado, detalle, duracion_segundos

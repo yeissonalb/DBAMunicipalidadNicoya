@@ -213,7 +213,7 @@ export function UsuariosRolesPage() {
                 queryClient.invalidateQueries({ queryKey: ['seguridad'] });
               }}
             >
-              <RefreshCw className="h-4 w-4" /> Actualizar
+              <RefreshCw className="h-4 w-4" /> Recargar datos
             </Button>
             <Button variant="secondary" asChild>
               <Link to="/seguridad/matriz-permisos">

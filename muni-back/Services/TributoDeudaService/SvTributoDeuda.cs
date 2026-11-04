@@ -36,12 +36,22 @@ namespace Services.TributoDeudaService
                 Sp.Float("@monto_intereses", dto.MontoIntereses),
                 Sp.Float("@monto_multas", dto.MontoMultas),
                 Sp.DateTime("@fecha_de_vencimiento", dto.FechaDeVencimiento),
+                Sp.Int("@id_contribuyente", dto.IdContribuyente),
                 Sp.Int("@id_inmueble", dto.IdInmueble),
                 Sp.Int("@id_tipo_tributo", dto.IdTipoTributo),
                 Sp.VarChar("@codigo_estado_deuda", dto.CodigoEstadoDeuda, 20),
                 Sp.OutInt("@nuevo_id_deuda"));
 
             return Respuesta.Ok(id, "Deuda municipal registrada.");
+        }
+
+        public async Task<BaseResponse<List<SpInmueblesPorContribuyenteResultDto>>> ConsultarInmueblesContribuyenteAsync(int idContribuyente)
+        {
+            var data = await _context.Database.QuerySpAsync<SpInmueblesPorContribuyenteResultDto>(
+                "dbo.sp_consultar_inmuebles_por_contribuyente",
+                Sp.Int("@id_contribuyente", idContribuyente));
+
+            return Respuesta.Ok(data);
         }
 
         public async Task<BaseResponse<List<SpDeudasContribuyenteResultDto>>> ConsultarDeudasContribuyenteAsync(int idContribuyente)

@@ -212,7 +212,7 @@ export function AuditoriaForensePage() {
               variant="secondary"
               onClick={() => queryClient.invalidateQueries({ queryKey: ['auditoria'] })}
             >
-              <RefreshCw className="h-4 w-4" /> Actualizar
+              <RefreshCw className="h-4 w-4" /> Recargar datos
             </Button>
             <Button
               variant="secondary"

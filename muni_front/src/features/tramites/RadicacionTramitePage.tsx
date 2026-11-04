@@ -47,6 +47,8 @@ interface StagedDocument {
   tamanoTexto: string;
   tamanoBytes: number;
   archivo: File;
+  idRequisito: number | null;
+  nombreRequisito: string | null;
 }
 
 export function RadicacionTramitePage() {
@@ -79,7 +81,6 @@ export function RadicacionTramitePage() {
 
   // Archivos preparados para adjuntar al radicar
   const [stagedDocs, setStagedDocs] = useState<StagedDocument[]>([]);
-  const planoInputRef = useRef<HTMLInputElement>(null);
   const documentosInputRef = useRef<HTMLInputElement>(null);
 
   // Verificación oficial con API del Ministerio de Hacienda
@@ -248,12 +249,15 @@ export function RadicacionTramitePage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const handleSeleccionarArchivos = (files: FileList | null, soloPdf = false) => {
+  const handleSeleccionarArchivos = (
+    files: FileList | null,
+    requisito?: { idRequisito: number; nombreRequisito: string }
+  ) => {
     if (!files) return;
     const nuevos: StagedDocument[] = [];
     for (const archivo of Array.from(files)) {
       const extension = archivo.name.split('.').pop()?.toLowerCase();
-      if (!(soloPdf ? ['pdf'] : ['pdf', 'jpg', 'jpeg']).includes(extension ?? '')) {
+      if (!['pdf', 'jpg', 'jpeg'].includes(extension ?? '')) {
         toast.error(`Formato no permitido: ${archivo.name}`);
         continue;
       }
@@ -268,9 +272,13 @@ export function RadicacionTramitePage() {
         tamanoTexto: `${(archivo.size / 1024).toFixed(1)} KB`,
         tamanoBytes: archivo.size,
         archivo,
+        idRequisito: requisito?.idRequisito ?? null,
+        nombreRequisito: requisito?.nombreRequisito ?? null,
       });
     }
-    setStagedDocs((prev) => [...prev, ...nuevos]);
+    setStagedDocs((prev) => requisito
+      ? [...prev.filter((doc) => doc.idRequisito !== requisito.idRequisito), ...nuevos.slice(0, 1)]
+      : [...prev, ...nuevos]);
   };
 
   // Radicación formal con generación atómica en servidor
@@ -301,7 +309,11 @@ export function RadicacionTramitePage() {
       const fallidos: StagedDocument[] = [];
       for (const doc of stagedDocs) {
         try {
-          await tramiteApi.adjuntarArchivo(nuevoIdTramite, doc.archivo);
+          if (doc.idRequisito) {
+            await tramiteApi.requisitoPresentado(nuevoIdTramite, doc.idRequisito, doc.archivo);
+          } else {
+            await tramiteApi.adjuntarArchivo(nuevoIdTramite, doc.archivo);
+          }
         } catch {
           fallidos.push(doc);
         }
@@ -603,7 +615,10 @@ export function RadicacionTramitePage() {
                 <FormField label="Tipo de Trámite Activo" required>
                   <Select
                     value={selectedTipoTramiteId}
-                    onChange={(e) => setSelectedTipoTramiteId(Number(e.target.value))}
+                    onChange={(e) => {
+                      setSelectedTipoTramiteId(Number(e.target.value));
+                      setStagedDocs([]);
+                    }}
                   >
                     <option value={0}>— Seleccione un tipo de trámite —</option>
                     {(tiposTramiteQuery.data ?? []).map((t) => (
@@ -672,12 +687,34 @@ export function RadicacionTramitePage() {
                   {(requisitosQuery.data ?? []).map((req) => (
                     <div
                       key={req.idRequisito}
-                      className="flex items-center justify-between rounded-[8px] border border-[#E5E7EB] bg-white px-3.5 py-2.5 text-xs"
+                      className="flex flex-col items-start justify-between gap-3 rounded-[8px] border border-[#E5E7EB] bg-white px-3.5 py-3 text-xs sm:flex-row sm:items-center"
                     >
-                      <span className="font-semibold text-[#171717]">— {req.nombreRequisito}</span>
-                      <Badge variant={req.esObligatorio ? 'success' : 'neutral'}>
-                        {req.esObligatorio ? 'OBLIGATORIO' : 'OPCIONAL'}
-                      </Badge>
+                      <div>
+                        <span className="font-semibold text-[#171717]">{req.nombreRequisito}</span>
+                        <div className="mt-1">
+                          <Badge variant={req.esObligatorio ? 'success' : 'neutral'}>
+                            {req.esObligatorio ? 'OBLIGATORIO' : 'OPCIONAL'}
+                          </Badge>
+                        </div>
+                      </div>
+                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-[#93C5FD] bg-[#EFF6FF] px-3 py-2 font-semibold text-[#1D4ED8] hover:bg-[#DBEAFE]">
+                        <Upload className="h-3.5 w-3.5" />
+                        {stagedDocs.some((doc) => doc.idRequisito === req.idRequisito)
+                          ? 'Cambiar archivo'
+                          : 'Subir archivo'}
+                        <input
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg"
+                          className="hidden"
+                          onChange={(e) => {
+                            handleSeleccionarArchivos(e.target.files, {
+                              idRequisito: req.idRequisito,
+                              nombreRequisito: req.nombreRequisito,
+                            });
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
                     </div>
                   ))}
                 </div>
@@ -692,15 +729,16 @@ export function RadicacionTramitePage() {
 
             </div>
 
-            <input ref={planoInputRef} type="file" accept=".pdf" className="hidden"
-              onChange={(e) => { handleSeleccionarArchivos(e.target.files, true); e.target.value = ''; }} />
             <input ref={documentosInputRef} type="file" accept=".pdf,.jpg,.jpeg" multiple className="hidden"
               onChange={(e) => { handleSeleccionarArchivos(e.target.files); e.target.value = ''; }} />
             {expedienteCreado && stagedDocs.length > 0 && (
               <Button variant="secondary" onClick={async () => {
                 const fallidos: StagedDocument[] = [];
                 for (const doc of stagedDocs) {
-                  try { await tramiteApi.adjuntarArchivo(expedienteCreado.idTramite, doc.archivo); }
+                  try {
+                    if (doc.idRequisito) await tramiteApi.requisitoPresentado(expedienteCreado.idTramite, doc.idRequisito, doc.archivo);
+                    else await tramiteApi.adjuntarArchivo(expedienteCreado.idTramite, doc.archivo);
+                  }
                   catch { fallidos.push(doc); }
                 }
                 setStagedDocs(fallidos);
@@ -708,27 +746,11 @@ export function RadicacionTramitePage() {
                 else toast.success('Archivos adjuntados al expediente existente.');
               }}>Reintentar archivos pendientes</Button>
             )}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => planoInputRef.current?.click()}
-                className="flex items-center justify-center gap-3 rounded-[10px] border-2 border-dashed border-[#93C5FD] bg-[#EFF6FF]/50 p-5 text-left transition-colors hover:bg-[#EFF6FF]"
-              >
-                <Upload className="h-6 w-6 shrink-0 text-[#1D4ED8]" />
-                <div>
-                  <p className="text-xs font-bold text-[#171717]">
-                    Subir Plano Catastrado (PDF)
-                  </p>
-                  <p className="text-[11px] text-[#4B5563]">
-                    Cargar plano o croquis georreferenciado
-                  </p>
-                </div>
-              </button>
-
+            <div>
               <button
                 type="button"
                 onClick={() => documentosInputRef.current?.click()}
-                className="flex items-center justify-center gap-3 rounded-[10px] border-2 border-dashed border-[#93C5FD] bg-[#EFF6FF]/50 p-5 text-left transition-colors hover:bg-[#EFF6FF]"
+                className="flex w-full items-center justify-center gap-3 rounded-[10px] border-2 border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-5 text-left transition-colors hover:bg-[#F1F5F9]"
               >
                 <Upload className="h-6 w-6 shrink-0 text-[#1D4ED8]" />
                 <div>
@@ -736,7 +758,7 @@ export function RadicacionTramitePage() {
                     Subir Documentos Complementarios (PDF, JPG)
                   </p>
                   <p className="text-[11px] text-[#4B5563]">
-                    Certificaciones, personerías o requisitos adicionales
+                    Solo informes, fotografías o anexos que no correspondan a un requisito
                   </p>
                 </div>
               </button>
@@ -750,6 +772,7 @@ export function RadicacionTramitePage() {
                     <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC] font-bold uppercase text-[#4B5563]">
                       <th className="px-4 py-2.5">#</th>
                       <th className="px-4 py-2.5">Archivo</th>
+                      <th className="px-4 py-2.5">Corresponde a</th>
                       <th className="px-4 py-2.5">Tipo</th>
                       <th className="px-4 py-2.5">Tamaño</th>
                       <th className="px-4 py-2.5">Estado</th>
@@ -758,13 +781,16 @@ export function RadicacionTramitePage() {
                   </thead>
                   <tbody className="divide-y divide-[#E5E7EB]">
                     {stagedDocs.length === 0 && (
-                      <tr><td colSpan={6} className="px-4 py-4 text-center text-slate-500">No hay archivos preparados.</td></tr>
+                      <tr><td colSpan={7} className="px-4 py-4 text-center text-slate-500">No hay archivos preparados.</td></tr>
                     )}
                     {stagedDocs.map((doc, idx) => (
                       <tr key={doc.id} className="hover:bg-[#F8FAFC]">
                         <td className="px-4 py-2.5 font-mono font-bold">{idx + 1}</td>
                         <td className="px-4 py-2.5 font-mono font-semibold text-[#171717]">
                           {doc.nombreArchivo}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          {doc.nombreRequisito ?? 'Documento complementario'}
                         </td>
                         <td className="px-4 py-2.5">{doc.tipo}</td>
                         <td className="px-4 py-2.5">{doc.tamanoTexto}</td>

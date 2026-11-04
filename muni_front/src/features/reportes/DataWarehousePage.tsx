@@ -141,7 +141,7 @@ export function DataWarehousePage() {
               size="sm"
               onClick={() => queryClient.invalidateQueries({ queryKey: ['dw'] })}
             >
-              <RefreshCw className="h-4 w-4" /> Actualizar
+              <RefreshCw className="h-4 w-4" /> Recargar datos
             </Button>
             {puedeEjecutarEtl && (
               <Button

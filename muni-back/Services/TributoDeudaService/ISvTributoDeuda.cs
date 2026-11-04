@@ -10,6 +10,7 @@ namespace Services.TributoDeudaService
         Task<BaseResponse<List<VwFacturasPendiente>>> ObtenerFacturasPendientesAsync();
         Task<BaseResponse<List<SpTiposTributoResultDto>>> ConsultarTiposTributoAsync();
         Task<BaseResponse<int>> RegistrarDeudaAsync(RegistrarDeudaMunicipalDto dto);
+        Task<BaseResponse<List<SpInmueblesPorContribuyenteResultDto>>> ConsultarInmueblesContribuyenteAsync(int idContribuyente);
         Task<BaseResponse<List<SpDeudasContribuyenteResultDto>>> ConsultarDeudasContribuyenteAsync(int idContribuyente);
         Task<BaseResponse<object>> ActualizarEstadoDeudaAsync(int idDeudaMunicipal, ActualizarEstadoDeudaDto dto);
         Task<BaseResponse<object>> CalcularRecargosInteresesAsync(int idDeudaMunicipal, CalcularRecargosDto dto);
