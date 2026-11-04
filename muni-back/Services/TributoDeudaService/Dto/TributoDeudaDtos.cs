@@ -4,6 +4,9 @@ namespace Services.TributoDeudaService.Dto
 {
     public class RegistrarDeudaMunicipalDto
     {
+        [Range(1, int.MaxValue, ErrorMessage = "Seleccione un contribuyente válido.")]
+        public int IdContribuyente { get; set; }
+
         [Required, StringLength(150)]
         public string PeriodoDeuda { get; set; } = string.Empty;
 

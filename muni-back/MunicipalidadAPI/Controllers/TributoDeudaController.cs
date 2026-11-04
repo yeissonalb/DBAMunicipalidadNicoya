@@ -28,6 +28,11 @@ namespace MunicipalidadAPI.Controllers
         public async Task<IActionResult> RegistrarDeuda([FromBody] RegistrarDeudaMunicipalDto dto)
             => StatusCode(StatusCodes.Status201Created, await _svTributoDeuda.RegistrarDeudaAsync(dto));
 
+        /// <summary>Fincas asociadas al contribuyente mediante sp_consultar_inmuebles_por_contribuyente.</summary>
+        [HttpGet("contribuyente/{idContribuyente:int}/inmuebles")]
+        public async Task<IActionResult> InmueblesContribuyente(int idContribuyente)
+            => Ok(await _svTributoDeuda.ConsultarInmueblesContribuyenteAsync(idContribuyente));
+
         /// <summary>sp_consultar_deudas_contribuyente.</summary>
         [HttpGet("contribuyente/{idContribuyente:int}/deudas")]
         public async Task<IActionResult> DeudasContribuyente(int idContribuyente)

@@ -41,12 +41,14 @@ const registrarDeudaSchema = z.object({
   montoIntereses: z.coerce.number().min(0, 'No puede ser negativo'),
   montoMultas: z.coerce.number().min(0, 'No puede ser negativo'),
   fechaDeVencimiento: z.string().min(1, 'Fecha de vencimiento requerida'),
-  idInmueble: z.coerce.number().int().min(1, 'Indique el ID del inmueble'),
+  idInmueble: z.coerce.number().int().min(1, 'Seleccione una finca válida'),
   idTipoTributo: z.coerce.number().int().min(1, 'Seleccione el tipo de tributo'),
   codigoEstadoDeuda: z.string().min(1, 'Seleccione un estado inicial'),
 });
 
 type RegistrarDeudaForm = z.infer<typeof registrarDeudaSchema>;
+
+const CLAVE_HACIENDA_PATTERN = /^\d{50}$/;
 
 function getEstatusLegalLabel(codigo: string, _diasMora: number | null | undefined): string {
   return ({ PAG: 'Cancelada', ARR: 'Arreglo de pago', VENC: 'Vencida', PEND: 'Pendiente' } as Record<string,string>)[codigo] || codigo;
@@ -88,6 +90,12 @@ export function TributosDeudasPage() {
   const deudasContribuyenteQuery = useQuery({
     queryKey: ['tributos', 'deudas-contribuyente', selectedContribuyenteId],
     queryFn: () => tributoDeudaApi.deudasContribuyente(selectedContribuyenteId),
+    enabled: selectedContribuyenteId > 0,
+  });
+
+  const inmueblesContribuyenteQuery = useQuery({
+    queryKey: ['tributos', 'inmuebles-contribuyente', selectedContribuyenteId],
+    queryFn: () => tributoDeudaApi.inmueblesContribuyente(selectedContribuyenteId),
     enabled: selectedContribuyenteId > 0,
   });
 
@@ -145,7 +153,11 @@ export function TributosDeudasPage() {
   });
 
   const registrarDeudaMut = useMutation({
-    mutationFn: (dto: RegistrarDeudaForm) => tributoDeudaApi.registrarDeuda(dto),
+    mutationFn: (dto: RegistrarDeudaForm) =>
+      tributoDeudaApi.registrarDeuda({
+        ...dto,
+        idContribuyente: selectedContribuyenteId,
+      }),
     onSuccess: (res) => {
       toast.success(`${res.message || 'Deuda municipal registrada'} (ID #${res.data})`);
       setOpenDeudaModal(false);
@@ -230,9 +242,12 @@ export function TributosDeudasPage() {
   const generarFacturaMut = useMutation({
     mutationFn: () => {
       if (!facturarDeudaTarget) throw new Error('Seleccione una deuda.');
+      if (!CLAVE_HACIENDA_PATTERN.test(claveHacienda)) {
+        throw new Error('La clave numérica de Hacienda debe contener exactamente 50 dígitos.');
+      }
       return facturacionPagoApi.generarFactura({
         idDeudaMunicipal: facturarDeudaTarget.idDeudaMunicipal,
-        claveNumericaHacienda: claveHacienda.trim(),
+        claveNumericaHacienda: claveHacienda,
         descuentos: Number(descuentosFactura) || 0,
       });
     },
@@ -286,7 +301,7 @@ export function TributosDeudasPage() {
                 queryClient.invalidateQueries({ queryKey: ['facturacion'] });
               }}
             >
-              <RefreshCw className="h-4 w-4" /> Actualizar
+              <RefreshCw className="h-4 w-4" /> Recargar datos
             </Button>
             <Button onClick={() => { deudaForm.reset(); setOpenDeudaModal(true); }}>
               <Plus className="h-4 w-4" /> Registrar Deuda
@@ -685,11 +700,36 @@ export function TributosDeudasPage() {
           </FormField>
 
           <FormField
-            label="ID Bien Inmueble (Finca)"
+            label="Bien Inmueble (Finca)"
             required
+            className="sm:col-span-2"
             error={deudaForm.formState.errors.idInmueble?.message}
+            hint={
+              inmueblesContribuyenteQuery.isLoading
+                ? 'Consultando las fincas asociadas al contribuyente...'
+                : (inmueblesContribuyenteQuery.data ?? []).length === 0
+                  ? 'El contribuyente seleccionado no tiene bienes inmuebles asociados.'
+                  : 'Seleccione una finca asociada al contribuyente activo.'
+            }
           >
-            <Input type="number" min={1} {...deudaForm.register('idInmueble')} />
+            <Select
+              disabled={
+                inmueblesContribuyenteQuery.isLoading ||
+                (inmueblesContribuyenteQuery.data ?? []).length === 0
+              }
+              error={Boolean(deudaForm.formState.errors.idInmueble)}
+              {...deudaForm.register('idInmueble')}
+            >
+              <option value={0}>— Seleccione una finca —</option>
+              {(inmueblesContribuyenteQuery.data ?? []).map((inmueble) => (
+                <option key={inmueble.idInmueble} value={inmueble.idInmueble}>
+                  Finca {inmueble.numeroFinca ?? 'sin número'} —{' '}
+                  {inmueble.nombreDistrito ?? 'Distrito no indicado'} —{' '}
+                  {inmueble.direccionExacta ?? inmueble.usoSuelo ?? 'Sin descripción'}{' '}
+                  (ID interno: {inmueble.idInmueble})
+                </option>
+              ))}
+            </Select>
           </FormField>
 
           <FormField
@@ -784,11 +824,29 @@ export function TributosDeudasPage() {
               </p>
             </div>
 
-            <FormField label="Clave Numérica Ministerio de Hacienda (50 dígitos)" required>
+            <FormField
+              label="Clave Numérica Ministerio de Hacienda (50 dígitos)"
+              required
+              error={
+                claveHacienda.length === 0
+                  ? 'La clave numérica de Hacienda es obligatoria.'
+                  : !CLAVE_HACIENDA_PATTERN.test(claveHacienda)
+                    ? 'Ingrese exactamente 50 dígitos, sin letras, espacios ni símbolos.'
+                    : undefined
+              }
+              hint="Esta validación comprueba únicamente el formato; no garantiza aceptación fiscal por Hacienda."
+            >
               <Input
+                id="clave-numerica-hacienda"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                pattern="[0-9]{50}"
                 maxLength={50}
                 value={claveHacienda}
                 onChange={(e) => setClaveHacienda(e.target.value)}
+                error={claveHacienda.length > 0 && !CLAVE_HACIENDA_PATTERN.test(claveHacienda)}
+                aria-invalid={!CLAVE_HACIENDA_PATTERN.test(claveHacienda)}
                 className="font-mono text-xs"
               />
             </FormField>
@@ -808,7 +866,9 @@ export function TributosDeudasPage() {
                 Cancelar
               </Button>
               <Button
-                disabled={generarFacturaMut.isPending || !claveHacienda.trim()}
+                disabled={
+                  generarFacturaMut.isPending || !CLAVE_HACIENDA_PATTERN.test(claveHacienda)
+                }
                 onClick={() => generarFacturaMut.mutate()}
               >
                 {generarFacturaMut.isPending ? (

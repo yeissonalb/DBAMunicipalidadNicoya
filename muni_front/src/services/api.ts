@@ -806,6 +806,10 @@ export const tributoDeudaApi = {
     unwrapResponse<SpDeudasContribuyenteResultDto[]>(
       httpClient.get(`/tributodeuda/contribuyente/${idContribuyente}/deudas`)
     ),
+  inmueblesContribuyente: (idContribuyente: number) =>
+    unwrapResponse<SpInmueblesPorContribuyenteResultDto[]>(
+      httpClient.get(`/tributodeuda/contribuyente/${idContribuyente}/inmuebles`)
+    ),
   actualizarEstadoDeuda: (idDeudaMunicipal: number, dto: ActualizarEstadoDeudaDto) =>
     unwrapFullResponse<unknown>(
       httpClient.patch(`/tributodeuda/deuda/${idDeudaMunicipal}/estado`, dto)

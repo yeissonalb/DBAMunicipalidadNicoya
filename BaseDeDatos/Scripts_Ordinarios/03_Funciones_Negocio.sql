@@ -29,14 +29,21 @@ AS
 BEGIN
     DECLARE @dias INT = 0;
     DECLARE @fecha_venc DATETIME;
+    DECLARE @codigo_estado VARCHAR(20);
 
-    SELECT @fecha_venc = fecha_de_vencimiento
-    FROM dbo.Deudas_Municipales
-    WHERE id_deuda_municipal = @id_deuda_municipal;
+    SELECT
+        @fecha_venc = dm.fecha_de_vencimiento,
+        @codigo_estado = ed.codigo_estado_deuda
+    FROM dbo.Deudas_Municipales dm
+    INNER JOIN dbo.Estado_Deuda ed ON dm.id_estado_deuda = ed.id_estado_deuda
+    WHERE dm.id_deuda_municipal = @id_deuda_municipal;
 
-    IF @fecha_venc IS NOT NULL AND @fecha_venc < GETDATE()
+    -- La regla vigente usa días naturales. PAG y ARR no continúan acumulando mora.
+    IF @fecha_venc IS NOT NULL
+       AND @codigo_estado IN ('PEND', 'VENC')
+       AND CAST(@fecha_venc AS DATE) < CAST(GETDATE() AS DATE)
     BEGIN
-        SET @dias = DATEDIFF(DAY, @fecha_venc, GETDATE());
+        SET @dias = DATEDIFF(DAY, CAST(@fecha_venc AS DATE), CAST(GETDATE() AS DATE));
     END
 
     RETURN @dias;

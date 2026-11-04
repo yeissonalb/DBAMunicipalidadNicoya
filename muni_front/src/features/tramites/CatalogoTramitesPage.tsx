@@ -128,7 +128,7 @@ export function CatalogoTramitesPage() {
               variant="secondary"
               onClick={() => queryClient.invalidateQueries({ queryKey: ['tipos-tramite'] })}
             >
-              <RefreshCw className="h-4 w-4" /> Actualizar
+              <RefreshCw className="h-4 w-4" /> Recargar datos
             </Button>
             {canWrite && (
               <Button onClick={() => setOpenTipoModal(true)}>

@@ -7,7 +7,9 @@ namespace Services.FacturacionPagoService.Dto
         [Range(1, int.MaxValue)]
         public int IdDeudaMunicipal { get; set; }
 
-        [Required, StringLength(50)]
+        [Required(ErrorMessage = "La clave numérica de Hacienda es obligatoria.")]
+        [RegularExpression(@"^[0-9]{50}$",
+            ErrorMessage = "La clave numérica de Hacienda debe contener exactamente 50 dígitos, sin letras, espacios ni símbolos.")]
         public string ClaveNumericaHacienda { get; set; } = string.Empty;
 
         public double Descuentos { get; set; } = 0;

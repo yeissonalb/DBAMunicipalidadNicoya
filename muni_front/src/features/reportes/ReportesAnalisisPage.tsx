@@ -205,7 +205,7 @@ export function ReportesAnalisisPage() {
               variant="secondary"
               onClick={() => queryClient.invalidateQueries({ queryKey: ['reportes'] })}
             >
-              <RefreshCw className="h-4 w-4" /> Actualizar
+              <RefreshCw className="h-4 w-4" /> Recargar datos
             </Button>
             <Button
               onClick={() =>

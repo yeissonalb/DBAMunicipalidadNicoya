@@ -57,7 +57,7 @@ export function PagosMunicipalesPage() {
  });
  const filtradas=(facturas.data ?? []).filter(f=>[String(f.idFactura),f.contribuyentes,f.numeroFinca,f.nombreTributo,f.periodoDeuda].some(v=>v.toLowerCase().includes(busqueda.trim().toLowerCase())));
  return <div className="space-y-6">
-  <PageHeader title="Caja y pagos municipales" subtitle="Seleccione una factura existente o verifique un reporte ciudadano antes de aplicar el pago." actions={<Button variant="secondary" disabled={cobrar.isPending} onClick={()=>qc.invalidateQueries({queryKey:['facturacion']})}>Actualizar</Button>} />
+  <PageHeader title="Caja y pagos municipales" subtitle="Seleccione una factura existente o verifique un reporte ciudadano antes de aplicar el pago." actions={<Button variant="secondary" disabled={cobrar.isPending} onClick={()=>qc.invalidateQueries({queryKey:['facturacion']})}>Recargar datos</Button>} />
   {recibo && <Card><CardContent className="pt-6 space-y-2"><p className="font-semibold">Pago #{recibo.id} registrado y aplicado</p><p>Factura #{recibo.factura} · Abono: {formatCurrencyCRC(recibo.monto)} · Saldo resultante: {formatCurrencyCRC(recibo.saldo)}</p></CardContent></Card>}
   <Card><CardHeader><CardTitle>Transferencias pendientes de verificación</CardTitle></CardHeader><CardContent className="space-y-3">
    <p className="text-sm">El reporte ciudadano no acredita por sí mismo la recepción del dinero. Selecciónelo, verifique la recepción y confirme su aplicación.</p>

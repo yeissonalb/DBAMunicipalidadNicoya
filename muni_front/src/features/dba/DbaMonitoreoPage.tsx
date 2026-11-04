@@ -113,7 +113,7 @@ export function DbaMonitoreoPage() {
             title="Volver a consultar las métricas; no modifica datos ni termina sesiones"
             onClick={() => queryClient.invalidateQueries({ queryKey: ['monitoreo'] })}
           >
-            <RefreshCw className={`h-4 w-4 ${actualizando ? 'animate-spin' : ''}`} /> {actualizando ? 'Actualizando...' : 'Actualizar métricas'}
+            <RefreshCw className={`h-4 w-4 ${actualizando ? 'animate-spin' : ''}`} /> {actualizando ? 'Recargando...' : 'Recargar métricas'}
           </Button>
         }
       />

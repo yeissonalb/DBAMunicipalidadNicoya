@@ -403,7 +403,7 @@ export function ContribuyentesPage() {
               variant="secondary"
               onClick={() => queryClient.invalidateQueries({ queryKey: ['contribuyentes'] })}
             >
-              <RefreshCw className="h-4 w-4" /> Actualizar
+              <RefreshCw className="h-4 w-4" /> Recargar datos
             </Button>
             <Button variant="secondary" onClick={() => setOpenRepModal(true)}>
               <UserCheck className="h-4 w-4" /> Representante Legal

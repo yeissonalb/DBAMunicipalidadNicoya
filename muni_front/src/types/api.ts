@@ -674,6 +674,7 @@ export interface SpDeudasContribuyenteResultDto {
 }
 
 export interface RegistrarDeudaMunicipalDto {
+  idContribuyente: number;
   periodoDeuda: string;
   montoPrincipal: number;
   montoIntereses: number;
