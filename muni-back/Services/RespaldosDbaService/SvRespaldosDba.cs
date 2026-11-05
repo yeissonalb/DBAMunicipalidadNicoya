@@ -9,7 +9,7 @@ using Services.RespaldosDbaService.Dto;
 
 namespace Services.RespaldosDbaService
 {
-    public class SvRespaldosDba : ISvRespaldosDba
+    public partial class SvRespaldosDba : ISvRespaldosDba
     {
         /// <summary>BACKUP / DBCC pueden tardar más que el timeout por defecto (30 s).</summary>
         private static readonly TimeSpan TimeoutOperacionesDba = TimeSpan.FromMinutes(15);
@@ -94,7 +94,7 @@ namespace Services.RespaldosDbaService
                 Sp.VarChar("@ruta_backup_full", dto.RutaBackupFull, 255),
                 Sp.Int("@id_usuario_dba", idUsuarioDba));
 
-            return Respuesta.Ok("Simulacro de restauración registrado.");
+            return Respuesta.Ok("Archivo de respaldo verificado. No se modificaron los datos.");
         }
 
         /// <summary>Si no se envía ruta, se omite el parámetro para respetar el DEFAULT del SP.</summary>

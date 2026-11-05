@@ -13,7 +13,9 @@ namespace MunicipalidadAPI.Controllers
     {
         private readonly ISvRespaldosDba _svRespaldos;
 
-        public RespaldosDbaController(ISvRespaldosDba svRespaldos) => _svRespaldos = svRespaldos;
+        private readonly ILogger<RespaldosDbaController> _logger;
+        public RespaldosDbaController(ISvRespaldosDba svRespaldos, ILogger<RespaldosDbaController> logger)
+        { _svRespaldos = svRespaldos; _logger = logger; }
 
         /// <summary>Monitor de respaldos (vw_estado_respaldos).</summary>
         [HttpGet("estado")]
@@ -59,6 +61,26 @@ namespace MunicipalidadAPI.Controllers
         /// <summary>sp_dba_verificar_integridad_dbcc.</summary>
         [HttpPost("verificar-integridad")]
         public async Task<IActionResult> VerificarIntegridad() => Ok(await _svRespaldos.VerificarIntegridadAsync());
+
+        /// <summary>Recupera los datos sobre la base municipal usando una conexión a master.</summary>
+        [HttpPost("restaurar")]
+        public async Task<IActionResult> Restaurar([FromBody] RestaurarRespaldoDto dto)
+        {
+            var usuario = AuthHelpers.GetIdUsuario(User);
+            _logger.LogWarning("Restauración solicitada por usuario {Usuario}, FULL {Archivo}, diferencial {Diferencial}",
+                usuario, dto.RutaBackupFull, dto.RutaBackupDiferencial);
+            try
+            {
+                var resultado = await _svRespaldos.RestaurarAsync(dto);
+                _logger.LogWarning("Restauración completada por usuario {Usuario}", usuario);
+                return Ok(resultado);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "No se completó la restauración del usuario {Usuario}", usuario);
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
 
         /// <summary>sp_dba_simular_restauracion_contingencia. @id_usuario_dba sale del JWT.</summary>
         [HttpPost("simular-restauracion")]
