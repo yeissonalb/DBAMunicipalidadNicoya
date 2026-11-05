@@ -17,6 +17,7 @@ namespace Services.RespaldosDbaService
         Task<BaseResponse<object>> EjecutarBackupFullAsync(EjecutarBackupDto dto);
         Task<BaseResponse<object>> EjecutarBackupDiferencialAsync(EjecutarBackupDto dto);
         Task<BaseResponse<object>> VerificarIntegridadAsync();
+        Task<BaseResponse<object>> RestaurarAsync(RestaurarRespaldoDto dto);
         Task<BaseResponse<object>> SimularRestauracionAsync(SimularRestauracionDto dto, int idUsuarioDba);
     }
 }

@@ -1,4 +1,4 @@
-﻿import type { SpArchivoTramiteResultDto } from '@/types/api';
+import type { SpArchivoTramiteResultDto } from '@/types/api';
 import { httpClient, unwrapFullResponse, unwrapResponse } from './httpClient';
 import type {
   EjecutarMantenimientoDto,
@@ -992,6 +992,8 @@ export const respaldosDbaApi = {
     unwrapFullResponse<unknown>(httpClient.post('/respaldosdba/backup-diferencial', dto ?? {})),
   verificarIntegridad: () =>
     unwrapFullResponse<unknown>(httpClient.post('/respaldosdba/verificar-integridad')),
+  restaurar: (dto: { rutaBackupFull: string; rutaBackupDiferencial?: string; confirmacionBase: string }) =>
+    unwrapFullResponse<unknown>(httpClient.post('/respaldosdba/restaurar', dto, { timeout: 0 })),
   simularRestauracion: (dto: SimularRestauracionDto) =>
     unwrapFullResponse<unknown>(httpClient.post('/respaldosdba/simular-restauracion', dto)),
 };

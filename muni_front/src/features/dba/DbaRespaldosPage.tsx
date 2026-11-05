@@ -33,9 +33,9 @@ export function DbaRespaldosPage() {
 
   // Panel Derecho: RESTAURAR RESPALDO (Recuperación ante Desastres)
   const [rutaBackupFull, setRutaBackupFull] = useState('');
-  const [motivoRestauracion, setMotivoRestauracion] = useState(
-    'Prueba periódica de contingencia y verificación de legibilidad (RESTORE VERIFYONLY)'
-  );
+  const [rutaDiferencial, setRutaDiferencial] = useState('');
+  const [confirmacionBase, setConfirmacionBase] = useState('');
+  const [restaurado, setRestaurado] = useState(false);
   const [openRestoreConfirm, setOpenRestoreConfirm] = useState(false);
 
   const estadoQuery = useQuery({
@@ -85,7 +85,7 @@ export function DbaRespaldosPage() {
       });
     },
     onSuccess: () => {
-      toast.success('Solicitud completada. Revise el registro de verificación; requiere el procedimiento actualizado por el script 24.');
+      toast.success('Archivo verificado. Los datos no fueron modificados.');
       setOpenRestoreConfirm(false);
       queryClient.invalidateQueries({ queryKey: ['dba'] });
       queryClient.invalidateQueries({ queryKey: ['auditoria'] });
@@ -96,18 +96,39 @@ export function DbaRespaldosPage() {
     },
   });
 
+  const restaurarMut = useMutation({
+    mutationFn: () => respaldosDbaApi.restaurar({
+      rutaBackupFull: rutaBackupFull.trim(),
+      rutaBackupDiferencial: rutaDiferencial.trim() || undefined,
+      confirmacionBase,
+    }),
+    onSuccess: (res) => {
+      setOpenRestoreConfirm(false);
+      queryClient.clear();
+      sessionStorage.removeItem('sigemun_auth_session_v1');
+      setRestaurado(true);
+      toast.success(res.message);
+    },
+    onError: (err: Error) => { toast.error(err.message); setOpenRestoreConfirm(false); },
+  });
+  const ocupado = restaurarMut.isPending || backupFullMut.isPending || backupDiffMut.isPending || simularRestauracionMut.isPending;
+  if (restaurado) return <Card><CardHeader><CardTitle>Datos recuperados</CardTitle></CardHeader>
+    <CardContent>La base municipal fue restaurada. Los usuarios y contraseñas también corresponden al respaldo.
+      <Button onClick={() => window.location.assign('/login')}>Volver a iniciar sesión</Button>
+    </CardContent></Card>;
+
   const ultimoRespaldo = historialQuery.data?.[0] ?? null;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Consola Técnica DBA — Respaldos y Recuperación ante Desastres"
-        subtitle="Historial de respaldos y comprobación de legibilidad mediante RESTORE VERIFYONLY."
+        subtitle="Verifique archivos o restaure la información guardada sobre la base municipal."
         badge="Operaciones Críticas SQL"
         icon={<Landmark className="h-6 w-6" />}
         actions={
           <>
-            <Button variant="secondary" disabled={verificarIntegridadMut.isPending} onClick={() => verificarIntegridadMut.mutate()}>
+            <Button variant="secondary" disabled={verificarIntegridadMut.isPending || ocupado} onClick={() => verificarIntegridadMut.mutate()}>
               <CheckCircle2 className="h-4 w-4" /> Comprobar base (DBCC CHECKDB)
             </Button>
             <Button
@@ -118,13 +139,13 @@ export function DbaRespaldosPage() {
             </Button>
             <Button
               variant="secondary"
-              disabled={backupDiffMut.isPending}
+              disabled={ocupado}
               onClick={() => backupDiffMut.mutate()}
             >
               <Play className="h-4 w-4" /> Backup DIFERENCIAL
             </Button>
             <Button
-              disabled={backupFullMut.isPending}
+              disabled={ocupado}
               onClick={() => backupFullMut.mutate()}
             >
               <Play className="h-4 w-4" /> Generar Respaldo FULL Inmediato
@@ -314,6 +335,7 @@ export function DbaRespaldosPage() {
                             <div className="inline-flex items-center gap-1.5">
 
                               <Button
+                                disabled={ocupado}
                                 onClick={() => setRutaBackupFull(h.rutaArchivo)}
                                 title="Cargar ruta en el panel de restauración"
                               >
@@ -336,19 +358,17 @@ export function DbaRespaldosPage() {
           <Card className="border-t-4 border-t-[#DC2626] sticky top-20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base text-[#DC2626]">
-                <RotateCcw className="h-5 w-5" /> VERIFICAR ARCHIVO DE RESPALDO
+                <RotateCcw className="h-5 w-5" /> RECUPERAR INFORMACIÓN
               </CardTitle>
               <CardDescription>
-                Comprueba el archivo mediante <code className="font-mono">RESTORE VERIFYONLY</code>{' '}
-                y registro forense.
+                Verifique el archivo o recupere los datos de un FULL y, opcionalmente, su diferencial.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-start gap-2 rounded-[10px] border border-[#FDE68A] bg-[#FFFBEB] p-3 text-xs text-[#B45309]">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>
-                  Verifica que el archivo <code className="font-mono">.bak</code> sea íntegro y
-                  legible por SQL Server sin sobrescribir la base de datos activa en producción.
+                  Restaurar reemplaza los datos actuales y cierra las conexiones activas. Se perderán los cambios posteriores al respaldo. El Data Mart se actualiza por separado mediante ETL.
                 </span>
               </div>
 
@@ -357,30 +377,33 @@ export function DbaRespaldosPage() {
               </FormField>
 
               <FormField
-                label="Ruta del Archivo .bak en el Servidor SQL"
+                label="Archivo FULL .bak en el servidor SQL"
                 required
                 hint="Seleccione un respaldo de la tabla izquierda o escriba la ruta física."
               >
                 <Input
                   placeholder="Ej. C:\Backups\MunicipalidadNicoya\DB_Muni_FULL.bak"
                   value={rutaBackupFull}
+                  disabled={ocupado}
                   onChange={(e) => setRutaBackupFull(e.target.value)}
                   className="font-mono text-xs"
                 />
               </FormField>
 
-              <FormField label="Motivo Técnico / Protocolo DRP">
-                <Input
-                  value={motivoRestauracion}
-                  onChange={(e) => setMotivoRestauracion(e.target.value)}
-                />
+              <FormField label="Archivo DIFERENCIAL (opcional)" hint="Solo si corresponde al FULL anterior. Déjelo vacío para recuperar únicamente el FULL.">
+                <Input value={rutaDiferencial} disabled={ocupado} onChange={(e) => setRutaDiferencial(e.target.value)} />
               </FormField>
+              <FormField label="Confirmar base que será reemplazada" hint="Escriba MunicipalidadNicoya2026 para habilitar la restauración.">
+                <Input value={confirmacionBase} disabled={ocupado} onChange={(e) => setConfirmacionBase(e.target.value)} />
+              </FormField>
+
+
 
               <Button
                 variant="destructive"
                 className="w-full"
-                disabled={!rutaBackupFull.trim() || simularRestauracionMut.isPending}
-                onClick={() => setOpenRestoreConfirm(true)}
+                disabled={!rutaBackupFull.trim() || ocupado}
+                onClick={() => simularRestauracionMut.mutate()}
               >
                 {simularRestauracionMut.isPending ? (
                   <>
@@ -392,6 +415,11 @@ export function DbaRespaldosPage() {
                   </>
                 )}
               </Button>
+              <Button variant="destructive" className="w-full"
+                disabled={!rutaBackupFull.trim() || confirmacionBase !== 'MunicipalidadNicoya2026' || ocupado}
+                onClick={() => setOpenRestoreConfirm(true)}>
+                {restaurarMut.isPending ? 'Recuperando datos en SQL Server...' : 'RESTAURAR INFORMACIÓN'}
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -400,21 +428,21 @@ export function DbaRespaldosPage() {
       {/* DIÁLOGO DE 3 PASOS DE SEGURIDAD PARA RESTAURACIÓN DBA */}
       <ConfirmDialog
         open={openRestoreConfirm}
-        onClose={() => setOpenRestoreConfirm(false)}
-        variant="default"
-        title="Comprobar archivo de respaldo"
-        description="Requiere aplicar el script 24. Ejecuta RESTORE VERIFYONLY WITH CHECKSUM sobre el archivo indicado. No restaura ni sobrescribe la base actual. Esta comprobación no sustituye una prueba real de restauración."
-        confirmLabel="Verificar archivo"
-        isPending={simularRestauracionMut.isPending}
-        onConfirm={() => simularRestauracionMut.mutate()}
+        onClose={() => { if (!restaurarMut.isPending) setOpenRestoreConfirm(false); }}
+        variant="destructive"
+        title="Restaurar MunicipalidadNicoya2026"
+        description="Se reemplazará la información de MunicipalidadNicoya2026 por el respaldo seleccionado. Se cerrarán las conexiones de los usuarios y se perderán los cambios posteriores al respaldo. Espere el resultado antes de volver a operar."
+        confirmLabel="Confirmar restauración y reemplazar datos"
+        isPending={restaurarMut.isPending}
+        onConfirm={() => restaurarMut.mutate()}
         impactSummary={
           <div className="space-y-1">
             <p>
-              <strong>Archivo .bak seleccionado:</strong>{' '}
+              <strong>Base a reemplazar: MunicipalidadNicoya2026. Archivo FULL:</strong>{' '}
               <code className="font-mono">{rutaBackupFull}</code>
             </p>
             <p>
-              <strong>Justificación DRP:</strong> {motivoRestauracion}
+              <strong>Diferencial:</strong> {rutaDiferencial || 'Sin diferencial'}
             </p>
           </div>
         }

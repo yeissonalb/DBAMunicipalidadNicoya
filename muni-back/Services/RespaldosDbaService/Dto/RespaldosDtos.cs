@@ -56,6 +56,16 @@ namespace Services.RespaldosDbaService.Dto
         public string? RutaCarpeta { get; set; }
     }
 
+    public class RestaurarRespaldoDto
+    {
+        [Required, StringLength(255)]
+        public string RutaBackupFull { get; set; } = string.Empty;
+        [StringLength(255)]
+        public string? RutaBackupDiferencial { get; set; }
+        [Required, RegularExpression("^MunicipalidadNicoya2026$")]
+        public string ConfirmacionBase { get; set; } = string.Empty;
+    }
+
     public class SimularRestauracionDto
     {
         [Required, StringLength(255)]
